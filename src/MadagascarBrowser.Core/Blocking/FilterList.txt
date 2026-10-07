@@ -1,0 +1,10 @@
+||pageads.info^
+||doubleclick.net^
+||googlesyndication.com^
+||google-analytics.com^
+||scorecardresearch.com^
+||criteo.com^
+||amazon-adsystem.com^
+||tracker.io^
+||adservice.google.com^
+||adsystem.com^
