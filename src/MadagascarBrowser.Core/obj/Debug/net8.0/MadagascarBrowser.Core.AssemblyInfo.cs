@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MadagascarBrowser.Core")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+20c7f451fe04b29ff3997f6300875525efc48770")]
 [assembly: System.Reflection.AssemblyProductAttribute("MadagascarBrowser.Core")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MadagascarBrowser.Core")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
