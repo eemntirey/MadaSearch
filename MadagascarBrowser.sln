@@ -1,0 +1,43 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{2A5609AA-6F63-4661-BD5C-54C3A7F87AE1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MadagascarBrowser.Core", "src\MadagascarBrowser.Core\MadagascarBrowser.Core.csproj", "{2B598D4F-2046-4C28-BADF-C9F2C9E5D857}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MadagascarBrowser", "src\MadagascarBrowser\MadagascarBrowser.csproj", "{3A5867C1-ECEE-4F86-81AA-6189AC403E4C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0139FCC3-DA09-4812-85B4-2E8C5D5CADC9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MadagascarBrowser.Tests", "tests\MadagascarBrowser.Tests\MadagascarBrowser.Tests.csproj", "{274A7623-8789-4D5A-955C-9DDDBD8BBA40}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2B598D4F-2046-4C28-BADF-C9F2C9E5D857}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2B598D4F-2046-4C28-BADF-C9F2C9E5D857}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2B598D4F-2046-4C28-BADF-C9F2C9E5D857}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2B598D4F-2046-4C28-BADF-C9F2C9E5D857}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3A5867C1-ECEE-4F86-81AA-6189AC403E4C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3A5867C1-ECEE-4F86-81AA-6189AC403E4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3A5867C1-ECEE-4F86-81AA-6189AC403E4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3A5867C1-ECEE-4F86-81AA-6189AC403E4C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{274A7623-8789-4D5A-955C-9DDDBD8BBA40}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{274A7623-8789-4D5A-955C-9DDDBD8BBA40}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{274A7623-8789-4D5A-955C-9DDDBD8BBA40}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{274A7623-8789-4D5A-955C-9DDDBD8BBA40}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{2B598D4F-2046-4C28-BADF-C9F2C9E5D857} = {2A5609AA-6F63-4661-BD5C-54C3A7F87AE1}
+		{3A5867C1-ECEE-4F86-81AA-6189AC403E4C} = {2A5609AA-6F63-4661-BD5C-54C3A7F87AE1}
+		{274A7623-8789-4D5A-955C-9DDDBD8BBA40} = {0139FCC3-DA09-4812-85B4-2E8C5D5CADC9}
+	EndGlobalSection
+EndGlobal
