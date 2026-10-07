@@ -1,23 +1,16 @@
-﻿using System.Text;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using MadagascarBrowser.Shell;
 
-namespace MadagascarBrowser;
-
-/// <summary>
-/// Interaction logic for MainWindow.xaml
-/// </summary>
-public partial class MainWindow : Window
+namespace MadagascarBrowser
 {
-    public MainWindow()
+    public partial class MainWindow : Window
     {
-        InitializeComponent();
+        public MainWindow()
+        {
+            InitializeComponent();
+            var tm = new TabManager();
+            tm.NewTab();
+            DataContext = tm;
+        }
     }
 }
