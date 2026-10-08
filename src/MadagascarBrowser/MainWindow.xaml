@@ -3,24 +3,25 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:chrome="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         xmlns:shell="clr-namespace:MadagascarBrowser.Shell"
         mc:Ignorable="d"
         Title="Madagascar Browser" Height="800" Width="1200"
         Background="{StaticResource BgBrush}">
     <Window.Style>
         <Style TargetType="{x:Type Window}">
-            <Setter Property="WindowChrome.WindowChrome">
+            <Setter Property="chrome:WindowChrome.WindowChrome">
                 <Setter.Value>
-                    <WindowChrome CaptionHeight="40" CornerRadius="10" GlassFrameThickness="0"
-                                  ResizeBorderThickness="6" UseAeroCaptionButtons="False"/>
+                    <chrome:WindowChrome CaptionHeight="40" CornerRadius="10" GlassFrameThickness="0"
+                                         ResizeBorderThickness="6" UseAeroCaptionButtons="False"/>
                 </Setter.Value>
             </Setter>
             <Style.Triggers>
                 <Trigger Property="WindowState" Value="Maximized">
-                    <Setter Property="WindowChrome.WindowChrome">
+                    <Setter Property="chrome:WindowChrome.WindowChrome">
                         <Setter.Value>
-                            <WindowChrome CaptionHeight="40" CornerRadius="0" GlassFrameThickness="0"
-                                          ResizeBorderThickness="6" UseAeroCaptionButtons="False"/>
+                            <chrome:WindowChrome CaptionHeight="40" CornerRadius="0" GlassFrameThickness="0"
+                                                 ResizeBorderThickness="6" UseAeroCaptionButtons="False"/>
                         </Setter.Value>
                     </Setter>
                 </Trigger>

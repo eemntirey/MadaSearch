@@ -175,7 +175,8 @@
 
         <wv2:WebView2 x:Name="WebView" Grid.Row="1"/>
         <StackPanel x:Name="WebViewError" Grid.Row="1" Visibility="Collapsed" Margin="24" VerticalAlignment="Center">
-            <TextBlock Text="WebView2 est indisponible sur cette machine."
+            <TextBlock x:Name="WebViewErrorText"
+                       Text="WebView2 est indisponible sur cette machine."
                        Foreground="{StaticResource TextBrush}" FontSize="16"/>
             <TextBlock Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0" TextWrapping="Wrap">
                 <Run Text="Installez le WebView2 Runtime : "/>

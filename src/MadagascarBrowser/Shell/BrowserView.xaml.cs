@@ -35,15 +35,16 @@ namespace MadagascarBrowser.Shell
             try
             {
                 await WebView.EnsureCoreWebView2Async();
+                _coreReady = true;
+                InitCore();
             }
-            catch
+            catch (Exception exception)
             {
                 WebView.Visibility = Visibility.Collapsed;
                 WebViewError.Visibility = Visibility.Visible;
+                WebViewErrorText.Text = $"Impossible d'initialiser WebView2 : {exception.Message}";
                 return;
             }
-            _coreReady = true;
-            InitCore();
         }
 
         private void InitCore()
@@ -195,7 +196,8 @@ namespace MadagascarBrowser.Shell
         private void MenuSettings_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
-            new SettingsWindow { Owner = Window.GetWindow(this) }.ShowDialog();
+            if (Window.GetWindow(this)?.DataContext is TabManager tm)
+                tm.OpenSettings();
         }
 
         private void MenuAddFavorite_Click(object sender, RoutedEventArgs e)
@@ -215,13 +217,15 @@ namespace MadagascarBrowser.Shell
         private void MenuHistory_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
-            new LibraryWindow(NavigateTo, selectedTab: 0) { Owner = Window.GetWindow(this) }.ShowDialog();
+            if (Window.GetWindow(this)?.DataContext is TabManager tm)
+                tm.OpenLibrary(0);
         }
 
         private void MenuFavorites_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
-            new LibraryWindow(NavigateTo, selectedTab: 1) { Owner = Window.GetWindow(this) }.ShowDialog();
+            if (Window.GetWindow(this)?.DataContext is TabManager tm)
+                tm.OpenLibrary(1);
         }
 
         private async void MenuSaveOffline_Click(object sender, RoutedEventArgs e)
@@ -258,13 +262,15 @@ namespace MadagascarBrowser.Shell
         private void MenuOfflinePages_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
-            new LibraryWindow(NavigateTo, selectedTab: 2) { Owner = Window.GetWindow(this) }.ShowDialog();
+            if (Window.GetWindow(this)?.DataContext is TabManager tm)
+                tm.OpenLibrary(2);
         }
 
         private void MenuDownloads_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
-            new DownloadsWindow { Owner = Window.GetWindow(this) }.ShowDialog();
+            if (Window.GetWindow(this)?.DataContext is TabManager tm)
+                tm.OpenDownloads();
         }
 
         private void MenuExportProfile_Click(object sender, RoutedEventArgs e)
@@ -335,14 +341,15 @@ namespace MadagascarBrowser.Shell
             var dialog = new SaveFileDialog
             {
                 FileName = fileName,
-                Filter = "Tous les fichiers (*.*)|*.*",
-                InitialDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads")
+                Filter = "Tous les fichiers (*.*)|*.*"
             };
+            var downloadsDirectory = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+            if (Directory.Exists(downloadsDirectory))
+                dialog.InitialDirectory = downloadsDirectory;
 
             if (dialog.ShowDialog(Window.GetWindow(this)) != true)
             {
-                var cancelled = BrowserServices.Downloads.Start(operation.Uri, string.Empty);
-                BrowserServices.Downloads.Cancel(cancelled.Id);
                 e.Cancel = true;
                 e.Handled = true;
                 return;
@@ -351,7 +358,7 @@ namespace MadagascarBrowser.Shell
             e.ResultFilePath = dialog.FileName;
             e.Handled = true;
             var download = BrowserServices.Downloads.Start(operation.Uri, e.ResultFilePath);
-            DownloadsWindow.Register(download.Id, operation);
+            DownloadsView.Register(download.Id, operation);
             operation.BytesReceivedChanged += (_, _) =>
                 BrowserServices.Downloads.UpdateProgress(download.Id, operation.BytesReceived, TotalBytesToReceive(operation));
             operation.StateChanged += (_, _) =>
@@ -359,7 +366,7 @@ namespace MadagascarBrowser.Shell
                 if (operation.State == CoreWebView2DownloadState.Completed)
                 {
                     BrowserServices.Downloads.Complete(download.Id, operation.BytesReceived, TotalBytesToReceive(operation));
-                    DownloadsWindow.Unregister(download.Id);
+                    DownloadsView.Unregister(download.Id);
                 }
                 else if (operation.State == CoreWebView2DownloadState.Interrupted)
                 {
@@ -367,7 +374,7 @@ namespace MadagascarBrowser.Shell
                         BrowserServices.Downloads.Cancel(download.Id);
                     else
                         BrowserServices.Downloads.Fail(download.Id);
-                    DownloadsWindow.Unregister(download.Id);
+                    DownloadsView.Unregister(download.Id);
                 }
             };
         }
@@ -516,7 +523,9 @@ namespace MadagascarBrowser.Shell
                 CloseSuggestions();
                 if (_coreReady && WebView.CoreWebView2 != null)
                 {
+                    _suppressSuggest = true;
                     AddressBar.Text = WebView.CoreWebView2.Source ?? string.Empty;
+                    _suppressSuggest = false;
                 }
                 e.Handled = true;
                 return;

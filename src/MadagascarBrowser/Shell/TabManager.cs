@@ -38,6 +38,62 @@ namespace MadagascarBrowser.Shell
             return t;
         }
 
+        public TabViewModel OpenLibrary(int selectedTab = 0)
+        {
+            var existing = Tabs.FirstOrDefault(t => t.Kind == TabKind.Library);
+            if (existing != null)
+            {
+                if (existing.View is LibraryView library)
+                    library.SelectTab(selectedTab);
+                Active = existing;
+                return existing;
+            }
+
+            return EnsureKindTab(TabKind.Library, "Bibliothèque",
+                () => new LibraryView(OpenUrlInNewTab, selectedTab));
+        }
+
+        public TabViewModel OpenDownloads()
+        {
+            return EnsureKindTab(TabKind.Downloads, "Téléchargements", () => new DownloadsView());
+        }
+
+        public TabViewModel OpenSettings()
+        {
+            var existing = Tabs.FirstOrDefault(t => t.Kind == TabKind.Settings);
+            if (existing != null)
+            {
+                if (existing.View is SettingsView settings)
+                    settings.RefreshSettings();
+                Active = existing;
+                return existing;
+            }
+
+            return EnsureKindTab(TabKind.Settings, "Paramètres", () => new SettingsView());
+        }
+
+        private TabViewModel EnsureKindTab(TabKind kind, string title, Func<object> viewFactory)
+        {
+            var existing = Tabs.FirstOrDefault(t => t.Kind == kind);
+            if (existing != null)
+            {
+                Active = existing;
+                return existing;
+            }
+
+            BrowserServices.EnsureInitialized();
+            var t = new TabViewModel { Title = title, Kind = kind };
+            t.View = viewFactory();
+            Tabs.Add(t);
+            Active = t;
+            return t;
+        }
+
+        private void OpenUrlInNewTab(string url)
+        {
+            NewTab(url);
+        }
+
         public void RestoreSession(MadagascarBrowser.Core.Data.BrowserSession session)
         {
             var urls = session.Urls

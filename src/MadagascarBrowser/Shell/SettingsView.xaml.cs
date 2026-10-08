@@ -1,16 +1,20 @@
 using System.Windows;
 using System.Windows.Controls;
 using MadagascarBrowser.Core.Data;
-using MadagascarBrowser.Shell;
 
-namespace MadagascarBrowser
+namespace MadagascarBrowser.Shell
 {
-    public partial class SettingsWindow : Window
+    public partial class SettingsView : UserControl
     {
-        public SettingsWindow()
+        public SettingsView()
         {
             InitializeComponent();
             BrowserServices.EnsureInitialized();
+            LoadSettings();
+        }
+
+        private void LoadSettings()
+        {
             var settings = BrowserServices.CurrentSettings;
             foreach (ComboBoxItem item in SearchProviderCombo.Items)
             {
@@ -23,6 +27,11 @@ namespace MadagascarBrowser
             AdBlockCheck.IsChecked = settings.AdBlockEnabled;
             DataSaverCheck.IsChecked = settings.DataSaverEnabled;
             RestoreSessionCheck.IsChecked = settings.RestoreSession;
+        }
+
+        public void RefreshSettings()
+        {
+            LoadSettings();
         }
 
         private void Save_Click(object sender, RoutedEventArgs e)
@@ -38,13 +47,17 @@ namespace MadagascarBrowser
             try
             {
                 BrowserServices.UpdateSettings(settings);
-                DialogResult = true;
             }
             catch (System.Exception exception)
             {
-                MessageBox.Show(this, $"Impossible d'enregistrer les paramètres : {exception.Message}",
+                MessageBox.Show($"Impossible d'enregistrer les paramètres : {exception.Message}",
                     "Madagascar Browser", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private void Cancel_Click(object sender, RoutedEventArgs e)
+        {
+            LoadSettings();
         }
     }
 }

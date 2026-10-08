@@ -1,23 +1,26 @@
 using System;
-using System.Linq;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using MadagascarBrowser.Core.Data;
-using MadagascarBrowser.Shell;
 
-namespace MadagascarBrowser
+namespace MadagascarBrowser.Shell
 {
-    public partial class LibraryWindow : Window
+    public partial class LibraryView : UserControl
     {
         private readonly Action<string> _openUrl;
 
-        public LibraryWindow(Action<string> openUrl, int selectedTab = 0)
+        public LibraryView(Action<string> openUrl, int selectedTab = 0)
         {
             InitializeComponent();
             BrowserServices.EnsureInitialized();
             _openUrl = openUrl;
+            SelectTab(selectedTab);
+        }
+
+        public void SelectTab(int selectedTab)
+        {
             LibraryTabs.SelectedIndex = Math.Clamp(selectedTab, 0, 2);
             LoadItems();
         }
@@ -67,7 +70,7 @@ namespace MadagascarBrowser
                 var path = BrowserServices.OfflinePages.GetPath(offlinePage.Id);
                 if (path == null || !File.Exists(path))
                 {
-                    MessageBox.Show(this, "Le fichier hors ligne est introuvable.", "Pages hors ligne",
+                    MessageBox.Show("Le fichier hors ligne est introuvable.", "Pages hors ligne",
                         MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
@@ -81,7 +84,6 @@ namespace MadagascarBrowser
             {
                 _openUrl(favorite.Url);
             }
-            Close();
         }
 
         private void RemoveSelected_Click(object sender, RoutedEventArgs e)
@@ -107,7 +109,7 @@ namespace MadagascarBrowser
 
         private void ClearHistory_Click(object sender, RoutedEventArgs e)
         {
-            if (MessageBox.Show(this, "Effacer tout l'historique de navigation ?", "Historique",
+            if (MessageBox.Show("Effacer tout l'historique de navigation ?", "Historique",
                     MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
                 return;
 
