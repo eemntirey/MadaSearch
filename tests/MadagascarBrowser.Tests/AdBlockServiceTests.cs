@@ -42,4 +42,12 @@ public class AdBlockServiceTests
         ad.ShouldBlock(new Uri("https://pageads.info/ads/x.js"));
         Assert.True(ad.BlockedCount > c0);
     }
+
+    [Fact]
+    public void ShouldBlock_WhenDisabled_ReturnsFalse()
+    {
+        var ad = new AdBlockService { Enabled = false };
+
+        Assert.False(ad.ShouldBlock(new Uri("https://pageads.info/ads/x.js")));
+    }
 }

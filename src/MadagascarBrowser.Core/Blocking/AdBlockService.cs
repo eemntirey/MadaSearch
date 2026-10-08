@@ -13,11 +13,12 @@ namespace MadagascarBrowser.Core.Blocking
         private readonly HashSet<string> _exempt = new(StringComparer.OrdinalIgnoreCase);
         private int _blocked;
 
-        public AdBlockService(string filterListPath = null)
+        public AdBlockService(string? filterListPath = null)
         {
             LoadFilters(filterListPath);
         }
 
+        public bool Enabled { get; set; } = true;
         public int BlockedCount => _blocked;
 
         public void SetDomainExempt(string domain)
@@ -28,7 +29,7 @@ namespace MadagascarBrowser.Core.Blocking
 
         public bool ShouldBlock(Uri url)
         {
-            if (url == null)
+            if (!Enabled || url == null)
                 return false;
             var host = url.Host.ToLowerInvariant();
             if (_exempt.Contains(host))
@@ -49,9 +50,9 @@ namespace MadagascarBrowser.Core.Blocking
             return false;
         }
 
-        private void LoadFilters(string path)
+        private void LoadFilters(string? path)
         {
-            string text = null;
+            string? text = null;
             if (!string.IsNullOrEmpty(path) && File.Exists(path))
             {
                 text = File.ReadAllText(path);
