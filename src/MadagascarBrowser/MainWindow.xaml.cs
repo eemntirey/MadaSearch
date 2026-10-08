@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Interop;
 using MadagascarBrowser.Shell;
 
@@ -99,6 +100,47 @@ namespace MadagascarBrowser
         private void NewTab_Click(object sender, RoutedEventArgs e)
         {
             _tabManager.NewTab();
+        }
+
+        private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ClickCount == 2)
+            {
+                ToggleMaximize();
+            }
+            else if (e.LeftButton == MouseButtonState.Pressed)
+            {
+                try
+                {
+                    DragMove();
+                }
+                catch (InvalidOperationException)
+                {
+                    // Le bouton a été relâché avant DragMove : ignorer.
+                }
+            }
+        }
+
+        private void Minimize_Click(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState.Minimized;
+        }
+
+        private void Maximize_Click(object sender, RoutedEventArgs e)
+        {
+            ToggleMaximize();
+        }
+
+        private void CloseWindow_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
+
+        private void ToggleMaximize()
+        {
+            WindowState = WindowState == WindowState.Maximized
+                ? WindowState.Normal
+                : WindowState.Maximized;
         }
 
         private void CloseTab_Click(object sender, RoutedEventArgs e)

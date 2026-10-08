@@ -7,8 +7,42 @@
         mc:Ignorable="d"
         Title="Madagascar Browser" Height="800" Width="1200"
         Background="{StaticResource BgBrush}">
+    <Window.Style>
+        <Style TargetType="{x:Type Window}">
+            <Setter Property="WindowChrome.WindowChrome">
+                <Setter.Value>
+                    <WindowChrome CaptionHeight="40" CornerRadius="10" GlassFrameThickness="0"
+                                  ResizeBorderThickness="6" UseAeroCaptionButtons="False"/>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="WindowState" Value="Maximized">
+                    <Setter Property="WindowChrome.WindowChrome">
+                        <Setter.Value>
+                            <WindowChrome CaptionHeight="40" CornerRadius="0" GlassFrameThickness="0"
+                                          ResizeBorderThickness="6" UseAeroCaptionButtons="False"/>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Style>
     <Grid Background="{StaticResource BgBrush}">
+        <Grid.Style>
+            <Style TargetType="Grid">
+                <Setter Property="Margin" Value="0"/>
+                <Style.Triggers>
+                    <!-- En maximisé, la fenêtre déborde de 8px de chaque côté (bord invisible
+                         du WindowChrome) : on insette le contenu pour qu'il reste à l'écran. -->
+                    <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType=Window}}"
+                                 Value="Maximized">
+                        <Setter Property="Margin" Value="8"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </Grid.Style>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -18,8 +52,45 @@
         <!-- Bandeau tricolore : mélange des couleurs du drapeau malgache -->
         <Border Grid.Row="0" Height="4" Background="{StaticResource FlagMixBrush}"/>
 
+        <!-- Barre de titre personnalisée (WindowChrome) -->
+        <Grid Grid.Row="1" Height="36" Background="{StaticResource BgBrush}"
+              MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="14,0,0,0"
+                        VerticalAlignment="Center">
+                <TextBlock Text="M" FontFamily="Segoe UI" FontSize="13" FontWeight="Bold"
+                           Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center"/>
+                <TextBlock Text="adagascar Browser" FontFamily="Segoe UI" FontSize="11.5"
+                           Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"
+                           Margin="1,0,0,0"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                <Button Style="{StaticResource CaptionButton}" Content="&#xE921;"
+                        Click="Minimize_Click" ToolTip="Réduire"/>
+                <Button Click="Maximize_Click" ToolTip="Agrandir">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource CaptionButton}">
+                            <Setter Property="Content" Value="&#xE922;"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType=Window}}" Value="Maximized">
+                                    <Setter Property="Content" Value="&#xE923;"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Button Style="{StaticResource CaptionCloseButton}" Content="&#xE8BB;"
+                        Click="CloseWindow_Click" ToolTip="Fermer"/>
+            </StackPanel>
+        </Grid>
+
         <!-- Barre d'onglets : pilules + bouton nouveau onglet -->
-        <Border Grid.Row="1" Background="{StaticResource SurfaceBrush}"
+        <Border Grid.Row="2" Background="{StaticResource SurfaceBrush}"
                 BorderBrush="{StaticResource EdgeBrush}" BorderThickness="0,0,0,1">
             <Grid Margin="8,6,8,0">
                 <Grid.ColumnDefinitions>
@@ -67,10 +138,10 @@
         </Border>
 
         <!-- Contenu de l'onglet actif -->
-        <ContentControl Grid.Row="2" Content="{Binding Active.View}"/>
+        <ContentControl Grid.Row="3" Content="{Binding Active.View}"/>
 
         <!-- Barre d'état moderne -->
-        <Border Grid.Row="3" Background="{StaticResource SurfaceBrush}"
+        <Border Grid.Row="4" Background="{StaticResource SurfaceBrush}"
                 BorderBrush="{StaticResource EdgeBrush}" BorderThickness="0,1,0,0">
             <StatusBar Background="Transparent" Foreground="{StaticResource MutedBrush}"
                        FontSize="11" Padding="10,4">
