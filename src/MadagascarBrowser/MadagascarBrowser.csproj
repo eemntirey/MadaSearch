@@ -8,6 +8,12 @@
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2849.39" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="StartPage\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>

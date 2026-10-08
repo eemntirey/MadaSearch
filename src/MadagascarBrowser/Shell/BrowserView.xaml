@@ -11,7 +11,178 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        <TextBox x:Name="AddressBar" Grid.Row="0" Margin="4" KeyDown="AddressBar_KeyDown" />
-        <wv2:WebView2 x:Name="WebView" Grid.Row="1" />
+
+        <!-- Barre d'outils : navigation + adresse en pilule + menu -->
+        <Border Grid.Row="0" Background="{StaticResource SurfaceBrush}"
+                BorderBrush="{StaticResource EdgeBrush}" BorderThickness="0,0,0,1"
+                Padding="8,6">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Navigation -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="BackBtn" Style="{StaticResource IconButton}"
+                            Content="&#xE72B;" ToolTip="Retour" Click="Back_Click"/>
+                    <Button x:Name="ForwardBtn" Style="{StaticResource IconButton}"
+                            Content="&#xE72A;" ToolTip="Avant" Click="Forward_Click"/>
+                    <Button x:Name="ReloadBtn" Style="{StaticResource IconButton}"
+                            Content="&#xE72C;" ToolTip="Rafraîchir" Click="Reload_Click"/>
+                </StackPanel>
+
+                <!-- Adresse en pilule -->
+                <Border Grid.Column="1" Background="{StaticResource PillBrush}"
+                        CornerRadius="18" Height="34" Margin="8,0"
+                        BorderBrush="{StaticResource EdgeBrush}" BorderThickness="1">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="&#xE72E;" FontFamily="Segoe MDL2 Assets"
+                                   Foreground="{StaticResource MutedBrush}" FontSize="12"
+                                   VerticalAlignment="Center" Margin="12,0,4,0"/>
+                        <TextBox x:Name="AddressBar" Grid.Column="1"
+                                 KeyDown="AddressBar_KeyDown" TextChanged="AddressBar_TextChanged"
+                                 Background="Transparent" Foreground="{StaticResource TextBrush}"
+                                 CaretBrush="{StaticResource TextBrush}" BorderThickness="0"
+                                 VerticalContentAlignment="Center" FontSize="12.5"
+                                 SelectionBrush="{StaticResource AccentBrush}"/>
+                    </Grid>
+                </Border>
+
+                <!-- Menu -->
+                <Button x:Name="MenuBtn" Grid.Column="2" Style="{StaticResource IconButton}"
+                        Content="&#xE712;" ToolTip="Menu" Click="Menu_Click"/>
+
+                <!-- Suggestions d'historique -->
+                <Popup x:Name="SuggestPopup" PlacementTarget="{Binding ElementName=AddressBar}"
+                       Placement="Bottom" StaysOpen="False" AllowsTransparency="True"
+                       VerticalOffset="6">
+                    <Border Background="{StaticResource SurfaceBrush}"
+                            BorderBrush="{StaticResource EdgeBrush}" BorderThickness="1"
+                            CornerRadius="10" MinWidth="420" Margin="0,4,0,0">
+                        <ListBox x:Name="SuggestList" MaxHeight="260"
+                                 Background="Transparent" BorderThickness="0"
+                                 Foreground="{StaticResource TextBrush}"
+                                 ItemContainerStyle="{StaticResource DarkListItem}"
+                                 PreviewMouseLeftButtonUp="SuggestList_Click"
+                                 Margin="4">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Title}" FontSize="12.5"/>
+                                        <TextBlock Text="{Binding Url}" FontSize="10.5"
+                                                   Foreground="{StaticResource MutedBrush}"
+                                                   TextTrimming="CharacterEllipsis" MaxWidth="400"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Border>
+                </Popup>
+
+                <!-- Menu contextuel -->
+                <Popup x:Name="MenuPopup" PlacementTarget="{Binding ElementName=MenuBtn}"
+                       Placement="Bottom" StaysOpen="False" AllowsTransparency="True"
+                       VerticalOffset="6" HorizontalOffset="-200">
+                    <Border Background="{StaticResource SurfaceBrush}"
+                            BorderBrush="{StaticResource EdgeBrush}" BorderThickness="1"
+                            CornerRadius="10" MinWidth="220" Padding="4">
+                        <StackPanel>
+                            <Button Style="{StaticResource MenuRowButton}" Click="MenuNewTab_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets"
+                                               FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBlock Text="Nouvel onglet" FontSize="12.5" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource MenuRowButton}" Click="MenuSettings_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets"
+                                               FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBlock Text="Paramètres" FontSize="12.5" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource MenuRowButton}" Click="MenuAddFavorite_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE734;" FontFamily="Segoe MDL2 Assets"
+                                               FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBlock Text="Ajouter aux favoris" FontSize="12.5" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource MenuRowButton}" Click="MenuSaveOffline_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE7C3;" FontFamily="Segoe MDL2 Assets"
+                                               FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBlock Text="Enregistrer hors ligne" FontSize="12.5" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource MenuRowButton}" Click="MenuOfflinePages_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets"
+                                               FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBlock Text="Pages hors ligne" FontSize="12.5" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource MenuRowButton}" Click="MenuHistory_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE81C;" FontFamily="Segoe MDL2 Assets"
+                                               FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBlock Text="Historique" FontSize="12.5" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource MenuRowButton}" Click="MenuFavorites_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE734;" FontFamily="Segoe MDL2 Assets"
+                                               FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBlock Text="Favoris" FontSize="12.5" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource MenuRowButton}" Click="MenuDownloads_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE896;" FontFamily="Segoe MDL2 Assets"
+                                               FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBlock Text="Téléchargements" FontSize="12.5" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Separator Background="{StaticResource EdgeBrush}" Margin="6,4"/>
+                            <Button Style="{StaticResource MenuRowButton}" Click="MenuExportProfile_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets"
+                                               FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBlock Text="Exporter le profil" FontSize="12.5" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource MenuRowButton}" Click="MenuImportProfile_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE8B5;" FontFamily="Segoe MDL2 Assets"
+                                               FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBlock Text="Importer le profil" FontSize="12.5" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <TextBlock x:Name="MenuFeedback" Text="" FontSize="11"
+                                       Foreground="{StaticResource MutedBrush}"
+                                       Margin="10,2,10,6" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                </Popup>
+            </Grid>
+        </Border>
+
+        <wv2:WebView2 x:Name="WebView" Grid.Row="1"/>
+        <StackPanel x:Name="WebViewError" Grid.Row="1" Visibility="Collapsed" Margin="24" VerticalAlignment="Center">
+            <TextBlock Text="WebView2 est indisponible sur cette machine."
+                       Foreground="{StaticResource TextBrush}" FontSize="16"/>
+            <TextBlock Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0" TextWrapping="Wrap">
+                <Run Text="Installez le WebView2 Runtime : "/>
+                <Hyperlink NavigateUri="https://developer.microsoft.com/fr-fr/microsoft-edge/webview2/"
+                           Foreground="{StaticResource AccentBrush}"
+                           RequestNavigate="WebView2Link_RequestNavigate">téléchargement officiel</Hyperlink>
+            </TextBlock>
+        </StackPanel>
     </Grid>
 </UserControl>

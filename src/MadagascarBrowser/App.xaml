@@ -3,5 +3,146 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
+
+        <!-- Palette Madagascar Browser — thème sombre issu du mélange des couleurs
+             du drapeau malgache : blanc #FFFFFF, rouge #FC3D32, vert #007E3A -->
+        <SolidColorBrush x:Key="BgBrush" Color="#0E0C0A"/>
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#151310"/>
+        <SolidColorBrush x:Key="PillBrush" Color="#1E1A15"/>
+        <SolidColorBrush x:Key="HoverBrush" Color="#2E2821"/>
+        <SolidColorBrush x:Key="ActiveTabBrush" Color="#352E26"/>
+        <SolidColorBrush x:Key="MutedBrush" Color="#BCAD99"/>
+        <SolidColorBrush x:Key="EdgeBrush" Color="#3A3229"/>
+        <SolidColorBrush x:Key="AccentBrush" Color="#FC3D32"/>
+        <SolidColorBrush x:Key="TextBrush" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="OkBrush" Color="#00A35A"/>
+
+        <!-- Bandeau tricolore du drapeau malgache (blanc → rouge → vert) -->
+        <LinearGradientBrush x:Key="FlagMixBrush" StartPoint="0,0.5" EndPoint="1,0.5">
+            <GradientStop Color="#FFFFFF" Offset="0"/>
+            <GradientStop Color="#FC3D32" Offset="0.5"/>
+            <GradientStop Color="#007E3A" Offset="1"/>
+        </LinearGradientBrush>
+
+        <!-- Bouton icône (Segoe MDL2 Assets) : rond, hover en pilule -->
+        <Style x:Key="IconButton" TargetType="Button">
+            <Setter Property="Width" Value="32"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="8">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource HoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.35"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Petit bouton icône (× de tab, + de tab) -->
+        <Style x:Key="IconButtonSmall" TargetType="Button" BasedOn="{StaticResource IconButton}">
+            <Setter Property="Width" Value="20"/>
+            <Setter Property="Height" Value="20"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource HoverBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Onglet en pilule flottante -->
+        <Style x:Key="TabStripItem" TargetType="ListBoxItem">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Bd" CornerRadius="10" Margin="2,4" Padding="14,6"
+                                Background="Transparent">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource HoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource ActiveTabBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Item de liste (suggestions, menus) : survol en pilule -->
+        <Style x:Key="DarkListItem" TargetType="ListBoxItem">
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Bd" CornerRadius="8" Margin="2,2" Padding="10,6"
+                                Background="Transparent">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource HoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource ActiveTabBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Bouton de menu (ligne cliquable du popup menu) -->
+        <Style x:Key="MenuRowButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="8" Padding="10,6">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource HoverBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
     </Application.Resources>
 </Application>

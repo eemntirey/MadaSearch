@@ -5,27 +5,104 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:shell="clr-namespace:MadagascarBrowser.Shell"
         mc:Ignorable="d"
-        Title="Madagascar Browser" Height="800" Width="1200">
-    <Grid>
+        Title="Madagascar Browser" Height="800" Width="1200"
+        Background="{StaticResource BgBrush}">
+    <Grid Background="{StaticResource BgBrush}">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <TabControl Grid.Row="1" ItemsSource="{Binding Tabs}" SelectedItem="{Binding Active}">
-            <TabControl.ItemTemplate>
-                <DataTemplate>
-                    <TextBlock Text="{Binding Title}" />
-                </DataTemplate>
-            </TabControl.ItemTemplate>
-            <TabControl.ContentTemplate>
-                <DataTemplate>
-                    <shell:BrowserView />
-                </DataTemplate>
-            </TabControl.ContentTemplate>
-        </TabControl>
-        <StatusBar Grid.Row="2">
-            <StatusBarItem Content="Prêt" />
-        </StatusBar>
+
+        <!-- Bandeau tricolore : mélange des couleurs du drapeau malgache -->
+        <Border Grid.Row="0" Height="4" Background="{StaticResource FlagMixBrush}"/>
+
+        <!-- Barre d'onglets : pilules + bouton nouveau onglet -->
+        <Border Grid.Row="1" Background="{StaticResource SurfaceBrush}"
+                BorderBrush="{StaticResource EdgeBrush}" BorderThickness="0,0,0,1">
+            <Grid Margin="8,6,8,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <ListBox Grid.Column="0"
+                         ItemsSource="{Binding Tabs}"
+                         SelectedItem="{Binding Active}"
+                         Background="Transparent" BorderThickness="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                         ItemContainerStyle="{StaticResource TabStripItem}">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{Binding Title}"
+                                           Foreground="{StaticResource TextBrush}"
+                                           FontSize="12" VerticalAlignment="Center"
+                                           MaxWidth="180" TextTrimming="CharacterEllipsis"/>
+                                <Button Grid.Column="1" Style="{StaticResource IconButtonSmall}"
+                                        Content="&#xE711;" Margin="8,0,0,0"
+                                        VerticalAlignment="Center"
+                                        Click="CloseTab_Click"
+                                        ToolTip="Fermer l'onglet"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <Button Grid.Column="1" Style="{StaticResource IconButton}"
+                        Content="&#xE710;" Margin="8,0,0,0" ToolTip="Nouvel onglet"
+                        Click="NewTab_Click"/>
+            </Grid>
+        </Border>
+
+        <!-- Contenu de l'onglet actif -->
+        <ContentControl Grid.Row="2" Content="{Binding Active.View}"/>
+
+        <!-- Barre d'état moderne -->
+        <Border Grid.Row="3" Background="{StaticResource SurfaceBrush}"
+                BorderBrush="{StaticResource EdgeBrush}" BorderThickness="0,1,0,0">
+            <StatusBar Background="Transparent" Foreground="{StaticResource MutedBrush}"
+                       FontSize="11" Padding="10,4">
+                <StatusBarItem>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Ellipse Width="6" Height="6" Fill="{StaticResource OkBrush}"
+                                 VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock x:Name="StatusText" Text="Prêt"
+                                   Foreground="{StaticResource MutedBrush}" FontSize="11">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="Prêt"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Active.IsLoading}" Value="True">
+                                            <Setter Property="Text" Value="Chargement…"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </StatusBarItem>
+                <Separator Background="{StaticResource EdgeBrush}" Margin="4,0"/>
+                <StatusBarItem>
+                    <TextBlock Text="{Binding BlockedCount, Source={x:Static shell:BrowserStats.Instance}, StringFormat=Pubs bloquées : {0}}"
+                               Foreground="{StaticResource MutedBrush}" FontSize="11"/>
+                </StatusBarItem>
+                <StatusBarItem HorizontalAlignment="Right">
+                    <TextBlock Text="Madagascar Browser" Foreground="{StaticResource MutedBrush}"
+                               FontSize="11" Opacity="0.6"/>
+                </StatusBarItem>
+            </StatusBar>
+        </Border>
     </Grid>
 </Window>

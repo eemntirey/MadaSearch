@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <title>Page inaccessible — Madagascar Browser</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <main class="container">
+        <header class="header">
+            <h1>Page <span>inaccessible</span></h1>
+        </header>
+        <section class="error-box">
+            <p id="message">Cette page n'a pas pu être chargée.</p>
+            <p id="failedUrl" class="failed-url"></p>
+            <p>Vérifiez votre connexion Internet ou l'adresse saisie, puis réessayez.</p>
+            <a class="home-link" href="index.html">← Retour à l'accueil</a>
+        </section>
+    </main>
+    <script>
+        (function () {
+            var u = new URLSearchParams(window.location.search).get("u");
+            if (u) {
+                document.getElementById("failedUrl").textContent = u;
+            } else {
+                document.getElementById("failedUrl").style.display = "none";
+            }
+        })();
+    </script>
+    <style>
+        .error-box {
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 24px;
+            line-height: 1.6;
+        }
+        .failed-url {
+            font-family: Consolas, monospace;
+            color: #FC3D32;
+            word-break: break-all;
+            margin: 8px 0;
+        }
+        .home-link {
+            display: inline-block;
+            margin-top: 16px;
+            color: #FFFFFF;
+            background: #FC3D32;
+            padding: 10px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+        }
+    </style>
+</body>
+</html>

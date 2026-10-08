@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <title>Page d'accueil — Madagascar Browser</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <main class="container">
+        <header class="header">
+            <h1>Madagascar <span>Browser</span></h1>
+            <div class="clock">
+                <div id="time" class="time">--:--:--</div>
+                <div id="date" class="date">—</div>
+            </div>
+        </header>
+
+        <form id="searchForm" class="search" action="https://www.google.mg/search" method="get" autocomplete="off">
+            <input id="q" name="q" type="text" placeholder="Rechercher sur le web…" autofocus />
+            <button type="submit">Rechercher</button>
+        </form>
+
+        <section class="links">
+            <a href="https://www.google.mg" class="card"><span class="flag red"></span>Google</a>
+            <a href="https://www.facebook.com" class="card">Facebook</a>
+            <a href="https://www.youtube.com" class="card">YouTube</a>
+            <a href="https://mail.google.com" class="card">Gmail</a>
+            <a href="https://mg.wikipedia.org" class="card">Wikipédia mg</a>
+            <a href="https://web.whatsapp.com" class="card">WhatsApp Web</a>
+            <a href="https://www.journalmadagascar.com" class="card">Journal Madagascar</a>
+            <a href="https://www.madagascar-tribune.com" class="card">Madagascar Tribune</a>
+            <a href="https://www.lexpress.mg" class="card">L'Express mg</a>
+            <a href="https://www.midi-madagascar.com.mg" class="card">Midi Madagascar</a>
+            <a href="https://www.tvm.mg" class="card">TVM</a>
+            <a href="https://la1ere.francetvinfo.fr" class="card">La 1ère</a>
+        </section>
+
+        <footer class="footer">Navigation 100% locale · Antananarivo (Indian/Antananarivo)</footer>
+    </main>
+    <script src="app.js"></script>
+</body>
+</html>
