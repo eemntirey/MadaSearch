@@ -24,6 +24,14 @@ namespace MadagascarBrowser.Shell
         private bool _coreReady;
         private bool _suppressSuggest;
         private bool _certificateError;
+        private readonly TaskCompletionSource<CoreWebView2> _coreReadySource =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>
+        /// Termine quand le WebView2 est initialisé : permet de raccrocher une nouvelle
+        /// fenêtre demandée par une page à l'onglet vide correspondant.
+        /// </summary>
+        public Task<CoreWebView2> CoreReady => _coreReadySource.Task;
 
         public BrowserView()
         {
@@ -43,12 +51,14 @@ namespace MadagascarBrowser.Shell
                 await WebView.EnsureCoreWebView2Async(environment);
                 _coreReady = true;
                 InitCore();
+                _coreReadySource.TrySetResult(WebView.CoreWebView2);
             }
             catch (Exception exception)
             {
                 WebView.Visibility = Visibility.Collapsed;
                 WebViewError.Visibility = Visibility.Visible;
                 WebViewErrorText.Text = $"Impossible d'initialiser WebView2 : {exception.Message}";
+                _coreReadySource.TrySetException(exception);
                 return;
             }
         }
@@ -70,17 +80,30 @@ namespace MadagascarBrowser.Shell
             core.NavigationCompleted += OnNavigationCompleted;
             core.SourceChanged += OnSourceChanged;
             core.HistoryChanged += OnHistoryChanged;
+            core.NewWindowRequested += OnNewWindowRequested;
             HookAcceleratorKeys();
 
             var source = core.Source;
             if (string.IsNullOrWhiteSpace(source) || source == "about:blank")
             {
-                var initialUrl = DataContext is TabViewModel tab &&
-                    Uri.TryCreate(tab.Url, UriKind.Absolute, out var uri) &&
-                    (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
-                    ? uri.AbsoluteUri
-                    : StartPageUrl;
-                core.Navigate(initialUrl);
+                var tab = DataContext as TabViewModel;
+                var kind = NavigationTargetResolver.Resolve(tab?.Url, out var target, out _);
+                switch (kind)
+                {
+                    case NavigationTargetKind.LocalFile:
+                        // Page hors ligne : navigation directe sur le fichier, sans le filtre http/https.
+                        core.Navigate(target);
+                        break;
+                    case NavigationTargetKind.Blank:
+                        core.Navigate(NewWindowRequestResolver.BlankUrl);
+                        break;
+                    case NavigationTargetKind.Web:
+                        core.Navigate(target);
+                        break;
+                    default:
+                        core.Navigate(StartPageUrl);
+                        break;
+                }
             }
 
             UpdateNavButtons();
@@ -89,6 +112,55 @@ namespace MadagascarBrowser.Shell
         private void OnHistoryChanged(object? sender, object e)
         {
             UpdateNavButtons();
+        }
+
+        /// <summary>
+        /// Une page demande l'ouverture d'une fenêtre : la fenêtre WebView2 par défaut est
+        /// annulée et l'URI est ouverte dans un nouvel onglet de l'application.
+        /// </summary>
+        private void OnNewWindowRequested(object? sender, CoreWebView2NewWindowRequestedEventArgs e)
+        {
+            e.Handled = true;
+            var target = NewWindowRequestResolver.Resolve(e.Uri);
+
+            if (Window.GetWindow(this)?.DataContext is not TabManager tabManager)
+                return;
+
+            if (NewWindowRequestResolver.IsBlank(e.Uri))
+            {
+                // window.open sans URL : on ouvre un onglet vide et on laisse la page
+                // appelante piloter le contenu via l'API WebView2.
+                _ = OpenBlankWindowAsync(e, tabManager);
+                return;
+            }
+
+            tabManager.NewTab(target);
+        }
+
+        private async Task OpenBlankWindowAsync(CoreWebView2NewWindowRequestedEventArgs e, TabManager tabManager)
+        {
+            var deferral = e.GetDeferral();
+            try
+            {
+                var tab = tabManager.NewTab(NewWindowRequestResolver.BlankUrl);
+                if (tab.View is BrowserView view)
+                {
+                    // Timeout : l'onglet vide reste utilisable même si WebView2 ne démarre pas.
+                    var ready = await Task.WhenAny(view.CoreReady, Task.Delay(TimeSpan.FromSeconds(5)));
+                    if (ready == view.CoreReady)
+                    {
+                        e.NewWindow = await view.CoreReady;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // Onglet vide sans rattachement API : la page appelante perd la main.
+            }
+            finally
+            {
+                deferral.Complete();
+            }
         }
 
         private void UpdateNavButtons()
