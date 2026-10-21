@@ -4,7 +4,6 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
-             xmlns:core="clr-namespace:MadagascarBrowser.Core.Navigation;assembly=MadagascarBrowser.Core"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid>
@@ -64,29 +63,28 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <!-- Slot d'état : globe / cadenas / avertissement -->
-                            <TextBlock Grid.Column="0" FontFamily="Segoe MDL2 Assets"
-                                       FontSize="13" VerticalAlignment="Center" Margin="12,0,6,0">
+                            <!-- Slot d'état : globe / cadenas / avertissement.
+                                 Le Core fournit le glyphe, le libellé et la clé du jeton
+                                 de couleur (SecurityIndicatorResolver) : l'interface ne
+                                 fait qu'appliquer la couleur. -->
+                            <TextBlock x:Name="SecurityIndicatorText" Grid.Column="0"
+                                       FontFamily="Segoe MDL2 Assets"
+                                       FontSize="13" VerticalAlignment="Center" Margin="12,0,6,0"
+                                       Text="{Binding SecurityGlyph}"
+                                       ToolTip="{Binding SecurityLabel}"
+                                       AutomationProperties.Name="{Binding SecurityLabel}">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
-                                        <Setter Property="Text" Value="&#xE774;"/>
                                         <Setter Property="Foreground" Value="{DynamicResource FaintBrush}"/>
-                                        <Setter Property="ToolTip" Value="Aucune connexion réseau"/>
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding SecurityState}" Value="{x:Static core:ConnectionSecurity.Secure}">
-                                                <Setter Property="Text" Value="&#xE72E;"/>
+                                            <DataTrigger Binding="{Binding SecurityBrushKey}" Value="SecureBrush">
                                                 <Setter Property="Foreground" Value="{DynamicResource SecureBrush}"/>
-                                                <Setter Property="ToolTip" Value="Connexion chiffrée (HTTPS)"/>
                                             </DataTrigger>
-                                            <DataTrigger Binding="{Binding SecurityState}" Value="{x:Static core:ConnectionSecurity.Insecure}">
-                                                <Setter Property="Text" Value="&#xE7BA;"/>
+                                            <DataTrigger Binding="{Binding SecurityBrushKey}" Value="WarnBrush">
                                                 <Setter Property="Foreground" Value="{DynamicResource WarnBrush}"/>
-                                                <Setter Property="ToolTip" Value="Connexion non chiffrée (HTTP)"/>
                                             </DataTrigger>
-                                            <DataTrigger Binding="{Binding SecurityState}" Value="{x:Static core:ConnectionSecurity.CertError}">
-                                                <Setter Property="Text" Value="&#xEA39;"/>
+                                            <DataTrigger Binding="{Binding SecurityBrushKey}" Value="DangerBrush">
                                                 <Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/>
-                                                <Setter Property="ToolTip" Value="Erreur de certificat"/>
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>

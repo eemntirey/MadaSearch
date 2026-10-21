@@ -20,6 +20,7 @@ namespace MadagascarBrowser.Shell
         private bool _isLoading;
         private bool _isFullScreen;
         private ConnectionSecurity _securityState = ConnectionSecurity.None;
+        private SecurityIndicator _securityIndicator = SecurityIndicator.None;
 
         public string Title { get => _title; set { _title = value; OnPropertyChanged(); } }
         public string Url { get => _url; set { _url = value; OnPropertyChanged(); } }
@@ -37,8 +38,27 @@ namespace MadagascarBrowser.Shell
         public ConnectionSecurity SecurityState
         {
             get => _securityState;
-            set { _securityState = value; OnPropertyChanged(); }
+            set
+            {
+                if (_securityState == value)
+                    return;
+                _securityState = value;
+                _securityIndicator = SecurityIndicatorResolver.Resolve(value);
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(SecurityGlyph));
+                OnPropertyChanged(nameof(SecurityLabel));
+                OnPropertyChanged(nameof(SecurityBrushKey));
+            }
         }
+
+        /// <summary>Glyphe du cadenas affiché pour l'état de sécurité courant.</summary>
+        public string SecurityGlyph => _securityIndicator.Glyph;
+
+        /// <summary>Libellé accessible de l'état de sécurité courant.</summary>
+        public string SecurityLabel => _securityIndicator.Label;
+
+        /// <summary>Clé du jeton de couleur à appliquer au cadenas.</summary>
+        public string SecurityBrushKey => _securityIndicator.BrushKey;
 
         public TabKind Kind { get; set; } = TabKind.Page;
         public object View { get; set; }
