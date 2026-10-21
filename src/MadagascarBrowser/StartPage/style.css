@@ -4,11 +4,15 @@
     box-sizing: border-box;
 }
 
+/* Thème sombre — mélange des couleurs du drapeau malgache :
+   blanc #FFFFFF, rouge #FC3D32, vert #007E3A */
 body {
-    background: #0A0D38;
+    background: #0E0C0A;
     color: #FFFFFF;
     font-family: "Segoe UI", system-ui, sans-serif;
     min-height: 100vh;
+    border-top: 4px solid transparent;
+    border-image: linear-gradient(90deg, #FFFFFF 0%, #FC3D32 50%, #007E3A 100%) 1;
 }
 
 .container {
@@ -32,6 +36,16 @@ body {
 
 .header h1 span {
     color: #FC3D32;
+}
+
+/* Soulignement tricolore du drapeau malgache sous le titre */
+.header h1::after {
+    content: "";
+    display: block;
+    width: 120px;
+    height: 3px;
+    margin-top: 6px;
+    background: linear-gradient(90deg, #FFFFFF 0%, #FC3D32 50%, #007E3A 100%);
 }
 
 .clock {
@@ -81,6 +95,11 @@ body {
 
 .search button:hover {
     background: #E0332A;
+}
+
+/* Version verte du drapeau malgache au survol : mélange blanc/rouge/vert */
+.search button:active {
+    background: #00A35A;
 }
 
 .links {

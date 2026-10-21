@@ -13,7 +13,7 @@
 ## Global Constraints
 - Windows, .NET 8, WebView2 >=153
 - Pas de cloud, français, 100% local au démarrage
-- Couleur imposée : `#0A0D38` (fond principal, thème appliqué dans MainWindow/BrowserView)
+- Couleur imposée : fond sombre `#0E0C0A` issu du mélange des couleurs du drapeau malgache (blanc `#FFFFFF`, rouge `#FC3D32`, vert `#007E3A`), accents tricolores, thème appliqué dans MainWindow/BrowserView
 - Code Core = testable sans WPF ; tests xUnit sur Core uniquement
 - Commits par task (voir Global Constraints du plan mère)
 
