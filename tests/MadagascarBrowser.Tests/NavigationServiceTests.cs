@@ -48,4 +48,44 @@ public class NavigationServiceTests
         Assert.StartsWith("https://duckduckgo.com/?q=", result);
         Assert.DoesNotContain("https://python", result);
     }
+
+    [Fact]
+    public void ResolveNavigation_GivenFileUrl_IsNotModified()
+    {
+        var result = _nav.ResolveNavigation("file:///C:/Temp/page.mhtml");
+
+        Assert.Equal("file:///C:/Temp/page.mhtml", result);
+    }
+
+    [Fact]
+    public void ResolveNavigation_GivenFileUrlWithSpaces_KeepsFileScheme()
+    {
+        var result = _nav.ResolveNavigation("file:///C:/mon dossier/page.mhtml");
+
+        Assert.StartsWith("file:///", result);
+        Assert.DoesNotContain("https://file", result);
+    }
+
+    [Fact]
+    public void ResolveNavigation_GivenRootedWindowsPath_BecomesFileUrl()
+    {
+        var result = _nav.ResolveNavigation(@"C:\Temp\page.mhtml");
+
+        Assert.StartsWith("file:///", result);
+        Assert.DoesNotContain("https://C", result);
+    }
+
+    [Fact]
+    public void ResolveNavigation_GivenDriveLetterWithText_IsTreatedAsSearch()
+    {
+        var result = _nav.ResolveNavigation("c: documents", "https://duckduckgo.com/?q=");
+
+        Assert.StartsWith("https://duckduckgo.com/?q=", result);
+    }
+
+    [Fact]
+    public void LooksLikeUrl_GivenFileUrl_IsAUrl()
+    {
+        Assert.True(_nav.LooksLikeUrl("file:///C:/Temp/page.mhtml"));
+    }
 }

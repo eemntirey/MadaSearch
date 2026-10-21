@@ -24,6 +24,11 @@ namespace MadagascarBrowser.Core.Navigation
                 return input;
             }
 
+            if (LooksLikeRootedPath(input))
+            {
+                return new Uri(System.IO.Path.GetFullPath(input)).AbsoluteUri;
+            }
+
             if (LooksLikeUrl(input))
             {
                 return "https://" + input;
@@ -69,9 +74,19 @@ namespace MadagascarBrowser.Core.Navigation
             return false;
         }
 
+        private static bool LooksLikeRootedPath(string s)
+        {
+            // Un chemin absolu Windows (« C:\... » ou « C:/... ») est une page locale, jamais une
+            // recherche. Un simple lecteur (« c: bonjour ») reste une recherche.
+            return s.IndexOfAny(new[] { '\\', '/' }) >= 0
+                && System.IO.Path.IsPathRooted(s);
+        }
+
         private static bool IsAbsoluteUrl(string s)
         {
-            return s.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || s.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+            return s.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                || s.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+                || s.StartsWith("file://", StringComparison.OrdinalIgnoreCase);
         }
     }
 }
