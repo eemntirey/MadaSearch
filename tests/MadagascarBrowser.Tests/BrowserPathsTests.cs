@@ -1,5 +1,3 @@
-using System;
-using System.IO;
 using MadagascarBrowser.Core.Paths;
 
 namespace MadagascarBrowser.Tests;
@@ -7,95 +5,79 @@ namespace MadagascarBrowser.Tests;
 public class BrowserPathsTests
 {
     [Fact]
-    public void Default_RepertoireSousLocalAppData()
+    public void ForRoot_GroupsAllDataUnderRoot()
     {
-        var expected = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "MadagascarBrowser");
-
-        Assert.Equal(expected, BrowserPaths.Default.Root, ignoreCase: true);
-    }
-
-    [Fact]
-    public void WebViewProfile_DansLeRepertoireApplicatif()
-    {
-        var paths = BrowserPaths.Default;
-
-        Assert.Equal(
-            Path.Combine(paths.Root, "WebView2"),
-            paths.WebViewProfilePath,
-            ignoreCase: true);
-    }
-
-    [Fact]
-    public void DonneesEcrites_DansLeRepertoireApplicatif()
-    {
-        var paths = BrowserPaths.Default;
-
-        Assert.Equal(Path.Combine(paths.Root, "browser.db"), paths.DatabasePath, ignoreCase: true);
-        Assert.Equal(Path.Combine(paths.Root, "offline"), paths.OfflineDirectory, ignoreCase: true);
-        Assert.Equal(Path.Combine(paths.Root, "logs"), paths.LogsDirectory, ignoreCase: true);
-        Assert.Equal(Path.Combine(paths.Root, "logs", "app.log"), paths.LogFilePath, ignoreCase: true);
-    }
-
-    [Fact]
-    public void ForRoot_AccepteUneRacinePersonnalisee()
-    {
-        var root = Path.Combine(Path.GetTempPath(), "mb-test-" + Guid.NewGuid().ToString("N"));
+        var root = Path.Combine(Path.GetTempPath(), "madagascar-browser-paths");
 
         var paths = BrowserPaths.ForRoot(root);
 
-        Assert.Equal(Path.GetFullPath(root), paths.Root, ignoreCase: true);
-        Assert.StartsWith(Path.GetFullPath(root), paths.WebViewProfilePath, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(Path.GetFullPath(root), paths.Root);
+        Assert.Equal(Path.Combine(paths.Root, "browser.db"), paths.DatabasePath);
+        Assert.Equal(Path.Combine(paths.Root, "WebView2"), paths.WebViewProfilePath);
+        Assert.Equal(Path.Combine(paths.Root, "WebView2-Private"), paths.PrivateWebViewProfilePath);
+        Assert.Equal(Path.Combine(paths.Root, "offline"), paths.OfflineDirectory);
+        Assert.Equal(Path.Combine(paths.Root, "logs", "app.log"), paths.LogFilePath);
     }
 
     [Fact]
-    public void ForRoot_RefuseUneRacineVide()
+    public void ForRoot_EmptyRoot_Throws()
     {
         Assert.Throws<ArgumentException>(() => BrowserPaths.ForRoot("  "));
     }
 
     [Fact]
-    public void FindDefaultProfileLeftovers_DetecteUnProfilACoteDeLExecutable()
+    public void ComposeRoot_UsesApplicationFolderName()
     {
-        var exeDirectory = Path.Combine(Path.GetTempPath(), "mb-leftover-" + Guid.NewGuid().ToString("N"));
-        var localAppData = Path.Combine(Path.GetTempPath(), "mb-localappdata-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(exeDirectory);
-        Directory.CreateDirectory(localAppData);
-        var leftover = Path.Combine(exeDirectory, "MadagascarBrowser.WebView2");
-        Directory.CreateDirectory(leftover);
+        var root = BrowserPaths.ComposeRoot("/base");
 
-        try
-        {
-            var leftovers = BrowserPaths.FindDefaultProfileLeftovers(exeDirectory, localAppData, "MadagascarBrowser");
-
-            Assert.Contains(leftover, leftovers);
-        }
-        finally
-        {
-            Directory.Delete(exeDirectory, recursive: true);
-            Directory.Delete(localAppData, recursive: true);
-        }
+        Assert.Equal(Path.Combine("/base", BrowserPaths.ApplicationFolderName), root);
     }
 
     [Fact]
-    public void FindDefaultProfileLeftovers_NeSignaleRienSiLeDossierEstPropre()
+    public void FindDefaultProfileLeftovers_NoLeftovers_ReturnsEmpty()
     {
-        var exeDirectory = Path.Combine(Path.GetTempPath(), "mb-clean-" + Guid.NewGuid().ToString("N"));
-        var localAppData = Path.Combine(Path.GetTempPath(), "mb-clean-local-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(exeDirectory);
+        var executableDirectory = Path.Combine(Path.GetTempPath(), "madagascar-no-leftover-" + Guid.NewGuid().ToString("N"));
+        var localAppData = Path.Combine(Path.GetTempPath(), "madagascar-no-leftover-data-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(executableDirectory);
         Directory.CreateDirectory(localAppData);
 
-        try
-        {
-            var leftovers = BrowserPaths.FindDefaultProfileLeftovers(exeDirectory, localAppData, "MadagascarBrowser");
+        var leftovers = BrowserPaths.FindDefaultProfileLeftovers(executableDirectory, localAppData, "MadagascarBrowser");
 
-            Assert.Empty(leftovers);
-        }
-        finally
-        {
-            Directory.Delete(exeDirectory, recursive: true);
-            Directory.Delete(localAppData, recursive: true);
-        }
+        Assert.Empty(leftovers);
+    }
+
+    [Fact]
+    public void FindDefaultProfileLeftovers_DefaultProfileBesideExecutable_IsReported()
+    {
+        var executableDirectory = Path.Combine(Path.GetTempPath(), "madagascar-leftover-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(executableDirectory, "MadagascarBrowser.WebView2"));
+
+        var leftovers = BrowserPaths.FindDefaultProfileLeftovers(
+            executableDirectory,
+            Path.Combine(Path.GetTempPath(), "madagascar-unused"),
+            "MadagascarBrowser");
+
+        Assert.Contains(Path.Combine(executableDirectory, "MadagascarBrowser.WebView2"), leftovers);
+    }
+
+    [Fact]
+    public void FindDefaultProfileLeftovers_EbWebViewBesideExecutable_IsReported()
+    {
+        var executableDirectory = Path.Combine(Path.GetTempPath(), "madagascar-leftover-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(executableDirectory, "EBWebView"));
+
+        var leftovers = BrowserPaths.FindDefaultProfileLeftovers(
+            executableDirectory,
+            Path.Combine(Path.GetTempPath(), "madagascar-unused"),
+            "MadagascarBrowser");
+
+        Assert.Contains(Path.Combine(executableDirectory, "EBWebView"), leftovers);
+    }
+
+    [Fact]
+    public void FindDefaultProfileLeftovers_EmptyInputs_ReturnsEmpty()
+    {
+        Assert.Empty(BrowserPaths.FindDefaultProfileLeftovers("", "", ""));
+        Assert.Empty(BrowserPaths.FindDefaultProfileLeftovers(null!, null!, null!));
     }
 }
