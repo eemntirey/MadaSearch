@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+             xmlns:core="clr-namespace:MadagascarBrowser.Core.Navigation;assembly=MadagascarBrowser.Core"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid>
@@ -42,9 +43,34 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="&#xE72E;" FontFamily="Segoe MDL2 Assets"
-                                   Foreground="{StaticResource MutedBrush}" FontSize="12"
-                                   VerticalAlignment="Center" Margin="12,0,4,0"/>
+                        <!-- Cadenas dynamique : état de sécurité de la page courante -->
+                        <TextBlock Grid.Column="0" FontFamily="Segoe MDL2 Assets"
+                                   FontSize="12" VerticalAlignment="Center" Margin="12,0,4,0">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="&#xE774;"/>
+                                    <Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
+                                    <Setter Property="ToolTip" Value="Aucune connexion réseau"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SecurityState}" Value="{x:Static core:ConnectionSecurity.Secure}">
+                                            <Setter Property="Text" Value="&#xE72E;"/>
+                                            <Setter Property="Foreground" Value="{StaticResource OkBrush}"/>
+                                            <Setter Property="ToolTip" Value="Connexion chiffrée (HTTPS)"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding SecurityState}" Value="{x:Static core:ConnectionSecurity.Insecure}">
+                                            <Setter Property="Text" Value="&#xE785;"/>
+                                            <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+                                            <Setter Property="ToolTip" Value="Connexion non chiffrée (HTTP)"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding SecurityState}" Value="{x:Static core:ConnectionSecurity.CertError}">
+                                            <Setter Property="Text" Value="&#xE7BA;"/>
+                                            <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+                                            <Setter Property="ToolTip" Value="Erreur de certificat"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                         <TextBox x:Name="AddressBar" Grid.Column="1"
                                  KeyDown="AddressBar_KeyDown" TextChanged="AddressBar_TextChanged"
                                  Background="Transparent" Foreground="{StaticResource TextBrush}"

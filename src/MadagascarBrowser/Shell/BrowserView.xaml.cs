@@ -8,6 +8,7 @@ using System.Text.Json;
 using Microsoft.Win32;
 using MadagascarBrowser.Core.Blocking;
 using MadagascarBrowser.Core.Data;
+using MadagascarBrowser.Core.Navigation;
 using Microsoft.Web.WebView2.Core;
 
 namespace MadagascarBrowser.Shell
@@ -16,11 +17,13 @@ namespace MadagascarBrowser.Shell
     {
         private const string StartPageUrl = "https://startpage.local/index.html";
         private const string ErrorPageUrl = "https://startpage.local/error.html";
+        private const string LocalHost = "startpage.local";
         private static readonly byte[] PlaceholderGif =
             Convert.FromBase64String("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7");
 
         private bool _coreReady;
         private bool _suppressSuggest;
+        private bool _certificateError;
 
         public BrowserView()
         {
@@ -391,10 +394,15 @@ namespace MadagascarBrowser.Shell
 
         private void OnNavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
         {
+            // La page d'erreur interne ne doit pas effacer une erreur de certificat déjà signalée.
+            if (!e.Uri.StartsWith(ErrorPageUrl, StringComparison.OrdinalIgnoreCase))
+                _certificateError = false;
+
             if (DataContext is TabViewModel tab)
             {
                 tab.IsLoading = true;
                 tab.Url = e.Uri;
+                tab.SecurityState = ConnectionSecurityResolver.Resolve(e.Uri, _certificateError, LocalHost);
             }
         }
 
@@ -468,9 +476,12 @@ namespace MadagascarBrowser.Shell
         private void OnNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
         {
             var core = WebView.CoreWebView2;
+            if (!e.IsSuccess && ConnectionSecurityResolver.IsCertificateError(e.WebErrorStatus.ToString()))
+                _certificateError = true;
             if (DataContext is TabViewModel tab)
             {
                 tab.IsLoading = false;
+                tab.SecurityState = ConnectionSecurityResolver.Resolve(core.Source, _certificateError, LocalHost);
                 if (e.IsSuccess)
                 {
                     tab.Title = string.IsNullOrWhiteSpace(core.DocumentTitle) ? "Nouvel onglet" : core.DocumentTitle;
