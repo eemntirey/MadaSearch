@@ -12,7 +12,7 @@
         <Style TargetType="{x:Type Window}">
             <Setter Property="chrome:WindowChrome.WindowChrome">
                 <Setter.Value>
-                    <chrome:WindowChrome CaptionHeight="40" CornerRadius="10" GlassFrameThickness="0"
+                    <chrome:WindowChrome CaptionHeight="34" CornerRadius="10" GlassFrameThickness="0"
                                          ResizeBorderThickness="6" UseAeroCaptionButtons="False"/>
                 </Setter.Value>
             </Setter>
@@ -20,7 +20,7 @@
                 <Trigger Property="WindowState" Value="Maximized">
                     <Setter Property="chrome:WindowChrome.WindowChrome">
                         <Setter.Value>
-                            <chrome:WindowChrome CaptionHeight="40" CornerRadius="0" GlassFrameThickness="0"
+                            <chrome:WindowChrome CaptionHeight="34" CornerRadius="0" GlassFrameThickness="0"
                                                  ResizeBorderThickness="6" UseAeroCaptionButtons="False"/>
                         </Setter.Value>
                     </Setter>
@@ -51,10 +51,10 @@
         </Grid.RowDefinitions>
 
         <!-- Bandeau tricolore : mélange des couleurs du drapeau malgache -->
-        <Border Grid.Row="0" Height="4" Background="{DynamicResource FlagMixBrush}"/>
+        <Border Grid.Row="0" Height="3" Background="{DynamicResource FlagMixBrush}"/>
 
         <!-- Barre de titre personnalisée (WindowChrome) -->
-        <Grid Grid.Row="1" Height="36" Background="{DynamicResource BgBrush}"
+        <Grid Grid.Row="1" Height="34" Background="{DynamicResource BgBrush}"
               MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
@@ -90,10 +90,9 @@
             </StackPanel>
         </Grid>
 
-        <!-- Barre d'onglets : pilules + bouton nouveau onglet -->
-        <Border Grid.Row="2" Background="{DynamicResource SurfaceBrush}"
-                BorderBrush="{DynamicResource EdgeBrush}" BorderThickness="0,0,0,1">
-            <Grid Margin="8,6,8,0">
+        <!-- Barre d'onglets : onglets flottants sur le fond de la fenêtre -->
+        <Border Grid.Row="2" Background="{DynamicResource BgBrush}" BorderThickness="0">
+            <Grid Margin="8,2,8,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
@@ -113,20 +112,38 @@
                     </ListBox.ItemsPanel>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <Grid>
+                            <Grid Height="24">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="{Binding Title}"
-                                           Foreground="{DynamicResource TextBrush}"
-                                           FontSize="12" VerticalAlignment="Center"
-                                           MaxWidth="180" TextTrimming="CharacterEllipsis"/>
-                                <Button Grid.Column="1" Style="{StaticResource IconButtonSmall}"
-                                        Content="&#xE711;" Margin="8,0,0,0"
-                                        VerticalAlignment="Center"
-                                        Click="CloseTab_Click"
-                                        ToolTip="Fermer l'onglet"/>
+
+                                <!-- Pastille d'onglet : le favicon n'est pas encore capturé par WebView2 -->
+                                <Border Grid.Column="0" Width="8" Height="8" CornerRadius="4"
+                                        Margin="0,0,8,0" VerticalAlignment="Center"
+                                        Background="{DynamicResource AccentSoftBrush}"/>
+
+                                <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="12.5"
+                                           VerticalAlignment="Center" MaxWidth="200"
+                                           TextTrimming="CharacterEllipsis">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Value="True"
+                                                             Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}">
+                                                    <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+
+                                <Button Grid.Column="2" Style="{StaticResource IconButtonSmall}"
+                                        Content="&#xE711;" Margin="6,0,0,0" VerticalAlignment="Center"
+                                        Click="CloseTab_Click" ToolTip="Fermer l'onglet"
+                                        AutomationProperties.Name="Fermer l'onglet"/>
                             </Grid>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
@@ -141,40 +158,40 @@
         <!-- Contenu de l'onglet actif -->
         <ContentControl Grid.Row="3" Content="{Binding Active.View}"/>
 
-        <!-- Barre d'état moderne -->
+        <!-- Barre d'état : état de navigation + puces d'information -->
         <Border Grid.Row="4" Background="{DynamicResource SurfaceBrush}"
                 BorderBrush="{DynamicResource EdgeBrush}" BorderThickness="0,1,0,0">
-            <StatusBar Background="Transparent" Foreground="{DynamicResource MutedBrush}"
-                       FontSize="11" Padding="10,4">
-                <StatusBarItem>
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Ellipse Width="6" Height="6" Fill="{DynamicResource OkBrush}"
-                                 VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <TextBlock x:Name="StatusText" Text="Prêt"
-                                   Foreground="{DynamicResource MutedBrush}" FontSize="11">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Text" Value="Prêt"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Active.IsLoading}" Value="True">
-                                            <Setter Property="Text" Value="Chargement…"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                    </StackPanel>
-                </StatusBarItem>
-                <Separator Background="{DynamicResource EdgeBrush}" Margin="4,0"/>
-                <StatusBarItem>
-                    <TextBlock Text="{Binding BlockedCount, Source={x:Static shell:BrowserStats.Instance}, StringFormat=Pubs bloquées : {0}}"
-                               Foreground="{DynamicResource MutedBrush}" FontSize="11"/>
-                </StatusBarItem>
-                <StatusBarItem HorizontalAlignment="Right">
-                    <TextBlock Text="Madagascar Browser" Foreground="{DynamicResource MutedBrush}"
-                               FontSize="11" Opacity="0.6"/>
-                </StatusBarItem>
-            </StatusBar>
+            <Grid Height="26" Margin="12,0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Ellipse Width="6" Height="6" Fill="{DynamicResource SecureBrush}"
+                             VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <TextBlock x:Name="StatusText" FontSize="11" Foreground="{DynamicResource MutedBrush}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Text" Value="Prêt"/>
+                                <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Active.IsLoading}" Value="True">
+                                        <Setter Property="Text" Value="Chargement…"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Border Background="{DynamicResource SurfaceHighBrush}" CornerRadius="999"
+                            Padding="10,3" Margin="0,0,6,0">
+                        <TextBlock FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                                   Text="{Binding BlockedCount, Source={x:Static shell:BrowserStats.Instance}, StringFormat={}{0} pubs bloquées}"/>
+                    </Border>
+                    <Border Background="{DynamicResource SurfaceHighBrush}" CornerRadius="999" Padding="10,3">
+                        <TextBlock FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                                   Text="{Binding Tabs.Count, StringFormat={}{0} onglets}"/>
+                    </Border>
+                </StackPanel>
+            </Grid>
         </Border>
     </Grid>
 </Window>
