@@ -38,6 +38,15 @@ namespace MadagascarBrowser.Shell
         /// </summary>
         public Task<CoreWebView2> CoreReady => _coreReadySource.Task;
 
+        /// <summary>
+        /// Hôte d'onglets injecté (renseigné par <see cref="TabManager"/> à la création).
+        /// Repli sur le DataContext de la fenêtre racine si non renseigné.
+        /// </summary>
+        public ITabHost? TabHost { get; set; }
+
+        private ITabHost? ResolveTabHost() =>
+            TabHost ?? Window.GetWindow(this)?.DataContext as ITabHost;
+
         public BrowserView()
         {
             InitializeComponent();
@@ -204,7 +213,8 @@ namespace MadagascarBrowser.Shell
             e.Handled = true;
             var target = NewWindowRequestResolver.Resolve(e.Uri);
 
-            if (Window.GetWindow(this)?.DataContext is not TabManager tabManager)
+            var tabManager = ResolveTabHost();
+            if (tabManager == null)
             {
                 // Sans gestionnaire d'onglets, la demande est perdue : on le signale
                 // plutôt que de laisser la page appelante sans retour.
@@ -226,7 +236,7 @@ namespace MadagascarBrowser.Shell
             tabManager.NewTab(target);
         }
 
-        private async Task OpenBlankWindowAsync(CoreWebView2NewWindowRequestedEventArgs e, TabManager tabManager)
+        private async Task OpenBlankWindowAsync(CoreWebView2NewWindowRequestedEventArgs e, ITabHost tabManager)
         {
             var deferral = e.GetDeferral();
             try
@@ -324,16 +334,15 @@ namespace MadagascarBrowser.Shell
                 case AcceleratorCommand.NewTab:
                     Dispatcher.BeginInvoke(new Action(() =>
                     {
-                        if (Window.GetWindow(this)?.DataContext is TabManager tabManager)
-                            tabManager.NewTab();
+                        ResolveTabHost()?.NewTab();
                     }));
                     break;
                 case AcceleratorCommand.CloseTab:
                     Dispatcher.BeginInvoke(new Action(() =>
                     {
-                        if (Window.GetWindow(this)?.DataContext is TabManager tabManager &&
-                            tabManager.Active != null)
-                            tabManager.Close(tabManager.Active);
+                        var host = ResolveTabHost();
+                        if (host?.Active != null)
+                            host.Close(host.Active);
                     }));
                     break;
                 case AcceleratorCommand.FocusAddressBar:
@@ -376,17 +385,13 @@ namespace MadagascarBrowser.Shell
         private void MenuNewTab_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
-            if (Window.GetWindow(this)?.DataContext is TabManager tm)
-            {
-                tm.NewTab();
-            }
+            ResolveTabHost()?.NewTab();
         }
 
         private void MenuSettings_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
-            if (Window.GetWindow(this)?.DataContext is TabManager tm)
-                tm.OpenSettings();
+            ResolveTabHost()?.OpenSettings();
         }
 
         private async void MenuAddFavorite_Click(object sender, RoutedEventArgs e)
@@ -408,15 +413,13 @@ namespace MadagascarBrowser.Shell
         private void MenuHistory_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
-            if (Window.GetWindow(this)?.DataContext is TabManager tm)
-                tm.OpenLibrary(0);
+            ResolveTabHost()?.OpenLibrary(0);
         }
 
         private void MenuFavorites_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
-            if (Window.GetWindow(this)?.DataContext is TabManager tm)
-                tm.OpenLibrary(1);
+            ResolveTabHost()?.OpenLibrary(1);
         }
 
         private async void MenuSaveOffline_Click(object sender, RoutedEventArgs e)
@@ -456,15 +459,13 @@ namespace MadagascarBrowser.Shell
         private void MenuOfflinePages_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
-            if (Window.GetWindow(this)?.DataContext is TabManager tm)
-                tm.OpenLibrary(2);
+            ResolveTabHost()?.OpenLibrary(2);
         }
 
         private void MenuDownloads_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
-            if (Window.GetWindow(this)?.DataContext is TabManager tm)
-                tm.OpenDownloads();
+            ResolveTabHost()?.OpenDownloads();
         }
 
         private void MenuExportProfile_Click(object sender, RoutedEventArgs e)
@@ -986,7 +987,16 @@ namespace MadagascarBrowser.Shell
                 _fetchRequestPausedReceiver.DevToolsProtocolEventReceived -= OnFetchRequestPaused;
                 _fetchRequestPausedReceiver = null;
             }
-            try { WebView.Dispose(); } catch { }
+            try
+            {
+                WebView.Dispose();
+            }
+            catch (Exception exception)
+            {
+                // La vue peut déjà être détachée du HWND : l'échec de libération
+                // ne doit pas masquer une erreur réelle, d'où la trace.
+                Trace.TraceWarning($"Libération du WebView impossible : {exception}");
+            }
         }
     }
 }

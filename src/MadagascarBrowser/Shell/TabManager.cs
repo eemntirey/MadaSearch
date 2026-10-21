@@ -6,7 +6,7 @@ using MadagascarBrowser.Core.Navigation;
 
 namespace MadagascarBrowser.Shell
 {
-    public class TabManager : INotifyPropertyChanged
+    public class TabManager : ITabHost, INotifyPropertyChanged
     {
         public ObservableCollection<TabViewModel> Tabs { get; } = new();
         private TabViewModel _active;
@@ -44,7 +44,7 @@ namespace MadagascarBrowser.Shell
             }
 
             var t = new TabViewModel { Title = title, Url = target };
-            var view = new BrowserView { DataContext = t };
+            var view = new BrowserView { DataContext = t, TabHost = this };
             t.View = view;
             Tabs.Add(t);
             Active = t;
