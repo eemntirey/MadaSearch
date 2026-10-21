@@ -1,51 +1,67 @@
+/* Madagascar Browser — page d'accueil
+   Jetons alignés sur Themes/Tokens.xaml (WPF). */
+
+:root {
+    --bg: #0C0B0A;
+    --surface: #131211;
+    --surface-hi: #1B1917;
+    --hover: #24211E;
+    --line: #272421;
+    --line-strong: #383430;
+    --text: #F2EFEA;
+    --muted: #A8A099;
+    --faint: #6F6963;
+    --accent: #FF4438;
+    --accent-soft: #33201E;
+    --secure: #19B36B;
+
+    --r-pill: 14px;
+    --r-card: 10px;
+    --ease: cubic-bezier(.2, .8, .2, 1);
+}
+
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
-/* Thème sombre — mélange des couleurs du drapeau malgache :
-   blanc #FFFFFF, rouge #FC3D32, vert #007E3A */
 body {
-    background: #0E0C0A;
-    color: #FFFFFF;
-    font-family: "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
     min-height: 100vh;
-    border-top: 4px solid transparent;
-    border-image: linear-gradient(90deg, #FFFFFF 0%, #FC3D32 50%, #007E3A 100%) 1;
+    /* Halo d'accent très discret + motif ravinala (baobab) en filigrane */
+    background-image:
+        radial-gradient(1200px 600px at 82% -12%, rgba(255, 68, 56, .07), transparent 62%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='620' height='620' viewBox='0 0 600 600'%3E%3Cg fill='none' stroke='%23FFFFFF' stroke-opacity='.035' stroke-width='1.2' stroke-linecap='round'%3E%3Cpath d='M300 62c-42 70-122 90-122 182 0 60 52 100 122 100s122-40 122-100c0-92-80-112-122-182z'/%3E%3Cpath d='M300 344v196M258 418h84M248 468h104M262 518h76'/%3E%3Cpath d='M178 244c-30-8-52 6-60 32M422 244c30-8 52 6 60 32'/%3E%3C/g%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 82% -12%, right 8% center;
 }
 
 .container {
-    max-width: 900px;
+    max-width: 1040px;
     margin: 0 auto;
-    padding: 48px 24px;
+    padding: 64px 32px;
 }
 
+/* ---------- En-tête ---------- */
 .header {
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 32px;
+    align-items: flex-end;
+    gap: 24px;
+    margin-bottom: 40px;
 }
 
 .header h1 {
-    font-size: 32px;
+    font-size: 34px;
     font-weight: 600;
-    letter-spacing: 0.5px;
+    letter-spacing: -.02em;
 }
 
 .header h1 span {
-    color: #FC3D32;
-}
-
-/* Soulignement tricolore du drapeau malgache sous le titre */
-.header h1::after {
-    content: "";
-    display: block;
-    width: 120px;
-    height: 3px;
-    margin-top: 6px;
-    background: linear-gradient(90deg, #FFFFFF 0%, #FC3D32 50%, #007E3A 100%);
+    color: var(--accent);
 }
 
 .clock {
@@ -53,81 +69,151 @@ body {
 }
 
 .time {
-    font-size: 28px;
+    font-size: 52px;
+    font-weight: 300;
     font-variant-numeric: tabular-nums;
+    letter-spacing: -.02em;
+    line-height: 1;
 }
 
 .date {
-    font-size: 14px;
-    opacity: 0.7;
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 6px;
 }
 
+/* ---------- Recherche ---------- */
 .search {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 36px;
+    position: relative;
+    margin-bottom: 44px;
+    max-width: 720px;
 }
 
 .search input {
-    flex: 1;
-    padding: 12px 16px;
+    width: 100%;
+    height: 56px;
+    padding: 0 64px 0 22px;
     font-size: 16px;
-    color: #FFFFFF;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
+    font-family: inherit;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
     outline: none;
+    transition: border-color .18s var(--ease), box-shadow .18s var(--ease);
+}
+
+.search input::placeholder {
+    color: var(--faint);
 }
 
 .search input:focus {
-    border-color: #FC3D32;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(255, 68, 56, .14);
 }
 
 .search button {
-    padding: 12px 20px;
-    font-size: 16px;
-    color: #FFFFFF;
-    background: #FC3D32;
-    border: none;
-    border-radius: 8px;
+    position: absolute;
+    right: 6px;
+    top: 6px;
+    height: 44px;
+    width: 44px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #fff;
     cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: transform .18s var(--ease), background .18s var(--ease);
 }
 
 .search button:hover {
-    background: #E0332A;
+    transform: scale(1.05);
 }
 
-/* Version verte du drapeau malgache au survol : mélange blanc/rouge/vert */
 .search button:active {
-    background: #00A35A;
+    background: var(--secure);
 }
 
+.search button svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* ---------- Tuiles ---------- */
 .links {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(212px, 1fr));
+    gap: 14px;
 }
 
 .card {
-    display: block;
-    padding: 16px;
-    color: #FFFFFF;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    color: var(--text);
     text-decoration: none;
-    font-size: 15px;
-    background: rgba(255, 255, 255, 0.07);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    transition: background 0.15s, border-color 0.15s;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-card);
+    transition: transform .18s var(--ease), border-color .18s var(--ease), background .18s var(--ease);
 }
 
 .card:hover {
-    background: rgba(255, 255, 255, 0.14);
-    border-color: #FC3D32;
+    transform: translateY(-2px);
+    border-color: var(--accent);
+    background: var(--surface-hi);
 }
 
+.card svg {
+    width: 22px;
+    height: 22px;
+    flex: none;
+    opacity: .85;
+    transition: opacity .18s var(--ease), color .18s var(--ease);
+}
+
+.card:hover svg {
+    opacity: 1;
+    color: var(--accent);
+}
+
+.card span {
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ---------- Pied de page ---------- */
 .footer {
-    margin-top: 40px;
+    margin-top: 48px;
     font-size: 12px;
-    opacity: 0.5;
+    color: var(--faint);
     text-align: center;
+}
+
+.footer .flag {
+    display: inline-block;
+    width: 26px;
+    height: 4px;
+    border-radius: 2px;
+    margin-right: 8px;
+    vertical-align: middle;
+    background: linear-gradient(90deg, #FFFFFF 0%, #FC3D32 50%, #007E3A 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .card,
+    .search input,
+    .search button {
+        transition: none;
+    }
+
+    .card:hover,
+    .search button:hover {
+        transform: none;
+    }
 }

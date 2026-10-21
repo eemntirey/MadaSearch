@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Page d'accueil — Madagascar Browser</title>
     <link rel="stylesheet" href="style.css" />
 </head>
@@ -17,25 +18,114 @@
 
         <form id="searchForm" class="search" action="https://www.google.mg/search" method="get" autocomplete="off">
             <input id="q" name="q" type="text" placeholder="Rechercher sur le web…" autofocus />
-            <button type="submit">Rechercher</button>
+            <button type="submit" aria-label="Rechercher">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <circle cx="11" cy="11" r="7" />
+                    <line x1="16.5" y1="16.5" x2="21" y2="21" />
+                </svg>
+            </button>
         </form>
 
         <section class="links">
-            <a href="https://www.google.mg" class="card"><span class="flag red"></span>Google</a>
-            <a href="https://www.facebook.com" class="card">Facebook</a>
-            <a href="https://www.youtube.com" class="card">YouTube</a>
-            <a href="https://mail.google.com" class="card">Gmail</a>
-            <a href="https://mg.wikipedia.org" class="card">Wikipédia mg</a>
-            <a href="https://web.whatsapp.com" class="card">WhatsApp Web</a>
-            <a href="https://www.journalmadagascar.com" class="card">Journal Madagascar</a>
-            <a href="https://www.madagascar-tribune.com" class="card">Madagascar Tribune</a>
-            <a href="https://www.lexpress.mg" class="card">L'Express mg</a>
-            <a href="https://www.midi-madagascar.com.mg" class="card">Midi Madagascar</a>
-            <a href="https://www.tvm.mg" class="card">TVM</a>
-            <a href="https://la1ere.francetvinfo.fr" class="card">La 1ère</a>
+            <a href="https://www.google.mg" class="card">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9S14.5 18.4 12 21c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z" />
+                </svg>
+                <span>Google</span>
+            </a>
+
+            <a href="https://www.facebook.com" class="card">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 12a8 8 0 1 0-3.2 6.4V15H14l.6-3h2.9V9.7c0-1.5.9-2.5 2.4-2.5h1.4V4.5A17 17 0 0 0 19 4.2c-2.7 0-4.5 1.6-4.5 4.5V12H11v3h3.5v3.4A8 8 0 0 0 20 12z" />
+                </svg>
+                <span>Facebook</span>
+            </a>
+
+            <a href="https://www.youtube.com" class="card">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2.5" y="5" width="19" height="14" rx="4" />
+                    <path d="M10.5 9.2l5 2.8-5 2.8z" />
+                </svg>
+                <span>YouTube</span>
+            </a>
+
+            <a href="https://mail.google.com" class="card">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2.5" y="5" width="19" height="14" rx="2.5" />
+                    <path d="M3 7l9 6 9-6" />
+                </svg>
+                <span>Gmail</span>
+            </a>
+
+            <a href="https://mg.wikipedia.org" class="card">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v16H6.5A2.5 2.5 0 0 0 4 21.5z" />
+                    <path d="M4 5.5v16M8 7.5h7M8 11h7" />
+                </svg>
+                <span>Wikipédia mg</span>
+            </a>
+
+            <a href="https://web.whatsapp.com" class="card">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 11.5a8 8 0 0 1-11.9 7L4 20l1.5-4A8 8 0 1 1 20 11.5z" />
+                    <path d="M9.2 9.4c.3-.7.6-.7 1-.7h.6c.2 0 .5 0 .7.6l.7 1.6c.1.3 0 .5-.1.7l-.4.5c-.2.2-.3.4-.1.7a7 7 0 0 0 2.9 2.5c.3.1.5.1.7-.1l.5-.6c.2-.2.4-.2.6-.1l1.6.8c.3.1.4.3.4.5a2 2 0 0 1-1.3 1.3c-.6.2-1.5.2-3-.6a10 10 0 0 1-4-4.4c-.4-.9-.5-1.6-.3-2.2z" />
+                </svg>
+                <span>WhatsApp Web</span>
+            </a>
+
+            <a href="https://www.journalmadagascar.com" class="card">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 5.5h13v14H5.5A1.5 1.5 0 0 1 4 18z" />
+                    <path d="M17 9h3v9.5a1.5 1.5 0 0 1-3 0zM7 9h7M7 12.5h7M7 16h4" />
+                </svg>
+                <span>Journal Madagascar</span>
+            </a>
+
+            <a href="https://www.madagascar-tribune.com" class="card">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 5.5h13v14H5.5A1.5 1.5 0 0 1 4 18z" />
+                    <path d="M17 9h3v9.5a1.5 1.5 0 0 1-3 0zM7 9h7M7 12.5h7M7 16h4" />
+                </svg>
+                <span>Madagascar Tribune</span>
+            </a>
+
+            <a href="https://www.lexpress.mg" class="card">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 5.5h13v14H5.5A1.5 1.5 0 0 1 4 18z" />
+                    <path d="M17 9h3v9.5a1.5 1.5 0 0 1-3 0zM7 9h7M7 12.5h7M7 16h4" />
+                </svg>
+                <span>L'Express mg</span>
+            </a>
+
+            <a href="https://www.midi-madagascar.com.mg" class="card">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 5.5h13v14H5.5A1.5 1.5 0 0 1 4 18z" />
+                    <path d="M17 9h3v9.5a1.5 1.5 0 0 1-3 0zM7 9h7M7 12.5h7M7 16h4" />
+                </svg>
+                <span>Midi Madagascar</span>
+            </a>
+
+            <a href="https://www.tvm.mg" class="card">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2.5" y="6" width="19" height="12" rx="2" />
+                    <path d="M8 21h8M12 18v3" />
+                </svg>
+                <span>TVM</span>
+            </a>
+
+            <a href="https://la1ere.francetvinfo.fr" class="card">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2.5" y="5" width="19" height="14" rx="4" />
+                    <path d="M10.5 9.2l5 2.8-5 2.8z" />
+                </svg>
+                <span>La 1ère</span>
+            </a>
         </section>
 
-        <footer class="footer">Navigation 100% locale · Antananarivo (Indian/Antananarivo)</footer>
+        <footer class="footer">
+            <span class="flag"></span>Navigation 100% locale · Antananarivo (Indian/Antananarivo)
+        </footer>
     </main>
     <script src="app.js"></script>
 </body>
