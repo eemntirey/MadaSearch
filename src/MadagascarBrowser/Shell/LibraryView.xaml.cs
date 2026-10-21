@@ -74,7 +74,9 @@ namespace MadagascarBrowser.Shell
                         MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
-                _openUrl(path);
+
+                // Schéma file:// : la page hors ligne est ouverte directement sur le fichier.
+                _openUrl(new Uri(path).AbsoluteUri);
             }
             else if (selected is Visit visit)
             {

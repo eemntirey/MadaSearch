@@ -21,4 +21,31 @@ public class NavigationServiceTests
         Assert.StartsWith("https://duckduckgo.com/?q=", result);
         Assert.Contains("histoire%20Madagascar", result);
     }
+
+    [Fact]
+    public void LooksLikeUrl_GivenTextWithSpace_IsNotAUrl()
+    {
+        Assert.False(_nav.LooksLikeUrl("python 3.11"));
+    }
+
+    [Fact]
+    public void LooksLikeUrl_GivenDomainWithTld_IsAUrl()
+    {
+        Assert.True(_nav.LooksLikeUrl("exemple.mg"));
+    }
+
+    [Fact]
+    public void LooksLikeUrl_GivenAbsoluteUrl_IsAUrl()
+    {
+        Assert.True(_nav.LooksLikeUrl("https://a.b"));
+    }
+
+    [Fact]
+    public void ResolveNavigation_GivenTextWithSpace_IsTreatedAsSearch()
+    {
+        var result = _nav.ResolveNavigation("python 3.11", "https://duckduckgo.com/?q=");
+
+        Assert.StartsWith("https://duckduckgo.com/?q=", result);
+        Assert.DoesNotContain("https://python", result);
+    }
 }

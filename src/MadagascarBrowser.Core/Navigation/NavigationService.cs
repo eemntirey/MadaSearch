@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Text.Encodings.Web;
 
 namespace MadagascarBrowser.Core.Navigation
@@ -38,6 +39,12 @@ namespace MadagascarBrowser.Core.Navigation
                 return false;
 
             var s = input.Trim();
+
+            // Une chaîne contenant un espace est une recherche, jamais une URL :
+            // « python 3.11 » ne doit pas être interprété comme le domaine « python 3.11 ».
+            if (s.Any(char.IsWhiteSpace))
+                return false;
+
             if (IsAbsoluteUrl(s))
                 return true;
 

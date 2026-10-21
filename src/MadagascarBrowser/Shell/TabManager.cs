@@ -2,6 +2,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using MadagascarBrowser.Core.Navigation;
 
 namespace MadagascarBrowser.Shell
 {
@@ -27,10 +28,22 @@ namespace MadagascarBrowser.Shell
         public TabViewModel NewTab(string url = "https://startpage.local/index.html")
         {
             BrowserServices.EnsureInitialized();
-            var title = Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.Host != "startpage.local"
-                ? uri.Host
-                : "Nouvel onglet";
-            var t = new TabViewModel { Title = title, Url = url };
+            var kind = NavigationTargetResolver.Resolve(url, out var target, out var title);
+            switch (kind)
+            {
+                case NavigationTargetKind.None:
+                    target = url;
+                    title = "Nouvel onglet";
+                    break;
+                case NavigationTargetKind.Blank:
+                    title = "Nouvel onglet";
+                    break;
+                case NavigationTargetKind.Web when target.Contains("startpage.local", StringComparison.OrdinalIgnoreCase):
+                    title = "Nouvel onglet";
+                    break;
+            }
+
+            var t = new TabViewModel { Title = title, Url = target };
             var view = new BrowserView { DataContext = t };
             t.View = view;
             Tabs.Add(t);
