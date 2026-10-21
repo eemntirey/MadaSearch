@@ -65,6 +65,13 @@ public class ConnectionSecurityTests
         Assert.True(ConnectionSecurityResolver.IsCertificateError(status));
     }
 
+    [Fact]
+    public void IsCertificateError_UnknownCertificateStatus_IsDetected()
+    {
+        // Tout état d'erreur mentionnant un certificat est une erreur de certificat.
+        Assert.True(ConnectionSecurityResolver.IsCertificateError("CertificateHostNameMismatch"));
+    }
+
     [Theory]
     [InlineData("HostNameNotResolved")]
     [InlineData("ConnectionReset")]

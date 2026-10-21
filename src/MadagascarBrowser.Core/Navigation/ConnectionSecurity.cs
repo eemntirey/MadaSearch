@@ -51,7 +51,10 @@ namespace MadagascarBrowser.Core.Navigation
                 if (string.Equals(status, webErrorStatus, StringComparison.Ordinal))
                     return true;
             }
-            return false;
+
+            // Tout état d'erreur mentionnant un certificat est une erreur de certificat
+            // (nouveaux statuts ajoutés par les versions futures de WebView2).
+            return webErrorStatus.Contains("Certificate", StringComparison.Ordinal);
         }
 
         /// <summary>

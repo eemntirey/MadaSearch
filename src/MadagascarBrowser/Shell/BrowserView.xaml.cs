@@ -84,6 +84,7 @@ namespace MadagascarBrowser.Shell
             core.HistoryChanged += OnHistoryChanged;
             core.NewWindowRequested += OnNewWindowRequested;
             core.ContainsFullScreenElementChanged += OnContainsFullScreenElementChanged;
+            core.ServerCertificateErrorDetected += OnServerCertificateErrorDetected;
             core.WebMessageReceived += OnWebMessageReceived;
             HookAcceleratorKeys();
 
@@ -153,6 +154,17 @@ namespace MadagascarBrowser.Shell
 
             // Diapositives au doigt : désactivées, la navigation tactile n'a pas lieu d'être.
             settings.IsSwipeNavigationEnabled = false;
+        }
+
+        /// <summary>
+        /// Erreur de certificat détectée par WebView2 : c'est le signal le plus fiable
+        /// (la navigation est annulée et l'état d'erreur de navigation peut être
+        /// générique). L'action par défaut de WebView2 est conservée : le certificat
+        /// n'est pas accepté, la navigation échoue.
+        /// </summary>
+        private void OnServerCertificateErrorDetected(object? sender, CoreWebView2ServerCertificateErrorDetectedEventArgs e)
+        {
+            _certificateError = true;
         }
 
         /// <summary>
