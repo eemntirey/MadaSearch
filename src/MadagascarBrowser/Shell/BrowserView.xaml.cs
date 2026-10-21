@@ -34,7 +34,10 @@ namespace MadagascarBrowser.Shell
             if (_coreReady) return;
             try
             {
-                await WebView.EnsureCoreWebView2Async();
+                // Environnement explicite : le profil utilisateur WebView2 vit dans
+                // %LocalAppData%\MadagascarBrowser\WebView2, jamais à côté de l'exe.
+                var environment = await WebViewEnvironment.GetAsync();
+                await WebView.EnsureCoreWebView2Async(environment);
                 _coreReady = true;
                 InitCore();
             }
