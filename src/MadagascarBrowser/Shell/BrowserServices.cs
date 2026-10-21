@@ -43,6 +43,7 @@ namespace MadagascarBrowser.Shell
             ApplyAllowedDomains(CurrentSettings);
             DataSaver = new DataSaverService();
             DataSaver.Enabled = CurrentSettings.DataSaverEnabled;
+            ThemeManager.Apply(CurrentSettings);
             _initialized = true;
         }
 
@@ -66,6 +67,7 @@ namespace MadagascarBrowser.Shell
             CurrentSettings = settings;
             ApplyAllowedDomains(settings);
             DataSaver.Enabled = settings.DataSaverEnabled;
+            ThemeManager.Apply(settings);
         }
 
         public static void ReloadSettings()
@@ -73,6 +75,7 @@ namespace MadagascarBrowser.Shell
             CurrentSettings = SettingsService.Load();
             ApplyAllowedDomains(CurrentSettings);
             DataSaver.Enabled = CurrentSettings.DataSaverEnabled;
+            ThemeManager.Apply(CurrentSettings);
         }
     }
 }

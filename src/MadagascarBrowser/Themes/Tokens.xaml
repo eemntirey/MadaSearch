@@ -46,4 +46,9 @@
     <CornerRadius x:Key="RadiusControl">6</CornerRadius>
     <CornerRadius x:Key="RadiusCard">10</CornerRadius>
     <CornerRadius x:Key="RadiusPill">14</CornerRadius>
+
+    <!-- ============ Densité (mutée à l'exécution par ThemeManager) ============ -->
+    <Thickness x:Key="ViewPadding">28,24,28,24</Thickness>
+    <Thickness x:Key="CardPadding">20</Thickness>
+    <Thickness x:Key="CardMargin">0,0,0,16</Thickness>
 </ResourceDictionary>

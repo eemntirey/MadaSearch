@@ -42,6 +42,15 @@ namespace MadagascarBrowser.Core.Data
                     case "allowed_domains":
                         settings.AllowedDomains = ParseDomains(value);
                         break;
+                    case "theme":
+                        settings.Theme = value;
+                        break;
+                    case "density":
+                        settings.Density = value;
+                        break;
+                    case "accent":
+                        settings.Accent = value;
+                        break;
                 }
             }
 
@@ -62,6 +71,9 @@ namespace MadagascarBrowser.Core.Data
             SaveValue(command, "data_saver_enabled", settings.DataSaverEnabled.ToString());
             SaveValue(command, "restore_session", settings.RestoreSession.ToString());
             SaveValue(command, "allowed_domains", string.Join(",", settings.AllowedDomains ?? new List<string>()));
+            SaveValue(command, "theme", settings.Theme);
+            SaveValue(command, "density", settings.Density);
+            SaveValue(command, "accent", settings.Accent);
             transaction.Commit();
         }
 

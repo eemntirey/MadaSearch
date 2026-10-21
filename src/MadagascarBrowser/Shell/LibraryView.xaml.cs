@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -68,11 +69,24 @@ namespace MadagascarBrowser.Shell
 
         private void OpenSelected_Click(object sender, RoutedEventArgs e)
         {
-            var selected = SelectedItem();
-            if (selected == null)
+            OpenItem(SelectedItem());
+        }
+
+        /// <summary>
+        /// Ouvre l'élément d'une ligne (bouton d'action au survol).
+        /// </summary>
+        private void OpenRow_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is { } item)
+                OpenItem(item);
+        }
+
+        private void OpenItem(object? item)
+        {
+            if (item == null)
                 return;
 
-            if (selected is OfflinePage offlinePage)
+            if (item is OfflinePage offlinePage)
             {
                 var path = BrowserServices.OfflinePages.GetPath(offlinePage.Id);
                 if (path == null || !File.Exists(path))
@@ -85,11 +99,11 @@ namespace MadagascarBrowser.Shell
                 // Schéma file:// : la page hors ligne est ouverte directement sur le fichier.
                 _openUrl(new Uri(path).AbsoluteUri);
             }
-            else if (selected is Visit visit)
+            else if (item is Visit visit)
             {
                 _openUrl(visit.Url);
             }
-            else if (selected is Favorite favorite)
+            else if (item is Favorite favorite)
             {
                 _openUrl(favorite.Url);
             }
@@ -97,11 +111,24 @@ namespace MadagascarBrowser.Shell
 
         private async void RemoveSelected_Click(object sender, RoutedEventArgs e)
         {
-            var selected = SelectedItem();
-            if (selected == null)
+            await RemoveItem(SelectedItem());
+        }
+
+        /// <summary>
+        /// Supprime l'élément d'une ligne (bouton d'action au survol).
+        /// </summary>
+        private async void RemoveRow_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is { } item)
+                await RemoveItem(item);
+        }
+
+        private async Task RemoveItem(object? item)
+        {
+            if (item == null)
                 return;
 
-            switch (selected)
+            switch (item)
             {
                 case Visit visit:
                     await DatabaseAccess.WriteAsync(() => BrowserServices.History.Remove(visit.Url));

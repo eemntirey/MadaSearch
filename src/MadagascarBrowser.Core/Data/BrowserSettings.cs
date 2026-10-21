@@ -8,6 +8,21 @@ namespace MadagascarBrowser.Core.Data
         public bool RestoreSession { get; set; }
 
         /// <summary>
+        /// Thème d'interface : seul « dark » est disponible dans cette version.
+        /// </summary>
+        public string Theme { get; set; } = "dark";
+
+        /// <summary>
+        /// Densité de l'interface : « comfortable » (défaut) ou « compact ».
+        /// </summary>
+        public string Density { get; set; } = "comfortable";
+
+        /// <summary>
+        /// Couleur d'accent : « malagasy » (défaut), « vert » ou « orange ».
+        /// </summary>
+        public string Accent { get; set; } = "malagasy";
+
+        /// <summary>
         /// Domaines autorisés : le bloqueur de publicités les laisse passer.
         /// </summary>
         public System.Collections.Generic.List<string> AllowedDomains { get; set; } = new();

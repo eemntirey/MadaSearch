@@ -80,6 +80,9 @@ namespace MadagascarBrowser.Core.Data
             SaveSetting(command, "data_saver_enabled", profile.Settings.DataSaverEnabled.ToString());
             SaveSetting(command, "restore_session", profile.Settings.RestoreSession.ToString());
             SaveSetting(command, "allowed_domains", string.Join(",", profile.Settings.AllowedDomains ?? new List<string>()));
+            SaveSetting(command, "theme", profile.Settings.Theme);
+            SaveSetting(command, "density", profile.Settings.Density);
+            SaveSetting(command, "accent", profile.Settings.Accent);
             transaction.Commit();
         }
 

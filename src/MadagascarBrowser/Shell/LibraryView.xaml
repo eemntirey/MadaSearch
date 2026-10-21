@@ -2,7 +2,43 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Background="{DynamicResource BgBrush}" Foreground="{DynamicResource TextBrush}">
-    <Grid Margin="28,24,28,24">
+    <UserControl.Resources>
+        <!-- Ligne façon table : titre, URL, actions révélées au survol -->
+        <DataTemplate x:Key="LibraryRow">
+            <Border BorderBrush="{DynamicResource EdgeBrush}" BorderThickness="0,0,0,1" Padding="4,9">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="{Binding Title}" FontSize="13" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding Url}" FontSize="11.5" Foreground="{DynamicResource MutedBrush}"
+                                   TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Style="{StaticResource RowAction}" Content="&#xE72A;" Click="OpenRow_Click"
+                                ToolTip="Ouvrir" AutomationProperties.Name="Ouvrir"/>
+                        <Button Style="{StaticResource RowAction}" Content="&#xE711;" Click="RemoveRow_Click"
+                                ToolTip="Supprimer" AutomationProperties.Name="Supprimer"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <!-- État vide illustré -->
+        <Style x:Key="EmptyStateIcon" TargetType="TextBlock">
+            <Setter Property="Text" Value="&#xE8A5;"/>
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="30"/>
+            <Setter Property="Foreground" Value="{DynamicResource FaintBrush}"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="{DynamicResource ViewPadding}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -31,66 +67,57 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <TextBox x:Name="HistorySearch" Style="{StaticResource DarkTextBox}"
-                                 ToolTip="Rechercher dans l'historique" TextChanged="HistorySearch_TextChanged"/>
+                                 ToolTip="Rechercher dans l'historique" TextChanged="HistorySearch_TextChanged"
+                                 AutomationProperties.Name="Rechercher dans l'historique"/>
                         <TextBlock Grid.Column="1" Text="&#xE721;" FontFamily="Segoe MDL2 Assets" FontSize="13"
                                    Foreground="{DynamicResource MutedBrush}" Margin="12,0,0,0" VerticalAlignment="Center"/>
                     </Grid>
                     <ListBox x:Name="HistoryList" Grid.Row="1" Style="{StaticResource DarkListBox}"
                              ItemContainerStyle="{StaticResource DarkListItem}"
-                             MouseDoubleClick="OpenSelected_Click">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel>
-                                    <TextBlock Text="{Binding Title}" FontSize="13" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{Binding Url}" FontSize="11" Foreground="{DynamicResource MutedBrush}"
-                                               TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
-                                </StackPanel>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                    <TextBlock x:Name="HistoryEmptyState" Grid.Row="1" Text="Aucune page visitée pour le moment."
-                               Style="{StaticResource ViewSubtitle}" FontSize="13"
-                               HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
+                             ItemTemplate="{StaticResource LibraryRow}"
+                             MouseDoubleClick="OpenSelected_Click"/>
+                    <StackPanel x:Name="HistoryEmptyState" Grid.Row="1" HorizontalAlignment="Center"
+                                VerticalAlignment="Center" Visibility="Collapsed">
+                        <TextBlock Style="{StaticResource EmptyStateIcon}"/>
+                        <TextBlock Text="Aucune page visitée pour le moment." FontSize="13"
+                                   Foreground="{DynamicResource MutedBrush}" Margin="0,12,0,0"/>
+                    </StackPanel>
                 </Grid>
             </TabItem>
             <TabItem Header="Favoris">
                 <Grid>
-                    <ListBox x:Name="FavoritesList" Style="{StaticResource DarkListBox}"
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <ListBox x:Name="FavoritesList" Grid.Row="1" Style="{StaticResource DarkListBox}"
                              ItemContainerStyle="{StaticResource DarkListItem}"
-                             MouseDoubleClick="OpenSelected_Click">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel>
-                                    <TextBlock Text="{Binding Title}" FontSize="13" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{Binding Url}" FontSize="11" Foreground="{DynamicResource MutedBrush}"
-                                               TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
-                                </StackPanel>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                    <TextBlock x:Name="FavoritesEmptyState" Text="Aucun favori enregistré pour le moment."
-                               Style="{StaticResource ViewSubtitle}" FontSize="13"
-                               HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
+                             ItemTemplate="{StaticResource LibraryRow}"
+                             MouseDoubleClick="OpenSelected_Click"/>
+                    <StackPanel x:Name="FavoritesEmptyState" Grid.Row="1" Visibility="Collapsed"
+                                HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource EmptyStateIcon}"/>
+                        <TextBlock Text="Aucun favori enregistré pour le moment." FontSize="13"
+                                   Foreground="{DynamicResource MutedBrush}" Margin="0,12,0,0"/>
+                    </StackPanel>
                 </Grid>
             </TabItem>
             <TabItem Header="Hors ligne">
                 <Grid>
-                    <ListBox x:Name="OfflinePagesList" Style="{StaticResource DarkListBox}"
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <ListBox x:Name="OfflinePagesList" Grid.Row="1" Style="{StaticResource DarkListBox}"
                              ItemContainerStyle="{StaticResource DarkListItem}"
-                             MouseDoubleClick="OpenSelected_Click">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel>
-                                    <TextBlock Text="{Binding Title}" FontSize="13" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{Binding Url}" FontSize="11" Foreground="{DynamicResource MutedBrush}"
-                                               TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
-                                </StackPanel>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                    <TextBlock x:Name="OfflineEmptyState" Text="Aucune page enregistrée hors ligne."
-                               Style="{StaticResource ViewSubtitle}" FontSize="13"
-                               HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"/>
+                             ItemTemplate="{StaticResource LibraryRow}"
+                             MouseDoubleClick="OpenSelected_Click"/>
+                    <StackPanel x:Name="OfflineEmptyState" Grid.Row="1" Visibility="Collapsed"
+                                HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource EmptyStateIcon}"/>
+                        <TextBlock Text="Aucune page enregistrée hors ligne." FontSize="13"
+                                   Foreground="{DynamicResource MutedBrush}" Margin="0,12,0,0"/>
+                    </StackPanel>
                 </Grid>
             </TabItem>
         </TabControl>

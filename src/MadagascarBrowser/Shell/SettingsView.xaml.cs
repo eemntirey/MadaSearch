@@ -19,14 +19,10 @@ namespace MadagascarBrowser.Shell
         private void LoadSettings()
         {
             var settings = BrowserServices.CurrentSettings;
-            foreach (ComboBoxItem item in SearchProviderCombo.Items)
-            {
-                if (item.Tag?.ToString() == settings.SearchProvider)
-                {
-                    SearchProviderCombo.SelectedItem = item;
-                    break;
-                }
-            }
+            SelectByTag(SearchProviderCombo, settings.SearchProvider);
+            SelectByTag(ThemeCombo, settings.Theme);
+            SelectByTag(DensityCombo, settings.Density);
+            SelectByTag(AccentCombo, settings.Accent);
             AdBlockCheck.IsChecked = settings.AdBlockEnabled;
             DataSaverCheck.IsChecked = settings.DataSaverEnabled;
             RestoreSessionCheck.IsChecked = settings.RestoreSession;
@@ -39,20 +35,46 @@ namespace MadagascarBrowser.Shell
             LoadSettings();
         }
 
-        private async void Save_Click(object sender, RoutedEventArgs e)
+        /// <summary>
+        /// Sélectionne l'élément d'une liste dont la balise correspond à la valeur enregistrée.
+        /// </summary>
+        private static void SelectByTag(ComboBox combo, string? tag)
         {
-            var settings = new BrowserSettings
+            foreach (ComboBoxItem item in combo.Items)
+            {
+                if (item.Tag?.ToString() == tag)
+                {
+                    combo.SelectedItem = item;
+                    return;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Construit les paramètres à partir de l'état des contrôles, en conservant
+        /// les domaines autorisés et les préférences d'apparence courantes.
+        /// </summary>
+        private BrowserSettings BuildSettings(List<string>? allowedDomains = null)
+        {
+            var current = BrowserServices.CurrentSettings;
+            return new BrowserSettings
             {
                 SearchProvider = SearchProviderCombo.SelectedValue?.ToString() ?? "google",
                 AdBlockEnabled = AdBlockCheck.IsChecked == true,
                 DataSaverEnabled = DataSaverCheck.IsChecked == true,
                 RestoreSession = RestoreSessionCheck.IsChecked == true,
-                AllowedDomains = BrowserServices.CurrentSettings.AllowedDomains?.ToList() ?? new List<string>()
+                AllowedDomains = allowedDomains ?? current.AllowedDomains?.ToList() ?? new List<string>(),
+                Theme = ThemeCombo.SelectedValue?.ToString() ?? current.Theme,
+                Density = DensityCombo.SelectedValue?.ToString() ?? current.Density,
+                Accent = AccentCombo.SelectedValue?.ToString() ?? current.Accent
             };
+        }
 
+        private async void Save_Click(object sender, RoutedEventArgs e)
+        {
             try
             {
-                await DatabaseAccess.WriteAsync(() => BrowserServices.UpdateSettings(settings));
+                await DatabaseAccess.WriteAsync(() => BrowserServices.UpdateSettings(BuildSettings()));
             }
             catch (Exception exception)
             {
@@ -64,6 +86,25 @@ namespace MadagascarBrowser.Shell
         private void Cancel_Click(object sender, RoutedEventArgs e)
         {
             LoadSettings();
+            ThemeManager.Apply(BrowserServices.CurrentSettings);
+        }
+
+        /// <summary>
+        /// Prévisualise immédiatement l'accent choisi, avant l'enregistrement.
+        /// </summary>
+        private void AccentCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!IsLoaded) return;
+            ThemeManager.ApplyAccent(AccentCombo.SelectedValue?.ToString());
+        }
+
+        /// <summary>
+        /// Prévisualise immédiatement la densité choisie, avant l'enregistrement.
+        /// </summary>
+        private void DensityCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!IsLoaded) return;
+            ThemeManager.ApplyDensity(DensityCombo.SelectedValue?.ToString());
         }
 
         private async void AllowDomain_Click(object sender, RoutedEventArgs e)
@@ -85,18 +126,9 @@ namespace MadagascarBrowser.Shell
 
             allowed.Add(domain);
 
-            var settings = new BrowserSettings
-            {
-                SearchProvider = BrowserServices.CurrentSettings.SearchProvider,
-                AdBlockEnabled = AdBlockCheck.IsChecked == true,
-                DataSaverEnabled = DataSaverCheck.IsChecked == true,
-                RestoreSession = RestoreSessionCheck.IsChecked == true,
-                AllowedDomains = allowed
-            };
-
             try
             {
-                await DatabaseAccess.WriteAsync(() => BrowserServices.UpdateSettings(settings));
+                await DatabaseAccess.WriteAsync(() => BrowserServices.UpdateSettings(BuildSettings(allowed)));
                 AllowedDomainBox.Text = string.Empty;
                 AllowedDomainsList.ItemsSource = allowed;
                 AllowedDomainsFeedback.Text = "Domaine autorisé.";
@@ -115,18 +147,9 @@ namespace MadagascarBrowser.Shell
             var allowed = BrowserServices.CurrentSettings.AllowedDomains?.ToList() ?? new List<string>();
             allowed.RemoveAll(existing => string.Equals(existing, domain, StringComparison.OrdinalIgnoreCase));
 
-            var settings = new BrowserSettings
-            {
-                SearchProvider = BrowserServices.CurrentSettings.SearchProvider,
-                AdBlockEnabled = AdBlockCheck.IsChecked == true,
-                DataSaverEnabled = DataSaverCheck.IsChecked == true,
-                RestoreSession = RestoreSessionCheck.IsChecked == true,
-                AllowedDomains = allowed
-            };
-
             try
             {
-                await DatabaseAccess.WriteAsync(() => BrowserServices.UpdateSettings(settings));
+                await DatabaseAccess.WriteAsync(() => BrowserServices.UpdateSettings(BuildSettings(allowed)));
                 AllowedDomainsList.ItemsSource = allowed;
                 AllowedDomainsFeedback.Text = "Domaine retiré.";
             }
