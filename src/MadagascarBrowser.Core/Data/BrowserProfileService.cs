@@ -47,8 +47,8 @@ namespace MadagascarBrowser.Core.Data
 
             Validate(profile);
 
-            using var connection = new SqliteConnection($"Data Source={_database.Path}");
-            connection.Open();
+            using var connection = SqliteConnectionFactory.Open(_database.Path);
+
             using var transaction = connection.BeginTransaction();
             using var command = connection.CreateCommand();
             command.Transaction = transaction;

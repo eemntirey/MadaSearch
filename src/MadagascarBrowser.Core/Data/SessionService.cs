@@ -22,8 +22,8 @@ namespace MadagascarBrowser.Core.Data
                 ? -1
                 : Math.Clamp(session.ActiveTabIndex, 0, urls.Count - 1);
 
-            using var connection = new SqliteConnection($"Data Source={_path}");
-            connection.Open();
+            using var connection = SqliteConnectionFactory.Open(_path);
+
             using var command = connection.CreateCommand();
             command.CommandText = "INSERT OR REPLACE INTO session_state (id, urls_json, active_tab_index) VALUES (1, $urls, $active)";
             command.Parameters.AddWithValue("$urls", JsonSerializer.Serialize(urls));
@@ -33,8 +33,8 @@ namespace MadagascarBrowser.Core.Data
 
         public BrowserSession Load()
         {
-            using var connection = new SqliteConnection($"Data Source={_path}");
-            connection.Open();
+            using var connection = SqliteConnectionFactory.Open(_path);
+
             using var command = connection.CreateCommand();
             command.CommandText = "SELECT urls_json, active_tab_index FROM session_state WHERE id = 1";
             using var reader = command.ExecuteReader();

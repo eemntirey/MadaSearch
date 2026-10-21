@@ -17,8 +17,8 @@ namespace MadagascarBrowser.Core.Data
         public BrowserDownload Start(string url, string destination)
         {
             var startedAt = DateTime.UtcNow;
-            using var connection = new SqliteConnection($"Data Source={_path}");
-            connection.Open();
+            using var connection = SqliteConnectionFactory.Open(_path);
+
             using var command = connection.CreateCommand();
             command.CommandText = "INSERT INTO downloads (url,path,bytes_received,total_bytes,state,started_at) VALUES ($url,$path,0,0,$state,$started_at); SELECT last_insert_rowid();";
             command.Parameters.AddWithValue("$url", url);
@@ -52,8 +52,8 @@ namespace MadagascarBrowser.Core.Data
         public List<BrowserDownload> GetRecent(int limit = 50)
         {
             var downloads = new List<BrowserDownload>();
-            using var connection = new SqliteConnection($"Data Source={_path}");
-            connection.Open();
+            using var connection = SqliteConnectionFactory.Open(_path);
+
             using var command = connection.CreateCommand();
             command.CommandText = "SELECT id,url,path,bytes_received,total_bytes,state,started_at FROM downloads ORDER BY id DESC LIMIT $limit";
             command.Parameters.AddWithValue("$limit", Math.Max(0, limit));
@@ -74,8 +74,8 @@ namespace MadagascarBrowser.Core.Data
 
         private void Update(long id, long bytesReceived, long totalBytes, DownloadState state)
         {
-            using var connection = new SqliteConnection($"Data Source={_path}");
-            connection.Open();
+            using var connection = SqliteConnectionFactory.Open(_path);
+
             using var command = connection.CreateCommand();
             command.CommandText = "UPDATE downloads SET bytes_received=$received,total_bytes=$total,state=$state WHERE id=$id";
             command.Parameters.AddWithValue("$received", Math.Max(0, bytesReceived));
@@ -87,8 +87,8 @@ namespace MadagascarBrowser.Core.Data
 
         private void SetState(long id, DownloadState state)
         {
-            using var connection = new SqliteConnection($"Data Source={_path}");
-            connection.Open();
+            using var connection = SqliteConnectionFactory.Open(_path);
+
             using var command = connection.CreateCommand();
             command.CommandText = "UPDATE downloads SET state=$state WHERE id=$id";
             command.Parameters.AddWithValue("$state", state.ToString());

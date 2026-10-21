@@ -16,8 +16,8 @@ namespace MadagascarBrowser.Core.Data
         public BrowserSettings Load()
         {
             var settings = new BrowserSettings();
-            using var connection = new SqliteConnection($"Data Source={_path}");
-            connection.Open();
+            using var connection = SqliteConnectionFactory.Open(_path);
+
             using var command = connection.CreateCommand();
             command.CommandText = "SELECT key, value FROM settings";
             using var reader = command.ExecuteReader();
@@ -59,8 +59,8 @@ namespace MadagascarBrowser.Core.Data
 
         public void Save(BrowserSettings settings)
         {
-            using var connection = new SqliteConnection($"Data Source={_path}");
-            connection.Open();
+            using var connection = SqliteConnectionFactory.Open(_path);
+
             using var transaction = connection.BeginTransaction();
             using var command = connection.CreateCommand();
             command.Transaction = transaction;

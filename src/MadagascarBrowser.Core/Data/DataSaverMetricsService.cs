@@ -27,7 +27,7 @@ public sealed class DataSaverMetricsService
 
     public DataSaverMetricsSnapshot GetSnapshot()
     {
-        using var connection = OpenConnection();
+        using var connection = SqliteConnectionFactory.Open(_path);
         using var command = connection.CreateCommand();
         command.CommandText = "SELECT saved_bytes, blocked_ads, replaced_images, blocked_videos FROM data_saver_metrics WHERE id = 1";
         using var reader = command.ExecuteReader();
@@ -70,7 +70,7 @@ public sealed class DataSaverMetricsService
         if (savedBytes < 0)
             throw new ArgumentOutOfRangeException(nameof(savedBytes));
 
-        using var connection = OpenConnection();
+        using var connection = SqliteConnectionFactory.Open(_path);
         using var command = connection.CreateCommand();
         command.CommandText = @"UPDATE data_saver_metrics
 SET saved_bytes = saved_bytes + $savedBytes,
@@ -84,12 +84,5 @@ WHERE id = 1";
         command.Parameters.AddWithValue("$videos", videos);
         if (command.ExecuteNonQuery() != 1)
             throw new InvalidOperationException("Impossible d'enregistrer les métriques de l'économiseur de données.");
-    }
-
-    private SqliteConnection OpenConnection()
-    {
-        var connection = new SqliteConnection($"Data Source={_path}");
-        connection.Open();
-        return connection;
     }
 }

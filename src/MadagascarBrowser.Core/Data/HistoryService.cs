@@ -15,8 +15,8 @@ namespace MadagascarBrowser.Core.Data
 
 		public void AddVisit(string url, string title)
 		{
-			using var connection = new SqliteConnection($"Data Source={_path}");
-			connection.Open();
+			using var connection = SqliteConnectionFactory.Open(_path);
+
 			using var command = connection.CreateCommand();
 			command.CommandText = "INSERT INTO history (url,title,visited_at) VALUES ($url,$title,$visited_at)";
 			command.Parameters.AddWithValue("$url", url);
@@ -28,8 +28,8 @@ namespace MadagascarBrowser.Core.Data
 		public List<Visit> Recent(int limit = 20)
 		{
 			var visits = new List<Visit>();
-			using var connection = new SqliteConnection($"Data Source={_path}");
-			connection.Open();
+			using var connection = SqliteConnectionFactory.Open(_path);
+
 			using var command = connection.CreateCommand();
 			command.CommandText = "SELECT url,title,visited_at FROM history ORDER BY id DESC LIMIT $limit";
 			command.Parameters.AddWithValue("$limit", limit);
@@ -44,8 +44,8 @@ namespace MadagascarBrowser.Core.Data
 		public List<Visit> Search(string query, int limit = 10)
 		{
 			var visits = new List<Visit>();
-			using var connection = new SqliteConnection($"Data Source={_path}");
-			connection.Open();
+			using var connection = SqliteConnectionFactory.Open(_path);
+
 			using var command = connection.CreateCommand();
 			command.CommandText = "SELECT url,title,visited_at FROM history WHERE url LIKE $q OR title LIKE $q ORDER BY id DESC LIMIT $limit";
 			command.Parameters.AddWithValue("$q", "%" + query + "%");
@@ -60,8 +60,8 @@ namespace MadagascarBrowser.Core.Data
 
 		public void Remove(string url)
 		{
-			using var connection = new SqliteConnection($"Data Source={_path}");
-			connection.Open();
+			using var connection = SqliteConnectionFactory.Open(_path);
+
 			using var command = connection.CreateCommand();
 			command.CommandText = "DELETE FROM history WHERE url = $url";
 			command.Parameters.AddWithValue("$url", url);
@@ -70,8 +70,8 @@ namespace MadagascarBrowser.Core.Data
 
 		public void Clear()
 		{
-			using var connection = new SqliteConnection($"Data Source={_path}");
-			connection.Open();
+			using var connection = SqliteConnectionFactory.Open(_path);
+
 			using var command = connection.CreateCommand();
 			command.CommandText = "DELETE FROM history";
 			command.ExecuteNonQuery();

@@ -17,8 +17,8 @@ namespace MadagascarBrowser.Core.Data
 
         public void Add(string url, string title)
         {
-            using var conn = new SqliteConnection($"Data Source={_path}");
-            conn.Open();
+            using var conn = SqliteConnectionFactory.Open(_path);
+
             var cmd = conn.CreateCommand();
             cmd.CommandText = "INSERT OR REPLACE INTO favorites (url,title,added_at) VALUES ($url,$title,$added_at)";
             cmd.Parameters.AddWithValue("$url", url);
@@ -29,8 +29,8 @@ namespace MadagascarBrowser.Core.Data
 
         public void Remove(string url)
         {
-            using var conn = new SqliteConnection($"Data Source={_path}");
-            conn.Open();
+            using var conn = SqliteConnectionFactory.Open(_path);
+
             var cmd = conn.CreateCommand();
             cmd.CommandText = "DELETE FROM favorites WHERE url=$url";
             cmd.Parameters.AddWithValue("$url", url);
@@ -40,8 +40,8 @@ namespace MadagascarBrowser.Core.Data
         public List<Favorite> GetAll()
         {
             var list = new List<Favorite>();
-            using var conn = new SqliteConnection($"Data Source={_path}");
-            conn.Open();
+            using var conn = SqliteConnectionFactory.Open(_path);
+
             var cmd = conn.CreateCommand();
             cmd.CommandText = "SELECT url,title,added_at FROM favorites ORDER BY id DESC";
             using var rdr = cmd.ExecuteReader();
@@ -69,8 +69,8 @@ namespace MadagascarBrowser.Core.Data
             var data = JsonSerializer.Deserialize<List<Favorite>>(json);
             if (data == null) return;
 
-            using var conn = new SqliteConnection($"Data Source={_path}");
-            conn.Open();
+            using var conn = SqliteConnectionFactory.Open(_path);
+
             foreach (var favorite in data)
             {
                 var cmd = conn.CreateCommand();
