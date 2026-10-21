@@ -25,7 +25,7 @@ namespace MadagascarBrowser.Shell
         public event EventHandler ActiveChanged;
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public TabViewModel NewTab(string url = "https://startpage.local/index.html")
+        public TabViewModel NewTab(string url = "https://" + WebViewEnvironment.LocalHost + "/index.html")
         {
             BrowserServices.EnsureInitialized();
             var kind = NavigationTargetResolver.Resolve(url, out var target, out var title);
@@ -38,7 +38,7 @@ namespace MadagascarBrowser.Shell
                 case NavigationTargetKind.Blank:
                     title = "Nouvel onglet";
                     break;
-                case NavigationTargetKind.Web when target.Contains("startpage.local", StringComparison.OrdinalIgnoreCase):
+                case NavigationTargetKind.Web when target.Contains(WebViewEnvironment.LocalHost, StringComparison.OrdinalIgnoreCase):
                     title = "Nouvel onglet";
                     break;
             }

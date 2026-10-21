@@ -15,9 +15,9 @@ namespace MadagascarBrowser.Shell
 {
     public partial class BrowserView : UserControl
     {
-        private const string StartPageUrl = "https://startpage.local/index.html";
-        private const string ErrorPageUrl = "https://startpage.local/error.html";
-        private const string LocalHost = "startpage.local";
+        private const string StartPageUrl = "https://" + WebViewEnvironment.LocalHost + "/index.html";
+        private const string ErrorPageUrl = "https://" + WebViewEnvironment.LocalHost + "/error.html";
+        private const string LocalHost = WebViewEnvironment.LocalHost;
         private static readonly byte[] PlaceholderGif =
             Convert.FromBase64String("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7");
 
@@ -140,7 +140,7 @@ namespace MadagascarBrowser.Shell
             settings.IsStatusBarEnabled = false;
 
             // Page d'erreur WebView2 : désactivée, Madagascar Browser affiche sa page
-            // d'erreur maison (startpage.local/error.html).
+            // d'erreur maison (startpage.localhost/error.html).
             settings.IsBuiltInErrorPageEnabled = false;
 
             // Scripts : activés (aucun site ne fonctionne sans JavaScript).
@@ -694,7 +694,7 @@ namespace MadagascarBrowser.Shell
         private static bool IsHistoryWorthy(string url)
         {
             return !string.IsNullOrWhiteSpace(url)
-                && !url.StartsWith("https://startpage.local/", StringComparison.OrdinalIgnoreCase)
+                && !url.StartsWith("https://" + WebViewEnvironment.LocalHost + "/", StringComparison.OrdinalIgnoreCase)
                 && (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
                     || url.StartsWith("https://", StringComparison.OrdinalIgnoreCase));
         }

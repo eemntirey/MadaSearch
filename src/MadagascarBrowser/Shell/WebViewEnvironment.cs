@@ -13,6 +13,16 @@ namespace MadagascarBrowser.Shell
     /// </summary>
     internal static class WebViewEnvironment
     {
+        /// <summary>
+        /// Hôte virtuel de la page de démarrage.
+        /// « .local » est un TLD réservé à mDNS : Chromium y tentait une résolution
+        /// multicast qui expirait après ≈ 2 s avant de servir la page, ce qui rendait
+        /// la page de démarrage lente à chaque rechargement. « .localhost » est
+        /// également réservé (RFC 6761) et n'appelle aucune résolution : la page
+        /// s'affiche en quelques dizaines de millisecondes.
+        /// </summary>
+        public const string LocalHost = "startpage.localhost";
+
         public static string UserDataFolder { get; } = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "MadagascarBrowser",
