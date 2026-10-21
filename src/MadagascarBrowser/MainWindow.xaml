@@ -70,23 +70,32 @@
                            Margin="1,0,0,0"/>
             </StackPanel>
 
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+            <!-- IsHitTestVisibleInChrome sort les boutons de la zone "caption" du WindowChrome :
+                 sans ça, la zone non-cliente avale le clic et les boutons ne sont pas cliquables. -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top"
+                        chrome:WindowChrome.IsHitTestVisibleInChrome="True">
                 <Button Style="{StaticResource CaptionButton}" Content="&#xE921;"
-                        Click="Minimize_Click" ToolTip="Réduire"/>
-                <Button Click="Maximize_Click" ToolTip="Agrandir">
+                        chrome:WindowChrome.IsHitTestVisibleInChrome="True"
+                        Click="Minimize_Click" ToolTip="Réduire" AutomationProperties.Name="Réduire"/>
+                <Button Click="Maximize_Click" ToolTip="Agrandir"
+                        chrome:WindowChrome.IsHitTestVisibleInChrome="True"
+                        AutomationProperties.Name="Agrandir">
                     <Button.Style>
                         <Style TargetType="Button" BasedOn="{StaticResource CaptionButton}">
                             <Setter Property="Content" Value="&#xE922;"/>
+                            <Setter Property="AutomationProperties.Name" Value="Agrandir"/>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType=Window}}" Value="Maximized">
                                     <Setter Property="Content" Value="&#xE923;"/>
+                                    <Setter Property="AutomationProperties.Name" Value="Restaurer"/>
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </Button.Style>
                 </Button>
                 <Button Style="{StaticResource CaptionCloseButton}" Content="&#xE8BB;"
-                        Click="CloseWindow_Click" ToolTip="Fermer"/>
+                        chrome:WindowChrome.IsHitTestVisibleInChrome="True"
+                        Click="CloseWindow_Click" ToolTip="Fermer" AutomationProperties.Name="Fermer la fenêtre"/>
             </StackPanel>
         </Grid>
 
@@ -151,7 +160,7 @@
 
                 <Button Grid.Column="1" Style="{StaticResource IconButton}"
                         Content="&#xE710;" Margin="8,0,0,0" ToolTip="Nouvel onglet"
-                        Click="NewTab_Click"/>
+                        Click="NewTab_Click" AutomationProperties.Name="Nouvel onglet"/>
             </Grid>
         </Border>
 

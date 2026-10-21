@@ -51,4 +51,11 @@
     <Thickness x:Key="ViewPadding">28,24,28,24</Thickness>
     <Thickness x:Key="CardPadding">20</Thickness>
     <Thickness x:Key="CardMargin">0,0,0,16</Thickness>
+
+    <!-- ============ Mouvement ============
+         Durées remplacées par 0 par Motion.ApplyPreference() quand
+         SystemParameters.ClientAreaAnimation est désactivé par l'utilisateur. -->
+    <Duration x:Key="MotionFast">0:0:0.12</Duration>
+    <Duration x:Key="MotionMedium">0:0:0.18</Duration>
+    <Duration x:Key="MotionSlow">0:0:0.22</Duration>
 </ResourceDictionary>

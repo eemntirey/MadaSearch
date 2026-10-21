@@ -10,7 +10,19 @@
             <ResourceDictionary Source="Themes/Tokens.xaml"/>
         </ResourceDictionary.MergedDictionaries>
 
-        <!-- Bouton icône (Segoe MDL2 Assets) : rond, hover en pilule -->
+        <!-- Anneau de focus : visible au clavier sur les contrôles interactifs -->
+        <Style x:Key="FocusRing">
+            <Setter Property="Control.Template">
+                <Setter.Value>
+                    <ControlTemplate>
+                        <Rectangle Margin="-3" RadiusX="8" RadiusY="8" StrokeThickness="2"
+                                   Stroke="{DynamicResource AccentBrush}" StrokeDashArray="2 2"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Bouton icône (Segoe MDL2 Assets) : rond, survol animé en 120 ms -->
         <Style x:Key="IconButton" TargetType="Button">
             <Setter Property="Width" Value="32"/>
             <Setter Property="Height" Value="32"/>
@@ -25,12 +37,31 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="8">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Grid>
+                                <Border x:Name="HoverLayer" CornerRadius="8" Opacity="0" IsHitTestVisible="False"
+                                        Background="{DynamicResource HoverBrush}"/>
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource HoverBrush}"/>
-                            </Trigger>
+                            <EventTrigger RoutedEvent="UIElement.MouseEnter" SourceName="Bd">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HoverLayer"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="{StaticResource MotionFast}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                            <EventTrigger RoutedEvent="UIElement.MouseLeave" SourceName="Bd">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HoverLayer"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="{StaticResource MotionFast}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Opacity" Value="0.35"/>
                             </Trigger>
@@ -49,12 +80,31 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="Bd" Background="Transparent" CornerRadius="6">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <Grid>
+                                <Border x:Name="HoverLayer" CornerRadius="6" Opacity="0" IsHitTestVisible="False"
+                                        Background="{DynamicResource HoverBrush}"/>
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Grid>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource HoverBrush}"/>
-                            </Trigger>
+                            <EventTrigger RoutedEvent="UIElement.MouseEnter" SourceName="Bd">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HoverLayer"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="1" Duration="{StaticResource MotionFast}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                            <EventTrigger RoutedEvent="UIElement.MouseLeave" SourceName="Bd">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="HoverLayer"
+                                                         Storyboard.TargetProperty="Opacity"
+                                                         To="0" Duration="{StaticResource MotionFast}"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
@@ -278,6 +328,7 @@
 
         <!-- Zone de saisie -->
         <Style x:Key="DarkTextBox" TargetType="TextBox">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}"/>
             <Setter Property="Background" Value="{DynamicResource PillBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource EdgeBrush}"/>
@@ -339,6 +390,7 @@
         </Style>
 
         <Style x:Key="DarkComboBox" TargetType="ComboBox">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="Background" Value="{DynamicResource PillBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource EdgeBrush}"/>
@@ -399,6 +451,7 @@
 
         <!-- Case à cocher -->
         <Style x:Key="DarkCheckBox" TargetType="CheckBox">
+            <Setter Property="FocusVisualStyle" Value="{StaticResource FocusRing}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="FontSize" Value="12.5"/>
             <Setter Property="Cursor" Value="Hand"/>
