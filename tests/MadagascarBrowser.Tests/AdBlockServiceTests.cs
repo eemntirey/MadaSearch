@@ -1,5 +1,6 @@
 using MadagascarBrowser.Core.Blocking;
 using System;
+using System.IO;
 
 namespace MadagascarBrowser.Tests;
 
@@ -32,6 +33,28 @@ public class AdBlockServiceTests
         var ad = new AdBlockService();
         ad.SetDomainExempt("tracker.io");
         Assert.False(ad.ShouldBlock(new Uri("https://tracker.io/ad.js")));
+    }
+
+    [Fact]
+    public void SetDomainExempt_ExemptsSubdomainsButNotLookalikeDomains()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        var filterListPath = Path.Combine(directory, "filters.txt");
+        File.WriteAllText(filterListPath, "||tracker.io^\n||nottracker.io^\n");
+        try
+        {
+            var ad = new AdBlockService(filterListPath);
+            ad.SetDomainExempt("tracker.io");
+
+            Assert.False(ad.ShouldBlock(new Uri("https://tracker.io/ad.js")));
+            Assert.False(ad.ShouldBlock(new Uri("https://sub.tracker.io/ad.js")));
+            Assert.True(ad.ShouldBlock(new Uri("https://nottracker.io/ad.js")));
+        }
+        finally
+        {
+            Directory.Delete(directory, true);
+        }
     }
 
     [Fact]

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
-using System.Text.RegularExpressions;
 
 namespace MadagascarBrowser.Core.Blocking
 {
@@ -21,19 +20,18 @@ namespace MadagascarBrowser.Core.Blocking
         public bool Enabled { get; set; } = true;
         public int BlockedCount => _blocked;
 
-        public void SetDomainExempt(string domain)
-        {
-            if (!string.IsNullOrWhiteSpace(domain))
-                _exempt.Add(domain.Trim());
-        }
-
         public bool ShouldBlock(Uri url)
         {
             if (!Enabled || url == null)
                 return false;
-            var host = url.Host.ToLowerInvariant();
-            if (_exempt.Contains(host))
-                return false;
+            var host = url.Host.TrimEnd('.').ToLowerInvariant();
+            foreach (var exemptDomain in _exempt)
+            {
+                if (host.Equals(exemptDomain, StringComparison.OrdinalIgnoreCase) ||
+                    host.EndsWith("." + exemptDomain, StringComparison.OrdinalIgnoreCase))
+                    return false;
+            }
+
             if (_domains.Contains(host))
             {
                 _blocked++;
@@ -48,6 +46,16 @@ namespace MadagascarBrowser.Core.Blocking
                 }
             }
             return false;
+        }
+
+        public void SetDomainExempt(string domain)
+        {
+            if (!string.IsNullOrWhiteSpace(domain))
+            {
+                var normalizedDomain = domain.Trim().TrimEnd('.').ToLowerInvariant();
+                if (normalizedDomain.Length > 0)
+                    _exempt.Add(normalizedDomain);
+            }
         }
 
         private void LoadFilters(string? path)
