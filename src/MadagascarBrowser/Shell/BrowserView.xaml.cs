@@ -630,9 +630,11 @@ namespace MadagascarBrowser.Shell
             _fetchRequestPausedReceiver.DevToolsProtocolEventReceived += OnFetchRequestPaused;
             try
             {
+                var patterns = string.Join(",", ResourceInterceptionScope.FetchPatterns.Select(
+                    pattern => $"{{\"urlPattern\":\"{pattern}\",\"requestStage\":\"Response\"}}"));
                 await core.CallDevToolsProtocolMethodAsync(
                     "Fetch.enable",
-                    "{\"patterns\":[{\"urlPattern\":\"http://*/*\",\"requestStage\":\"Response\"},{\"urlPattern\":\"https://*/*\",\"requestStage\":\"Response\"}]}");
+                    $"{{\"patterns\":[{patterns}]}}");
             }
             catch (Exception exception)
             {
