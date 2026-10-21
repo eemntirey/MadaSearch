@@ -44,10 +44,12 @@ INSERT OR IGNORE INTO data_saver_metrics (id, saved_bytes, blocked_ads, replaced
                 command.CommandText = "PRAGMA journal_mode=WAL;";
                 command.ExecuteScalar();
             }
-            catch (SqliteException)
+            catch (SqliteException exception)
             {
                 // Certains systèmes de fichiers refusent le mode WAL : la base reste
                 // utilisable en mode « delete », simplement avec moins de concurrence.
+                System.Diagnostics.Trace.TraceWarning(
+                    $"Mode WAL indisponible, la base reste utilisable sans concurrence optimisée : {exception.Message}");
             }
         }
 
