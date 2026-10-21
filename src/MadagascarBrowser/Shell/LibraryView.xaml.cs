@@ -50,14 +50,19 @@ namespace MadagascarBrowser.Shell
                     ? BrowserServices.History.Recent(1000)
                     : BrowserServices.History.Search(query, 1000));
                 HistoryList.ItemsSource = items;
+                HistoryEmptyState.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             }
             else if (LibraryTabs.SelectedIndex == 1)
             {
-                FavoritesList.ItemsSource = await DatabaseAccess.ReadAsync(() => BrowserServices.Favorites.GetAll());
+                var items = await DatabaseAccess.ReadAsync(() => BrowserServices.Favorites.GetAll());
+                FavoritesList.ItemsSource = items;
+                FavoritesEmptyState.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             }
             else
             {
-                OfflinePagesList.ItemsSource = await DatabaseAccess.ReadAsync(() => BrowserServices.OfflinePages.GetAll());
+                var items = await DatabaseAccess.ReadAsync(() => BrowserServices.OfflinePages.GetAll());
+                OfflinePagesList.ItemsSource = items;
+                OfflineEmptyState.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             }
         }
 

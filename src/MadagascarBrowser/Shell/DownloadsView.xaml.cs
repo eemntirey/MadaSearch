@@ -45,7 +45,9 @@ namespace MadagascarBrowser.Shell
         private async void RefreshDownloads()
         {
             var selectedId = (DownloadsList.SelectedItem as BrowserDownload)?.Id;
-            DownloadsList.ItemsSource = await DatabaseAccess.ReadAsync(() => BrowserServices.Downloads.GetRecent(100));
+            var items = await DatabaseAccess.ReadAsync(() => BrowserServices.Downloads.GetRecent(100));
+            DownloadsList.ItemsSource = items;
+            EmptyState.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             if (selectedId.HasValue)
                 DownloadsList.SelectedItem = DownloadsList.Items.Cast<BrowserDownload>().FirstOrDefault(item => item.Id == selectedId);
         }
