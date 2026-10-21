@@ -42,10 +42,10 @@ namespace MadagascarBrowser.Shell
                 ActiveOperations.Remove(id);
         }
 
-        private void RefreshDownloads()
+        private async void RefreshDownloads()
         {
             var selectedId = (DownloadsList.SelectedItem as BrowserDownload)?.Id;
-            DownloadsList.ItemsSource = BrowserServices.Downloads.GetRecent(100);
+            DownloadsList.ItemsSource = await DatabaseAccess.ReadAsync(() => BrowserServices.Downloads.GetRecent(100));
             if (selectedId.HasValue)
                 DownloadsList.SelectedItem = DownloadsList.Items.Cast<BrowserDownload>().FirstOrDefault(item => item.Id == selectedId);
         }

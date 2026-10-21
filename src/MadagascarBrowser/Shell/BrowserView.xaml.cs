@@ -24,6 +24,7 @@ namespace MadagascarBrowser.Shell
         private bool _coreReady;
         private bool _suppressSuggest;
         private bool _certificateError;
+        private AsyncDebouncer? _suggestDebouncer;
         private readonly TaskCompletionSource<CoreWebView2> _coreReadySource =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -278,7 +279,7 @@ namespace MadagascarBrowser.Shell
                 tm.OpenSettings();
         }
 
-        private void MenuAddFavorite_Click(object sender, RoutedEventArgs e)
+        private async void MenuAddFavorite_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
             if (!Uri.TryCreate(WebView.CoreWebView2?.Source, UriKind.Absolute, out var uri) ||
@@ -289,7 +290,9 @@ namespace MadagascarBrowser.Shell
                 return;
             }
 
-            BrowserServices.Favorites.Add(uri.AbsoluteUri, WebView.CoreWebView2.DocumentTitle);
+            var url = uri.AbsoluteUri;
+            var title = WebView.CoreWebView2.DocumentTitle;
+            await DatabaseAccess.WriteAsync(() => BrowserServices.Favorites.Add(url, title));
         }
 
         private void MenuHistory_Click(object sender, RoutedEventArgs e)
@@ -326,7 +329,10 @@ namespace MadagascarBrowser.Shell
                 if (string.IsNullOrEmpty(mhtml))
                     throw new InvalidOperationException("WebView2 n'a renvoyé aucun contenu.");
 
-                BrowserServices.OfflinePages.Save(uri.AbsoluteUri, WebView.CoreWebView2.DocumentTitle, mhtml);
+                var pageUrl = uri.AbsoluteUri;
+                var pageTitle = WebView.CoreWebView2.DocumentTitle;
+                await DatabaseAccess.WriteAsync(() =>
+                    BrowserServices.OfflinePages.Save(pageUrl, pageTitle, mhtml));
                 MessageBox.Show(Window.GetWindow(this), "La page a été enregistrée hors ligne.",
                     "Pages hors ligne", MessageBoxButton.OK, MessageBoxImage.Information);
             }
@@ -407,7 +413,7 @@ namespace MadagascarBrowser.Shell
                 : new Uri(ResolveAddress(url));
         }
 
-        private void OnDownloadStarting(object? sender, CoreWebView2DownloadStartingEventArgs e)
+        private async void OnDownloadStarting(object? sender, CoreWebView2DownloadStartingEventArgs e)
         {
             var operation = e.DownloadOperation;
             var fileName = Uri.TryCreate(operation.Uri, UriKind.Absolute, out var uri)
@@ -435,23 +441,40 @@ namespace MadagascarBrowser.Shell
 
             e.ResultFilePath = dialog.FileName;
             e.Handled = true;
-            var download = BrowserServices.Downloads.Start(operation.Uri, e.ResultFilePath);
+            var download = await DatabaseAccess.WriteAsync(() =>
+                BrowserServices.Downloads.Start(operation.Uri, e.ResultFilePath));
             DownloadsView.Register(download.Id, operation);
+
+            // L'avancement n'est plus écrit à chaque événement : l'écriture est
+            // limitée à un intervalle de 500 ms ou à un pas de 5 %, et la dernière
+            // écriture a lieu à la fin du téléchargement.
+            var progressWriter = new DownloadProgressWriter();
             operation.BytesReceivedChanged += (_, _) =>
-                BrowserServices.Downloads.UpdateProgress(download.Id, operation.BytesReceived, TotalBytesToReceive(operation));
+            {
+                var received = operation.BytesReceived;
+                var total = TotalBytesToReceive(operation);
+                if (!progressWriter.ShouldPersist(received, total, DateTime.UtcNow))
+                    return;
+
+                _ = DatabaseAccess.WriteAsync(() =>
+                    BrowserServices.Downloads.UpdateProgress(download.Id, received, total));
+            };
             operation.StateChanged += (_, _) =>
             {
                 if (operation.State == CoreWebView2DownloadState.Completed)
                 {
-                    BrowserServices.Downloads.Complete(download.Id, operation.BytesReceived, TotalBytesToReceive(operation));
+                    var received = operation.BytesReceived;
+                    var total = TotalBytesToReceive(operation);
+                    _ = DatabaseAccess.WriteAsync(() =>
+                        BrowserServices.Downloads.Complete(download.Id, received, total));
                     DownloadsView.Unregister(download.Id);
                 }
                 else if (operation.State == CoreWebView2DownloadState.Interrupted)
                 {
                     if (operation.InterruptReason == CoreWebView2DownloadInterruptReason.UserCanceled)
-                        BrowserServices.Downloads.Cancel(download.Id);
+                        _ = DatabaseAccess.WriteAsync(() => BrowserServices.Downloads.Cancel(download.Id));
                     else
-                        BrowserServices.Downloads.Fail(download.Id);
+                        _ = DatabaseAccess.WriteAsync(() => BrowserServices.Downloads.Fail(download.Id));
                     DownloadsView.Unregister(download.Id);
                 }
             };
@@ -568,7 +591,9 @@ namespace MadagascarBrowser.Shell
 
             if (e.IsSuccess && IsHistoryWorthy(core.Source))
             {
-                BrowserServices.History.AddVisit(core.Source, core.DocumentTitle ?? string.Empty);
+                var url = core.Source;
+                var title = core.DocumentTitle ?? string.Empty;
+                _ = DatabaseAccess.WriteAsync(() => BrowserServices.History.AddVisit(url, title));
             }
 
             RefreshStats();
@@ -645,18 +670,32 @@ namespace MadagascarBrowser.Shell
             if (text.Length < 2)
             {
                 CloseSuggestions();
+                _suggestDebouncer?.Dispose();
+                _suggestDebouncer = null;
                 return;
             }
 
-            var items = BrowserServices.History.Search(text, 8);
-            if (items.Count == 0)
+            // Requête SQLite différée et exécutée hors du thread UI.
+            _suggestDebouncer?.Dispose();
+            _suggestDebouncer = new AsyncDebouncer(async token =>
             {
-                CloseSuggestions();
-                return;
-            }
+                var items = await DatabaseAccess.ReadAsync(() => BrowserServices.History.Search(text, 8));
+                if (token.IsCancellationRequested)
+                    return;
 
-            SuggestList.ItemsSource = items;
-            SuggestPopup.IsOpen = true;
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    if (items.Count == 0)
+                    {
+                        CloseSuggestions();
+                        return;
+                    }
+
+                    SuggestList.ItemsSource = items;
+                    SuggestPopup.IsOpen = true;
+                });
+            });
+            _suggestDebouncer.Debounce();
         }
 
         private void SuggestList_Click(object sender, MouseButtonEventArgs e)
@@ -709,6 +748,8 @@ namespace MadagascarBrowser.Shell
 
         public void Dispose()
         {
+            _suggestDebouncer?.Dispose();
+            _suggestDebouncer = null;
             try { WebView.Dispose(); } catch { }
         }
     }

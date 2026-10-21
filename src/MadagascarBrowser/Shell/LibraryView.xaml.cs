@@ -37,25 +37,27 @@ namespace MadagascarBrowser.Shell
                 LoadItems();
         }
 
-        private void LoadItems()
+        private async void LoadItems()
         {
             var showHistory = LibraryTabs.SelectedIndex == 0;
             HistorySearch.IsEnabled = showHistory;
             ClearHistoryButton.IsEnabled = showHistory;
+
             if (showHistory)
             {
                 var query = HistorySearch.Text.Trim();
-                HistoryList.ItemsSource = query.Length == 0
+                var items = await DatabaseAccess.ReadAsync(() => query.Length == 0
                     ? BrowserServices.History.Recent(1000)
-                    : BrowserServices.History.Search(query, 1000);
+                    : BrowserServices.History.Search(query, 1000));
+                HistoryList.ItemsSource = items;
             }
             else if (LibraryTabs.SelectedIndex == 1)
             {
-                FavoritesList.ItemsSource = BrowserServices.Favorites.GetAll();
+                FavoritesList.ItemsSource = await DatabaseAccess.ReadAsync(() => BrowserServices.Favorites.GetAll());
             }
             else
             {
-                OfflinePagesList.ItemsSource = BrowserServices.OfflinePages.GetAll();
+                OfflinePagesList.ItemsSource = await DatabaseAccess.ReadAsync(() => BrowserServices.OfflinePages.GetAll());
             }
         }
 
@@ -88,7 +90,7 @@ namespace MadagascarBrowser.Shell
             }
         }
 
-        private void RemoveSelected_Click(object sender, RoutedEventArgs e)
+        private async void RemoveSelected_Click(object sender, RoutedEventArgs e)
         {
             var selected = SelectedItem();
             if (selected == null)
@@ -97,25 +99,25 @@ namespace MadagascarBrowser.Shell
             switch (selected)
             {
                 case Visit visit:
-                    BrowserServices.History.Remove(visit.Url);
+                    await DatabaseAccess.WriteAsync(() => BrowserServices.History.Remove(visit.Url));
                     break;
                 case Favorite favorite:
-                    BrowserServices.Favorites.Remove(favorite.Url);
+                    await DatabaseAccess.WriteAsync(() => BrowserServices.Favorites.Remove(favorite.Url));
                     break;
                 case OfflinePage page:
-                    BrowserServices.OfflinePages.Remove(page.Id);
+                    await DatabaseAccess.WriteAsync(() => BrowserServices.OfflinePages.Remove(page.Id));
                     break;
             }
             LoadItems();
         }
 
-        private void ClearHistory_Click(object sender, RoutedEventArgs e)
+        private async void ClearHistory_Click(object sender, RoutedEventArgs e)
         {
             if (MessageBox.Show("Effacer tout l'historique de navigation ?", "Historique",
                     MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
                 return;
 
-            BrowserServices.History.Clear();
+            await DatabaseAccess.WriteAsync(() => BrowserServices.History.Clear());
             LoadItems();
         }
 
