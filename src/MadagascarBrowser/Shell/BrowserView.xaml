@@ -14,8 +14,8 @@
         </Grid.RowDefinitions>
 
         <!-- Barre d'outils : navigation + adresse en pilule + menu -->
-        <Border x:Name="Toolbar" Grid.Row="0" Background="{StaticResource SurfaceBrush}"
-                BorderBrush="{StaticResource EdgeBrush}" BorderThickness="0,0,0,1"
+        <Border x:Name="Toolbar" Grid.Row="0" Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource EdgeBrush}" BorderThickness="0,0,0,1"
                 Padding="8,6">
             <Border.Style>
                 <Style TargetType="Border">
@@ -46,9 +46,9 @@
                 </StackPanel>
 
                 <!-- Adresse en pilule -->
-                <Border Grid.Column="1" Background="{StaticResource PillBrush}"
+                <Border Grid.Column="1" Background="{DynamicResource PillBrush}"
                         CornerRadius="18" Height="34" Margin="8,0"
-                        BorderBrush="{StaticResource EdgeBrush}" BorderThickness="1">
+                        BorderBrush="{DynamicResource EdgeBrush}" BorderThickness="1">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -60,22 +60,22 @@
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Text" Value="&#xE774;"/>
-                                    <Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
                                     <Setter Property="ToolTip" Value="Aucune connexion réseau"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding SecurityState}" Value="{x:Static core:ConnectionSecurity.Secure}">
                                             <Setter Property="Text" Value="&#xE72E;"/>
-                                            <Setter Property="Foreground" Value="{StaticResource OkBrush}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource OkBrush}"/>
                                             <Setter Property="ToolTip" Value="Connexion chiffrée (HTTPS)"/>
                                         </DataTrigger>
                                         <DataTrigger Binding="{Binding SecurityState}" Value="{x:Static core:ConnectionSecurity.Insecure}">
                                             <Setter Property="Text" Value="&#xE785;"/>
-                                            <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
                                             <Setter Property="ToolTip" Value="Connexion non chiffrée (HTTP)"/>
                                         </DataTrigger>
                                         <DataTrigger Binding="{Binding SecurityState}" Value="{x:Static core:ConnectionSecurity.CertError}">
                                             <Setter Property="Text" Value="&#xE7BA;"/>
-                                            <Setter Property="Foreground" Value="{StaticResource AccentBrush}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentBrush}"/>
                                             <Setter Property="ToolTip" Value="Erreur de certificat"/>
                                         </DataTrigger>
                                     </Style.Triggers>
@@ -84,10 +84,10 @@
                         </TextBlock>
                         <TextBox x:Name="AddressBar" Grid.Column="1"
                                  KeyDown="AddressBar_KeyDown" TextChanged="AddressBar_TextChanged"
-                                 Background="Transparent" Foreground="{StaticResource TextBrush}"
-                                 CaretBrush="{StaticResource TextBrush}" BorderThickness="0"
+                                 Background="Transparent" Foreground="{DynamicResource TextBrush}"
+                                 CaretBrush="{DynamicResource TextBrush}" BorderThickness="0"
                                  VerticalContentAlignment="Center" FontSize="12.5"
-                                 SelectionBrush="{StaticResource AccentBrush}"/>
+                                 SelectionBrush="{DynamicResource AccentBrush}"/>
                     </Grid>
                 </Border>
 
@@ -99,12 +99,12 @@
                 <Popup x:Name="SuggestPopup" PlacementTarget="{Binding ElementName=AddressBar}"
                        Placement="Bottom" StaysOpen="False" AllowsTransparency="True"
                        VerticalOffset="6">
-                    <Border Background="{StaticResource SurfaceBrush}"
-                            BorderBrush="{StaticResource EdgeBrush}" BorderThickness="1"
+                    <Border Background="{DynamicResource SurfaceBrush}"
+                            BorderBrush="{DynamicResource EdgeBrush}" BorderThickness="1"
                             CornerRadius="10" MinWidth="420" Margin="0,4,0,0">
                         <ListBox x:Name="SuggestList" MaxHeight="260"
                                  Background="Transparent" BorderThickness="0"
-                                 Foreground="{StaticResource TextBrush}"
+                                 Foreground="{DynamicResource TextBrush}"
                                  ItemContainerStyle="{StaticResource DarkListItem}"
                                  PreviewMouseLeftButtonUp="SuggestList_Click"
                                  Margin="4">
@@ -113,7 +113,7 @@
                                     <StackPanel>
                                         <TextBlock Text="{Binding Title}" FontSize="12.5"/>
                                         <TextBlock Text="{Binding Url}" FontSize="10.5"
-                                                   Foreground="{StaticResource MutedBrush}"
+                                                   Foreground="{DynamicResource MutedBrush}"
                                                    TextTrimming="CharacterEllipsis" MaxWidth="400"/>
                                     </StackPanel>
                                 </DataTemplate>
@@ -126,8 +126,8 @@
                 <Popup x:Name="MenuPopup" PlacementTarget="{Binding ElementName=MenuBtn}"
                        Placement="Bottom" StaysOpen="False" AllowsTransparency="True"
                        VerticalOffset="6" HorizontalOffset="-200">
-                    <Border Background="{StaticResource SurfaceBrush}"
-                            BorderBrush="{StaticResource EdgeBrush}" BorderThickness="1"
+                    <Border Background="{DynamicResource SurfaceBrush}"
+                            BorderBrush="{DynamicResource EdgeBrush}" BorderThickness="1"
                             CornerRadius="10" MinWidth="220" Padding="4">
                         <StackPanel>
                             <Button Style="{StaticResource MenuRowButton}" Click="MenuNewTab_Click">
@@ -186,7 +186,7 @@
                                     <TextBlock Text="Téléchargements" FontSize="12.5" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
-                            <Separator Background="{StaticResource EdgeBrush}" Margin="6,4"/>
+                            <Separator Background="{DynamicResource EdgeBrush}" Margin="6,4"/>
                             <Button Style="{StaticResource MenuRowButton}" Click="MenuExportProfile_Click">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets"
@@ -202,7 +202,7 @@
                                 </StackPanel>
                             </Button>
                             <TextBlock x:Name="MenuFeedback" Text="" FontSize="11"
-                                       Foreground="{StaticResource MutedBrush}"
+                                       Foreground="{DynamicResource MutedBrush}"
                                        Margin="10,2,10,6" TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>
@@ -214,11 +214,11 @@
         <StackPanel x:Name="WebViewError" Grid.Row="1" Visibility="Collapsed" Margin="24" VerticalAlignment="Center">
             <TextBlock x:Name="WebViewErrorText"
                        Text="WebView2 est indisponible sur cette machine."
-                       Foreground="{StaticResource TextBrush}" FontSize="16"/>
-            <TextBlock Foreground="{StaticResource MutedBrush}" Margin="0,8,0,0" TextWrapping="Wrap">
+                       Foreground="{DynamicResource TextBrush}" FontSize="16"/>
+            <TextBlock Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,0" TextWrapping="Wrap">
                 <Run Text="Installez le WebView2 Runtime : "/>
                 <Hyperlink NavigateUri="https://developer.microsoft.com/fr-fr/microsoft-edge/webview2/"
-                           Foreground="{StaticResource AccentBrush}"
+                           Foreground="{DynamicResource AccentBrush}"
                            RequestNavigate="WebView2Link_RequestNavigate">téléchargement officiel</Hyperlink>
             </TextBlock>
         </StackPanel>

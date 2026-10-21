@@ -1,0 +1,49 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ============ Surfaces ============ -->
+    <SolidColorBrush x:Key="BgBrush" Color="#0C0B0A"/>
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#131211"/>
+    <SolidColorBrush x:Key="SurfaceHighBrush" Color="#1B1917"/>
+    <SolidColorBrush x:Key="HoverBrush" Color="#24211E"/>
+    <SolidColorBrush x:Key="ActiveTabBrush" Color="#2B2724"/>
+    <SolidColorBrush x:Key="PillBrush" Color="#1B1917"/>
+
+    <!-- ============ Filets ============ -->
+    <SolidColorBrush x:Key="EdgeBrush" Color="#272421"/>
+    <SolidColorBrush x:Key="EdgeStrongBrush" Color="#383430"/>
+
+    <!-- ============ Texte ============ -->
+    <SolidColorBrush x:Key="TextBrush" Color="#F2EFEA"/>
+    <SolidColorBrush x:Key="MutedBrush" Color="#A8A099"/>
+    <SolidColorBrush x:Key="FaintBrush" Color="#6F6963"/>
+
+    <!-- ============ Sémantique ============ -->
+    <SolidColorBrush x:Key="AccentBrush" Color="#FF4438"/>
+    <SolidColorBrush x:Key="AccentSoftBrush" Color="#33201E"/>
+    <SolidColorBrush x:Key="SecureBrush" Color="#19B36B"/>
+    <SolidColorBrush x:Key="WarnBrush" Color="#F0A63C"/>
+    <SolidColorBrush x:Key="DangerBrush" Color="#FF5C57"/>
+
+    <!-- ============ Texte et survol sur accent ============ -->
+    <SolidColorBrush x:Key="OnAccentBrush" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="CloseHoverBrush" Color="#E81123"/>
+
+    <!-- ============ Alias conservés ============
+         OkBrush et PillBrush sont référencés par le XAML existant : on les garde
+         pour ne rompre aucun binding, la migration vers SecureBrush se fera à part. -->
+    <SolidColorBrush x:Key="OkBrush" Color="#19B36B"/>
+
+    <!-- ============ Drapeau malgache ============
+         Les littéraux restent ici : GradientStop.Color attend une Color, pas un Brush. -->
+    <LinearGradientBrush x:Key="FlagMixBrush" StartPoint="0,0.5" EndPoint="1,0.5">
+        <GradientStop Color="#FFFFFF" Offset="0"/>
+        <GradientStop Color="#FC3D32" Offset="0.5"/>
+        <GradientStop Color="#007E3A" Offset="1"/>
+    </LinearGradientBrush>
+
+    <!-- ============ Rayons ============ -->
+    <CornerRadius x:Key="RadiusControl">6</CornerRadius>
+    <CornerRadius x:Key="RadiusCard">10</CornerRadius>
+    <CornerRadius x:Key="RadiusPill">14</CornerRadius>
+</ResourceDictionary>

@@ -1,7 +1,7 @@
 <UserControl x:Class="MadagascarBrowser.Shell.DownloadsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Background="{StaticResource BgBrush}" Foreground="{StaticResource TextBrush}">
+             Background="{DynamicResource BgBrush}" Foreground="{DynamicResource TextBrush}">
     <Grid Margin="28,24,28,24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -41,7 +41,7 @@
                             <TextBlock Text="{Binding Path}" FontSize="12.5" TextTrimming="CharacterEllipsis"
                                        VerticalAlignment="Center"/>
                             <TextBlock Grid.Column="1" Text="{Binding State}" FontSize="11"
-                                       Foreground="{StaticResource MutedBrush}" Margin="14,0,0,0"
+                                       Foreground="{DynamicResource MutedBrush}" Margin="14,0,0,0"
                                        VerticalAlignment="Center"/>
                             <ProgressBar Grid.Row="1" Grid.ColumnSpan="2" Height="6" Margin="0,8,0,0"
                                          Style="{StaticResource DarkProgressBar}"
@@ -56,7 +56,7 @@
         </Grid>
 
         <!-- Barre d'actions -->
-        <Border Grid.Row="2" BorderBrush="{StaticResource EdgeBrush}" BorderThickness="0,1,0,0" Padding="0,14,0,0">
+        <Border Grid.Row="2" BorderBrush="{DynamicResource EdgeBrush}" BorderThickness="0,1,0,0" Padding="0,14,0,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button x:Name="CancelButton" Content="Annuler" Style="{StaticResource SecondaryButton}"
                         Margin="0,0,8,0" IsEnabled="False" Click="Cancel_Click"/>

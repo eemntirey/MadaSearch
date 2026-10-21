@@ -7,7 +7,7 @@
         xmlns:shell="clr-namespace:MadagascarBrowser.Shell"
         mc:Ignorable="d"
         Title="Madagascar Browser" Height="800" Width="1200"
-        Background="{StaticResource BgBrush}">
+        Background="{DynamicResource BgBrush}">
     <Window.Style>
         <Style TargetType="{x:Type Window}">
             <Setter Property="chrome:WindowChrome.WindowChrome">
@@ -28,7 +28,7 @@
             </Style.Triggers>
         </Style>
     </Window.Style>
-    <Grid Background="{StaticResource BgBrush}">
+    <Grid Background="{DynamicResource BgBrush}">
         <Grid.Style>
             <Style TargetType="Grid">
                 <Setter Property="Margin" Value="0"/>
@@ -51,10 +51,10 @@
         </Grid.RowDefinitions>
 
         <!-- Bandeau tricolore : mélange des couleurs du drapeau malgache -->
-        <Border Grid.Row="0" Height="4" Background="{StaticResource FlagMixBrush}"/>
+        <Border Grid.Row="0" Height="4" Background="{DynamicResource FlagMixBrush}"/>
 
         <!-- Barre de titre personnalisée (WindowChrome) -->
-        <Grid Grid.Row="1" Height="36" Background="{StaticResource BgBrush}"
+        <Grid Grid.Row="1" Height="36" Background="{DynamicResource BgBrush}"
               MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
@@ -64,9 +64,9 @@
             <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="14,0,0,0"
                         VerticalAlignment="Center">
                 <TextBlock Text="M" FontFamily="Segoe UI" FontSize="13" FontWeight="Bold"
-                           Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center"/>
+                           Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
                 <TextBlock Text="adagascar Browser" FontFamily="Segoe UI" FontSize="11.5"
-                           Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center"
+                           Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"
                            Margin="1,0,0,0"/>
             </StackPanel>
 
@@ -91,8 +91,8 @@
         </Grid>
 
         <!-- Barre d'onglets : pilules + bouton nouveau onglet -->
-        <Border Grid.Row="2" Background="{StaticResource SurfaceBrush}"
-                BorderBrush="{StaticResource EdgeBrush}" BorderThickness="0,0,0,1">
+        <Border Grid.Row="2" Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource EdgeBrush}" BorderThickness="0,0,0,1">
             <Grid Margin="8,6,8,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -119,7 +119,7 @@
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="{Binding Title}"
-                                           Foreground="{StaticResource TextBrush}"
+                                           Foreground="{DynamicResource TextBrush}"
                                            FontSize="12" VerticalAlignment="Center"
                                            MaxWidth="180" TextTrimming="CharacterEllipsis"/>
                                 <Button Grid.Column="1" Style="{StaticResource IconButtonSmall}"
@@ -142,16 +142,16 @@
         <ContentControl Grid.Row="3" Content="{Binding Active.View}"/>
 
         <!-- Barre d'état moderne -->
-        <Border Grid.Row="4" Background="{StaticResource SurfaceBrush}"
-                BorderBrush="{StaticResource EdgeBrush}" BorderThickness="0,1,0,0">
-            <StatusBar Background="Transparent" Foreground="{StaticResource MutedBrush}"
+        <Border Grid.Row="4" Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource EdgeBrush}" BorderThickness="0,1,0,0">
+            <StatusBar Background="Transparent" Foreground="{DynamicResource MutedBrush}"
                        FontSize="11" Padding="10,4">
                 <StatusBarItem>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <Ellipse Width="6" Height="6" Fill="{StaticResource OkBrush}"
+                        <Ellipse Width="6" Height="6" Fill="{DynamicResource OkBrush}"
                                  VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <TextBlock x:Name="StatusText" Text="Prêt"
-                                   Foreground="{StaticResource MutedBrush}" FontSize="11">
+                                   Foreground="{DynamicResource MutedBrush}" FontSize="11">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Text" Value="Prêt"/>
@@ -165,13 +165,13 @@
                         </TextBlock>
                     </StackPanel>
                 </StatusBarItem>
-                <Separator Background="{StaticResource EdgeBrush}" Margin="4,0"/>
+                <Separator Background="{DynamicResource EdgeBrush}" Margin="4,0"/>
                 <StatusBarItem>
                     <TextBlock Text="{Binding BlockedCount, Source={x:Static shell:BrowserStats.Instance}, StringFormat=Pubs bloquées : {0}}"
-                               Foreground="{StaticResource MutedBrush}" FontSize="11"/>
+                               Foreground="{DynamicResource MutedBrush}" FontSize="11"/>
                 </StatusBarItem>
                 <StatusBarItem HorizontalAlignment="Right">
-                    <TextBlock Text="Madagascar Browser" Foreground="{StaticResource MutedBrush}"
+                    <TextBlock Text="Madagascar Browser" Foreground="{DynamicResource MutedBrush}"
                                FontSize="11" Opacity="0.6"/>
                 </StatusBarItem>
             </StatusBar>
