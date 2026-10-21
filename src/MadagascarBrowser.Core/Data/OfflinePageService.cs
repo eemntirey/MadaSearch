@@ -43,7 +43,7 @@ namespace MadagascarBrowser.Core.Data
                 command.Parameters.AddWithValue("$url", uri.AbsoluteUri);
                 command.Parameters.AddWithValue("$title", title ?? string.Empty);
                 command.Parameters.AddWithValue("$path", path);
-                command.Parameters.AddWithValue("$saved_at", savedAt.ToString("o"));
+                command.Parameters.AddWithValue("$saved_at", DateTimeStorage.ToStorage(savedAt));
                 command.ExecuteNonQuery();
             }
             catch
@@ -68,7 +68,7 @@ namespace MadagascarBrowser.Core.Data
                 pages.Add(new OfflinePage(
                     reader.GetString(0), reader.GetString(1), reader.GetString(2),
                     reader.GetString(3),
-                    DateTime.Parse(reader.GetString(4), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)));
+                    DateTimeStorage.Parse(reader.GetString(4))));
             }
             return pages;
         }

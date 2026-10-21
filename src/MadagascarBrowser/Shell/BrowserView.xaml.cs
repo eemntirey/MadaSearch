@@ -478,13 +478,6 @@ namespace MadagascarBrowser.Shell
             }
         }
 
-        private void NavigateTo(string url)
-        {
-            WebView.Source = Uri.TryCreate(url, UriKind.Absolute, out var uri) && uri.IsFile
-                ? uri
-                : new Uri(ResolveAddress(url));
-        }
-
         private async void OnDownloadStarting(object? sender, CoreWebView2DownloadStartingEventArgs e)
         {
             var operation = e.DownloadOperation;

@@ -21,7 +21,7 @@ namespace MadagascarBrowser.Core.Data
 			command.CommandText = "INSERT INTO history (url,title,visited_at) VALUES ($url,$title,$visited_at)";
 			command.Parameters.AddWithValue("$url", url);
 			command.Parameters.AddWithValue("$title", title);
-			command.Parameters.AddWithValue("$visited_at", DateTime.UtcNow.ToString("o"));
+			command.Parameters.AddWithValue("$visited_at", DateTimeStorage.ToStorage(DateTime.UtcNow));
 			command.ExecuteNonQuery();
 		}
 
@@ -36,7 +36,7 @@ namespace MadagascarBrowser.Core.Data
 			using var reader = command.ExecuteReader();
 			while (reader.Read())
 			{
-				visits.Add(new Visit(reader.GetString(0), reader.GetString(1), DateTime.Parse(reader.GetString(2))));
+				visits.Add(new Visit(reader.GetString(0), reader.GetString(1), DateTimeStorage.Parse(reader.GetString(2))));
 			}
 			return visits;
 		}
@@ -53,7 +53,7 @@ namespace MadagascarBrowser.Core.Data
 			using var reader = command.ExecuteReader();
 			while (reader.Read())
 			{
-				visits.Add(new Visit(reader.GetString(0), reader.GetString(1), DateTime.Parse(reader.GetString(2))));
+				visits.Add(new Visit(reader.GetString(0), reader.GetString(1), DateTimeStorage.Parse(reader.GetString(2))));
 			}
 			return visits;
 		}

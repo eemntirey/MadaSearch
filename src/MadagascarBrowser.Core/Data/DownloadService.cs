@@ -24,7 +24,7 @@ namespace MadagascarBrowser.Core.Data
             command.Parameters.AddWithValue("$url", url);
             command.Parameters.AddWithValue("$path", destination);
             command.Parameters.AddWithValue("$state", DownloadState.InProgress.ToString());
-            command.Parameters.AddWithValue("$started_at", startedAt.ToString("o"));
+            command.Parameters.AddWithValue("$started_at", DateTimeStorage.ToStorage(startedAt));
             var id = (long)command.ExecuteScalar()!;
             return new BrowserDownload(id, url, destination, 0, 0, DownloadState.InProgress, startedAt);
         }
@@ -67,7 +67,7 @@ namespace MadagascarBrowser.Core.Data
                     reader.GetInt64(3),
                     reader.GetInt64(4),
                     Enum.Parse<DownloadState>(reader.GetString(5)),
-                    DateTime.Parse(reader.GetString(6), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)));
+                    DateTimeStorage.Parse(reader.GetString(6))));
             }
             return downloads;
         }

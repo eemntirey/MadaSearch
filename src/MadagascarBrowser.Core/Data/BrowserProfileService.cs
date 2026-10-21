@@ -61,7 +61,7 @@ namespace MadagascarBrowser.Core.Data
                 command.CommandText = "INSERT INTO favorites (url,title,added_at) VALUES ($url,$title,$added_at)";
                 command.Parameters.AddWithValue("$url", favorite.Url);
                 command.Parameters.AddWithValue("$title", favorite.Title);
-                command.Parameters.AddWithValue("$added_at", favorite.AddedAt.ToUniversalTime().ToString("o"));
+                command.Parameters.AddWithValue("$added_at", DateTimeStorage.ToStorage(favorite.AddedAt));
                 command.ExecuteNonQuery();
             }
 
@@ -71,7 +71,7 @@ namespace MadagascarBrowser.Core.Data
                 command.CommandText = "INSERT INTO history (url,title,visited_at) VALUES ($url,$title,$visited_at)";
                 command.Parameters.AddWithValue("$url", visit.Url);
                 command.Parameters.AddWithValue("$title", visit.Title);
-                command.Parameters.AddWithValue("$visited_at", visit.VisitedAt.ToUniversalTime().ToString("o"));
+                command.Parameters.AddWithValue("$visited_at", DateTimeStorage.ToStorage(visit.VisitedAt));
                 command.ExecuteNonQuery();
             }
 
