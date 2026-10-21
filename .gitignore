@@ -3,3 +3,4 @@ obj/
 .vs/
 *.user
 @AutomationLog.txt
+graphify-out/

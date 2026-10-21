@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -24,6 +26,7 @@ namespace MadagascarBrowser.Shell
         private bool _coreReady;
         private bool _suppressSuggest;
         private bool _certificateError;
+        private CoreWebView2DevToolsProtocolEventReceiver? _fetchRequestPausedReceiver;
         private AsyncDebouncer? _suggestDebouncer;
         private readonly TaskCompletionSource<CoreWebView2> _coreReadySource =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -51,7 +54,8 @@ namespace MadagascarBrowser.Shell
                 var environment = await WebViewEnvironment.GetAsync();
                 await WebView.EnsureCoreWebView2Async(environment);
                 _coreReady = true;
-                InitCore();
+                await InitCoreAsync();
+                RefreshStats();
                 _coreReadySource.TrySetResult(WebView.CoreWebView2);
             }
             catch (Exception exception)
@@ -64,7 +68,7 @@ namespace MadagascarBrowser.Shell
             }
         }
 
-        private void InitCore()
+        private async Task InitCoreAsync()
         {
             var core = WebView.CoreWebView2;
             ConfigureSettings(core.Settings);
@@ -75,7 +79,8 @@ namespace MadagascarBrowser.Shell
                 core.SetVirtualHostNameToFolderMapping(LocalHost, folder, CoreWebView2HostResourceAccessKind.DenyCors);
             }
 
-            core.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
+            core.AddWebResourceRequestedFilter("http://*", CoreWebView2WebResourceContext.All);
+            core.AddWebResourceRequestedFilter("https://*", CoreWebView2WebResourceContext.All);
             core.WebResourceRequested += OnWebResourceRequested;
             core.DownloadStarting += OnDownloadStarting;
             core.NavigationStarting += OnNavigationStarting;
@@ -87,6 +92,7 @@ namespace MadagascarBrowser.Shell
             core.ServerCertificateErrorDetected += OnServerCertificateErrorDetected;
             core.WebMessageReceived += OnWebMessageReceived;
             HookAcceleratorKeys();
+            await EnableDataSaverInterceptionAsync(core);
 
             var source = core.Source;
             if (string.IsNullOrWhiteSpace(source) || source == "about:blank")
@@ -586,22 +592,8 @@ namespace MadagascarBrowser.Shell
             if (BrowserServices.AdBlock.ShouldBlock(uri))
             {
                 SetResponse(e, 403, "Bloqué", "text/plain; charset=utf-8", Array.Empty<byte>());
+                RecordMetric(BrowserServices.DataSaverMetrics.RecordAdBlocked);
                 RefreshStats();
-                return;
-            }
-
-            var mime = MimeTypeFromUri(uri);
-            if (mime == null)
-                return;
-
-            var decision = BrowserServices.DataSaver.Evaluate(uri, mime, ContentLengthOf(e));
-            if (decision == DataSaverDecision.Block)
-            {
-                SetResponse(e, 403, "Économisé", "text/plain; charset=utf-8", Array.Empty<byte>());
-            }
-            else if (decision == DataSaverDecision.Placeholder)
-            {
-                SetResponse(e, 200, "OK", "image/gif", PlaceholderGif);
             }
         }
 
@@ -612,37 +604,151 @@ namespace MadagascarBrowser.Shell
                 .CreateWebResourceResponse(new MemoryStream(body), status, reason, headers);
         }
 
-        private static long ContentLengthOf(CoreWebView2WebResourceRequestedEventArgs e)
+        private async Task EnableDataSaverInterceptionAsync(CoreWebView2 core)
         {
-            if (e.Request.Headers.Contains("Content-Length") &&
-                long.TryParse(e.Request.Headers.GetHeader("Content-Length"), out var length))
+            _fetchRequestPausedReceiver = core.GetDevToolsProtocolEventReceiver("Fetch.requestPaused");
+            _fetchRequestPausedReceiver.DevToolsProtocolEventReceived += OnFetchRequestPaused;
+            try
             {
-                return length;
+                await core.CallDevToolsProtocolMethodAsync(
+                    "Fetch.enable",
+                    "{\"patterns\":[{\"urlPattern\":\"http://*/*\",\"requestStage\":\"Response\"},{\"urlPattern\":\"https://*/*\",\"requestStage\":\"Response\"}]}");
             }
-            return 0;
+            catch (Exception exception)
+            {
+                System.Diagnostics.Trace.TraceError(
+                    $"Impossible d'activer l'interception des réponses pour l'économiseur de données : {exception}");
+                _fetchRequestPausedReceiver.DevToolsProtocolEventReceived -= OnFetchRequestPaused;
+                _fetchRequestPausedReceiver = null;
+            }
         }
 
-        private static string? MimeTypeFromUri(Uri uri)
+        private async void OnFetchRequestPaused(
+            object? sender,
+            CoreWebView2DevToolsProtocolEventReceivedEventArgs e)
         {
-            switch (Path.GetExtension(uri.AbsolutePath).ToLowerInvariant())
+            string? requestId = null;
+            try
             {
-                case ".jpg":
-                case ".jpeg": return "image/jpeg";
-                case ".png": return "image/png";
-                case ".gif": return "image/gif";
-                case ".webp": return "image/webp";
-                case ".svg": return "image/svg+xml";
-                case ".bmp":
-                case ".ico": return "image/bmp";
-                case ".mp4":
-                case ".m4v": return "video/mp4";
-                case ".webm": return "video/webm";
-                case ".ogv": return "video/ogg";
-                case ".avi": return "video/x-msvideo";
-                case ".mkv":
-                case ".mov": return "video/x-matroska";
-                default: return null;
+                using var document = JsonDocument.Parse(e.ParameterObjectAsJson);
+                var root = document.RootElement;
+                requestId = root.GetProperty("requestId").GetString();
+                if (string.IsNullOrEmpty(requestId))
+                    throw new InvalidOperationException("La réponse interceptée ne contient pas d'identifiant de requête.");
+
+                var url = root.GetProperty("request").GetProperty("url").GetString();
+                if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+                    (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+                {
+                    await ContinuePausedRequestAsync(requestId);
+                    return;
+                }
+
+                if (BrowserServices.AdBlock.IsDomainExempt(uri))
+                {
+                    await ContinuePausedRequestAsync(requestId);
+                    return;
+                }
+
+                var responseHeaders = root.GetProperty("responseHeaders").EnumerateArray()
+                    .Select(header => new
+                    {
+                        Name = header.GetProperty("name").GetString() ?? string.Empty,
+                        Value = header.GetProperty("value").GetString() ?? string.Empty
+                    })
+                    .ToList();
+                var contentType = responseHeaders
+                    .FirstOrDefault(header => header.Name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))
+                    ?.Value.Split(';', 2)[0].Trim() ?? string.Empty;
+                var contentLengthHeader = responseHeaders
+                    .FirstOrDefault(header => header.Name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
+                    ?.Value;
+                long? contentLength = long.TryParse(contentLengthHeader, out var length) && length >= 0
+                    ? length
+                    : null;
+                var statusCode = root.TryGetProperty("responseStatusCode", out var status)
+                    ? status.GetInt32()
+                    : 0;
+
+                if (statusCode != 200)
+                {
+                    await ContinuePausedRequestAsync(requestId);
+                    return;
+                }
+
+                var decision = BrowserServices.DataSaver.Evaluate(uri, contentType, contentLength);
+                if (decision == DataSaverDecision.Block)
+                {
+                    await WebView.CoreWebView2.CallDevToolsProtocolMethodAsync(
+                        "Fetch.failRequest",
+                        JsonSerializer.Serialize(new { requestId, errorReason = "BlockedByClient" }));
+                    RecordMetric(() => BrowserServices.DataSaverMetrics.RecordVideoBlocked(contentLength ?? 0));
+                    RefreshStats();
+                    return;
+                }
+
+                if (decision == DataSaverDecision.Placeholder && contentLength.HasValue)
+                {
+                    var replacementHeaders = responseHeaders
+                        .Where(header => !IsPayloadHeader(header.Name))
+                        .Select(header => new Dictionary<string, string>
+                        {
+                            ["name"] = header.Name,
+                            ["value"] = header.Value
+                        })
+                        .ToList();
+                    replacementHeaders.Add(new Dictionary<string, string> { ["name"] = "Content-Type", ["value"] = "image/gif" });
+                    replacementHeaders.Add(new Dictionary<string, string> { ["name"] = "Content-Length", ["value"] = PlaceholderGif.Length.ToString() });
+
+                    await WebView.CoreWebView2.CallDevToolsProtocolMethodAsync(
+                        "Fetch.fulfillRequest",
+                        JsonSerializer.Serialize(new
+                        {
+                            requestId,
+                            responseCode = statusCode,
+                            responseHeaders = replacementHeaders,
+                            body = Convert.ToBase64String(PlaceholderGif)
+                        }));
+                    RecordMetric(() => BrowserServices.DataSaverMetrics.RecordImageReplaced(contentLength.Value));
+                    RefreshStats();
+                    return;
+                }
+
+                await ContinuePausedRequestAsync(requestId);
             }
+            catch (Exception exception)
+            {
+                System.Diagnostics.Trace.TraceError($"Erreur pendant l'interception d'une réponse Web : {exception}");
+                if (!string.IsNullOrEmpty(requestId))
+                {
+                    try
+                    {
+                        await ContinuePausedRequestAsync(requestId);
+                    }
+                    catch (Exception continuationException)
+                    {
+                        System.Diagnostics.Trace.TraceError(
+                            $"Impossible de reprendre la réponse Web interceptée : {continuationException}");
+                    }
+                }
+            }
+        }
+
+        private static bool IsPayloadHeader(string name)
+        {
+            return name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)
+                || name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase)
+                || name.Equals("Content-Encoding", StringComparison.OrdinalIgnoreCase)
+                || name.Equals("Content-Range", StringComparison.OrdinalIgnoreCase)
+                || name.Equals("Transfer-Encoding", StringComparison.OrdinalIgnoreCase)
+                || name.Equals("Content-MD5", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private Task<string> ContinuePausedRequestAsync(string requestId)
+        {
+            return WebView.CoreWebView2.CallDevToolsProtocolMethodAsync(
+                "Fetch.continueRequest",
+                JsonSerializer.Serialize(new { requestId }));
         }
 
         private void OnNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
@@ -701,7 +807,33 @@ namespace MadagascarBrowser.Shell
 
         private static void RefreshStats()
         {
-            BrowserStats.Instance.BlockedCount = BrowserServices.AdBlock.BlockedCount;
+            try
+            {
+                var metrics = BrowserServices.DataSaverMetrics.GetSnapshot();
+                var culture = System.Globalization.CultureInfo.CurrentCulture;
+                BrowserStats.Instance.BlockedCount = metrics.SessionBlockedAds;
+                BrowserStats.Instance.SavedDataText =
+                    $"↓ {(metrics.SessionSavedBytes / (1024d * 1024d)).ToString("N1", culture)} Mo économisés";
+                BrowserStats.Instance.SavedDataTooltip =
+                    $"Cette session : {metrics.SessionSavedBytes.ToString("N0", culture)} octets. " +
+                    $"Cumul : {metrics.TotalSavedBytes.ToString("N0", culture)} octets.";
+            }
+            catch (Exception exception)
+            {
+                System.Diagnostics.Trace.TraceError($"Impossible de lire les métriques du navigateur : {exception}");
+            }
+        }
+
+        private static void RecordMetric(Action record)
+        {
+            try
+            {
+                record();
+            }
+            catch (Exception exception)
+            {
+                System.Diagnostics.Trace.TraceError($"Impossible d'enregistrer une métrique du navigateur : {exception}");
+            }
         }
 
         private void AddressBar_KeyDown(object sender, KeyEventArgs e)
@@ -827,6 +959,11 @@ namespace MadagascarBrowser.Shell
         {
             _suggestDebouncer?.Dispose();
             _suggestDebouncer = null;
+            if (_fetchRequestPausedReceiver != null)
+            {
+                _fetchRequestPausedReceiver.DevToolsProtocolEventReceived -= OnFetchRequestPaused;
+                _fetchRequestPausedReceiver = null;
+            }
             try { WebView.Dispose(); } catch { }
         }
     }

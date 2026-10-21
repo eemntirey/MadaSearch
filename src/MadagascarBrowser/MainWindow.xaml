@@ -78,8 +78,7 @@
                         chrome:WindowChrome.IsHitTestVisibleInChrome="True"
                         Click="Minimize_Click" ToolTip="Réduire" AutomationProperties.Name="Réduire"/>
                 <Button Click="Maximize_Click" ToolTip="Agrandir"
-                        chrome:WindowChrome.IsHitTestVisibleInChrome="True"
-                        AutomationProperties.Name="Agrandir">
+                        chrome:WindowChrome.IsHitTestVisibleInChrome="True">
                     <Button.Style>
                         <Style TargetType="Button" BasedOn="{StaticResource CaptionButton}">
                             <Setter Property="Content" Value="&#xE922;"/>
@@ -194,6 +193,12 @@
                             Padding="10,3" Margin="0,0,6,0">
                         <TextBlock FontSize="11" Foreground="{DynamicResource MutedBrush}"
                                    Text="{Binding BlockedCount, Source={x:Static shell:BrowserStats.Instance}, StringFormat={}{0} pubs bloquées}"/>
+                    </Border>
+                    <Border Background="{DynamicResource SurfaceHighBrush}" CornerRadius="999"
+                            Padding="10,3" Margin="0,0,6,0">
+                        <TextBlock FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                                   Text="{Binding SavedDataText, Source={x:Static shell:BrowserStats.Instance}}"
+                                   ToolTip="{Binding SavedDataTooltip, Source={x:Static shell:BrowserStats.Instance}}"/>
                     </Border>
                     <Border Background="{DynamicResource SurfaceHighBrush}" CornerRadius="999" Padding="10,3">
                         <TextBlock FontSize="11" Foreground="{DynamicResource MutedBrush}"

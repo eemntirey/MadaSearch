@@ -3,8 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Media.Media3D;
 using MadagascarBrowser.Shell;
 
 namespace MadagascarBrowser
@@ -104,6 +108,12 @@ namespace MadagascarBrowser
 
         private void TitleBar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            // Un clic qui démarre sur un bouton (min/max/fermer) ne doit pas lancer le
+            // déplacement de fenêtre : DragMove() capture la souris et le bouton ne reçoit
+            // jamais le MouseUp, donc le Click n'est jamais déclenché.
+            if (IsInsideButton(e.OriginalSource as DependencyObject))
+                return;
+
             if (e.ClickCount == 2)
             {
                 ToggleMaximize();
@@ -119,6 +129,24 @@ namespace MadagascarBrowser
                     // Le bouton a été relâché avant DragMove : ignorer.
                 }
             }
+        }
+
+        private static bool IsInsideButton(DependencyObject? source)
+        {
+            while (source != null)
+            {
+                if (source is ButtonBase)
+                    return true;
+
+                source = source switch
+                {
+                    Visual visual => VisualTreeHelper.GetParent(visual),
+                    Visual3D visual3D => VisualTreeHelper.GetParent(visual3D),
+                    _ => null
+                };
+            }
+
+            return false;
         }
 
         private void Minimize_Click(object sender, RoutedEventArgs e)

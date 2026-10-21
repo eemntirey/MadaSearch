@@ -14,6 +14,7 @@ namespace MadagascarBrowser.Shell
         public static NavigationService Navigation { get; private set; } = null!;
         public static AdBlockService AdBlock { get; private set; } = null!;
         public static DataSaverService DataSaver { get; private set; } = null!;
+        public static DataSaverMetricsService DataSaverMetrics { get; private set; } = null!;
         public static HistoryService History { get; private set; } = null!;
         public static FavoritesService Favorites { get; private set; } = null!;
         public static DownloadService Downloads { get; private set; } = null!;
@@ -31,6 +32,7 @@ namespace MadagascarBrowser.Shell
                 "MadagascarBrowser");
             var db = new Database(Path.Combine(dir, "browser.db"));
             History = new HistoryService(db);
+            DataSaverMetrics = new DataSaverMetricsService(db);
             Favorites = new FavoritesService(db);
             Downloads = new DownloadService(db);
             OfflinePages = new OfflinePageService(db, Path.Combine(dir, "offline"));

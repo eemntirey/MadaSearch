@@ -25,12 +25,8 @@ namespace MadagascarBrowser.Core.Blocking
             if (!Enabled || url == null)
                 return false;
             var host = url.Host.TrimEnd('.').ToLowerInvariant();
-            foreach (var exemptDomain in _exempt)
-            {
-                if (host.Equals(exemptDomain, StringComparison.OrdinalIgnoreCase) ||
-                    host.EndsWith("." + exemptDomain, StringComparison.OrdinalIgnoreCase))
-                    return false;
-            }
+            if (IsDomainExempt(url))
+                return false;
 
             if (_domains.Contains(host))
             {
@@ -44,6 +40,18 @@ namespace MadagascarBrowser.Core.Blocking
                     _blocked++;
                     return true;
                 }
+            }
+            return false;
+        }
+
+        public bool IsDomainExempt(Uri url)
+        {
+            var host = url.Host.TrimEnd('.').ToLowerInvariant();
+            foreach (var exemptDomain in _exempt)
+            {
+                if (host.Equals(exemptDomain, StringComparison.OrdinalIgnoreCase) ||
+                    host.EndsWith("." + exemptDomain, StringComparison.OrdinalIgnoreCase))
+                    return true;
             }
             return false;
         }
