@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using MadagascarBrowser.Core.Blocking;
 using MadagascarBrowser.Core.Data;
@@ -39,24 +40,38 @@ namespace MadagascarBrowser.Shell
             CurrentSettings = SettingsService.Load();
             Navigation = new NavigationService();
             AdBlock = new AdBlockService();
-            AdBlock.Enabled = CurrentSettings.AdBlockEnabled;
+            ApplyAllowedDomains(CurrentSettings);
             DataSaver = new DataSaverService();
             DataSaver.Enabled = CurrentSettings.DataSaverEnabled;
             _initialized = true;
+        }
+
+        /// <summary>
+        /// Recrée le bloqueur de publicités et applique les domaines autorisés
+        /// par l'utilisateur via SetDomainExempt (fonction existante du Core).
+        /// </summary>
+        private static void ApplyAllowedDomains(BrowserSettings settings)
+        {
+            var adBlock = new AdBlockService { Enabled = settings.AdBlockEnabled };
+            foreach (var domain in settings.AllowedDomains ?? new List<string>())
+            {
+                adBlock.SetDomainExempt(domain);
+            }
+            AdBlock = adBlock;
         }
 
         public static void UpdateSettings(BrowserSettings settings)
         {
             SettingsService.Save(settings);
             CurrentSettings = settings;
-            AdBlock.Enabled = settings.AdBlockEnabled;
+            ApplyAllowedDomains(settings);
             DataSaver.Enabled = settings.DataSaverEnabled;
         }
 
         public static void ReloadSettings()
         {
             CurrentSettings = SettingsService.Load();
-            AdBlock.Enabled = CurrentSettings.AdBlockEnabled;
+            ApplyAllowedDomains(CurrentSettings);
             DataSaver.Enabled = CurrentSettings.DataSaverEnabled;
         }
     }

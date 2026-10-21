@@ -79,6 +79,7 @@ namespace MadagascarBrowser.Core.Data
             SaveSetting(command, "ad_block_enabled", profile.Settings.AdBlockEnabled.ToString());
             SaveSetting(command, "data_saver_enabled", profile.Settings.DataSaverEnabled.ToString());
             SaveSetting(command, "restore_session", profile.Settings.RestoreSession.ToString());
+            SaveSetting(command, "allowed_domains", string.Join(",", profile.Settings.AllowedDomains ?? new List<string>()));
             transaction.Commit();
         }
 

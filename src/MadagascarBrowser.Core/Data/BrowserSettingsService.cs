@@ -1,4 +1,6 @@
 using Microsoft.Data.Sqlite;
+using System;
+using System.Collections.Generic;
 
 namespace MadagascarBrowser.Core.Data
 {
@@ -37,6 +39,9 @@ namespace MadagascarBrowser.Core.Data
                     case "restore_session":
                         settings.RestoreSession = bool.TryParse(value, out var restoreSession) && restoreSession;
                         break;
+                    case "allowed_domains":
+                        settings.AllowedDomains = ParseDomains(value);
+                        break;
                 }
             }
 
@@ -56,7 +61,23 @@ namespace MadagascarBrowser.Core.Data
             SaveValue(command, "ad_block_enabled", settings.AdBlockEnabled.ToString());
             SaveValue(command, "data_saver_enabled", settings.DataSaverEnabled.ToString());
             SaveValue(command, "restore_session", settings.RestoreSession.ToString());
+            SaveValue(command, "allowed_domains", string.Join(",", settings.AllowedDomains ?? new List<string>()));
             transaction.Commit();
+        }
+
+        /// <summary>
+        /// Découpe la liste de domaines autorisés stockée en base.
+        /// </summary>
+        private static List<string> ParseDomains(string value)
+        {
+            var domains = new List<string>();
+            foreach (var part in value.Split(',', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var domain = part.Trim();
+                if (domain.Length > 0)
+                    domains.Add(domain);
+            }
+            return domains;
         }
 
         private static void SaveValue(SqliteCommand command, string key, string value)
