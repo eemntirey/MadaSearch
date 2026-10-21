@@ -67,11 +67,12 @@ namespace MadagascarBrowser.Shell
         private void InitCore()
         {
             var core = WebView.CoreWebView2;
+            ConfigureSettings(core.Settings);
 
             var folder = Path.Combine(AppContext.BaseDirectory, "StartPage");
             if (Directory.Exists(folder))
             {
-                core.SetVirtualHostNameToFolderMapping("startpage.local", folder, CoreWebView2HostResourceAccessKind.Allow);
+                core.SetVirtualHostNameToFolderMapping(LocalHost, folder, CoreWebView2HostResourceAccessKind.DenyCors);
             }
 
             core.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
@@ -82,6 +83,8 @@ namespace MadagascarBrowser.Shell
             core.SourceChanged += OnSourceChanged;
             core.HistoryChanged += OnHistoryChanged;
             core.NewWindowRequested += OnNewWindowRequested;
+            core.ContainsFullScreenElementChanged += OnContainsFullScreenElementChanged;
+            core.WebMessageReceived += OnWebMessageReceived;
             HookAcceleratorKeys();
 
             var source = core.Source;
@@ -108,6 +111,62 @@ namespace MadagascarBrowser.Shell
             }
 
             UpdateNavButtons();
+        }
+
+        /// <summary>
+        /// Audit des réglages WebView2. Chaque choix est documenté : on n'active que ce qui
+        /// est utile à Madagascar Browser, on neutralise ce qui exposerait l'utilisateur.
+        /// </summary>
+        private static void ConfigureSettings(CoreWebView2Settings settings)
+        {
+            // Zoom Ctrl+molette et Ctrl++/Ctrl+- : activé (navigation en 3G/4G fréquente).
+            settings.IsZoomControlEnabled = true;
+
+            // Accélérateurs navigateur (Ctrl+F recherche, Ctrl+P impression, F5, Ctrl+molette) :
+            // laissés actifs, l'utilisateur garde les raccourcis habituels d'un navigateur.
+            settings.AreBrowserAcceleratorKeysEnabled = true;
+
+            // Menu contextuel natif (copier/coller, lien dans un nouvel onglet) : activé.
+            settings.AreDefaultContextMenusEnabled = true;
+
+            // Pas d'enregistrement automatique des mots de passe ni d'autofill Chromium :
+            // MadaSearch ne gère pas de coffre-fort, ces fonctions resteraient
+            // inaccessibles et stockeraient des secrets sans contrôle de l'utilisateur.
+            settings.IsPasswordAutosaveEnabled = false;
+            settings.IsGeneralAutofillEnabled = false;
+
+            // Barre d'état WebView2 : désactivée, l'application affiche la sienne.
+            settings.IsStatusBarEnabled = false;
+
+            // Page d'erreur WebView2 : désactivée, Madagascar Browser affiche sa page
+            // d'erreur maison (startpage.local/error.html).
+            settings.IsBuiltInErrorPageEnabled = false;
+
+            // Scripts : activés (aucun site ne fonctionne sans JavaScript).
+            settings.IsScriptEnabled = true;
+
+            // Messages Web : activés, nécessaire pour les pages hors ligne et l'hôte virtuel.
+            settings.IsWebMessageEnabled = true;
+
+            // DevTools : activés pour le diagnostic, sans impact sur l'utilisateur final.
+            settings.AreDevToolsEnabled = true;
+
+            // Diapositives au doigt : désactivées, la navigation tactile n'a pas lieu d'être.
+            settings.IsSwipeNavigationEnabled = false;
+        }
+
+        /// <summary>
+        /// Une page passe en plein écran : la barre d'outils de l'onglet est masquée
+        /// pour laisser la page occuper tout l'espace.
+        /// </summary>
+        private void OnContainsFullScreenElementChanged(object? sender, object e)
+        {
+            var isFullScreen = WebView.CoreWebView2?.ContainsFullScreenElement ?? false;
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (DataContext is TabViewModel tab)
+                    tab.IsFullScreen = isFullScreen;
+            }));
         }
 
         private void OnHistoryChanged(object? sender, object e)
@@ -174,44 +233,64 @@ namespace MadagascarBrowser.Shell
 
         private void HookAcceleratorKeys()
         {
-            // L'événement AcceleratorKeyPressed vit sur CoreWebView2Controller,
-            // non exposé publiquement par le contrôle WPF : réflexion ciblée.
-            try
-            {
-                var property = WebView.GetType().BaseType?.GetProperty(
-                    "CoreWebView2Controller",
-                    System.Reflection.BindingFlags.Instance |
-                    System.Reflection.BindingFlags.NonPublic |
-                    System.Reflection.BindingFlags.Public);
-                if (property?.GetValue(WebView) is CoreWebView2Controller controller)
-                {
-                    controller.AcceleratorKeyPressed += OnAcceleratorKeyPressed;
-                }
-            }
-            catch
-            {
-                // Sans hook clavier, les raccourcis restent gérés par la fenêtre
-                // quand le focus n'est pas sur le WebView.
-            }
+            // L'événement AcceleratorKeyPressed du CoreWebView2Controller n'est pas
+            // exposé par le contrôle WPF (Microsoft.Web.WebView2.Wpf.WebView2 ne
+            // publie pas CoreWebView2Controller), et aucune version du SDK ne le
+            // rend accessible : le seul accès possible passait par la réflexion
+            // ci-dessous, qui échouait silencieusement.
+            // Les raccourcis applicatifs (Ctrl+T / Ctrl+W / Ctrl+L) sont donc
+            // interceptés dans la page via AddScriptToExecuteOnDocumentCreatedAsync
+            // puis relayés par WebMessageReceived (API publique CoreWebView2).
+            _ = WebView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(AcceleratorBridgeScript);
         }
 
-        private void OnAcceleratorKeyPressed(object? sender, CoreWebView2AcceleratorKeyPressedEventArgs e)
-        {
-            if (e.KeyEventKind != CoreWebView2KeyEventKind.KeyDown) return;
-            if ((Interop.GetAsyncKeyState(0x11) & 0x8000) == 0) return;
+        /// <summary>
+        /// Script injecté dans chaque page : relaie les raccourcis applicatifs
+        /// (Ctrl+T / Ctrl+W / Ctrl+L) vers l'hôte via le canal WebMessage.
+        /// </summary>
+        private const string AcceleratorBridgeScript = @"
+(function () {
+  if (window.__madagascarAcceleratorBridge) { return; }
+  window.__madagascarAcceleratorBridge = true;
+  document.addEventListener('keydown', function (event) {
+    if (!event.ctrlKey || event.altKey || event.metaKey) { return; }
+    var key = (event.key || '').toLowerCase();
+    if (key !== 't' && key !== 'w' && key !== 'l') { return; }
+    try {
+      window.chrome.webview.postMessage(key);
+    } catch (error) {
+      /* canal de messages indisponible */
+    }
+  }, true);
+})();";
 
-            switch ((Key)e.VirtualKey)
+        /// <summary>
+        /// Réception d'un raccourci applicatif relayé par la page.
+        /// </summary>
+        private void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
+        {
+            string? key;
+            try
             {
-                case Key.T:
-                    e.Handled = true;
+                key = e.TryGetWebMessageAsString();
+            }
+            catch (ArgumentException)
+            {
+                // Message non textuel : ignoré.
+                return;
+            }
+
+            var command = AcceleratorCommandResolver.Resolve(key, ctrl: true, alt: false, shift: false);
+            switch (command)
+            {
+                case AcceleratorCommand.NewTab:
                     Dispatcher.BeginInvoke(new Action(() =>
                     {
                         if (Window.GetWindow(this)?.DataContext is TabManager tabManager)
                             tabManager.NewTab();
                     }));
                     break;
-                case Key.W:
-                    e.Handled = true;
+                case AcceleratorCommand.CloseTab:
                     Dispatcher.BeginInvoke(new Action(() =>
                     {
                         if (Window.GetWindow(this)?.DataContext is TabManager tabManager &&
@@ -219,17 +298,10 @@ namespace MadagascarBrowser.Shell
                             tabManager.Close(tabManager.Active);
                     }));
                     break;
-                case Key.L:
-                    e.Handled = true;
+                case AcceleratorCommand.FocusAddressBar:
                     Dispatcher.BeginInvoke(new Action(FocusAddressBar));
                     break;
             }
-        }
-
-        private static class Interop
-        {
-            [System.Runtime.InteropServices.DllImport("user32.dll")]
-            internal static extern short GetAsyncKeyState(int vKey);
         }
 
         private void Back_Click(object sender, RoutedEventArgs e)

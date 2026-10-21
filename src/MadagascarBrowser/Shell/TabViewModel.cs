@@ -18,12 +18,20 @@ namespace MadagascarBrowser.Shell
         private string _url = "about:blank";
         private string _favicon = string.Empty;
         private bool _isLoading;
+        private bool _isFullScreen;
         private ConnectionSecurity _securityState = ConnectionSecurity.None;
 
         public string Title { get => _title; set { _title = value; OnPropertyChanged(); } }
         public string Url { get => _url; set { _url = value; OnPropertyChanged(); } }
         public string Favicon { get => _favicon; set { _favicon = value; OnPropertyChanged(); } }
         public bool IsLoading { get => _isLoading; set { _isLoading = value; OnPropertyChanged(); } }
+
+        /// <summary>Vrai quand la page affichée occupe tout l'espace (plein écran).</summary>
+        public bool IsFullScreen
+        {
+            get => _isFullScreen;
+            set { _isFullScreen = value; OnPropertyChanged(); }
+        }
 
         /// <summary>État de sécurité de la page affichée, pilote l'icône du cadenas.</summary>
         public ConnectionSecurity SecurityState

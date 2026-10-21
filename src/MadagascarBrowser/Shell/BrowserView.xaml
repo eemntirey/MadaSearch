@@ -14,9 +14,20 @@
         </Grid.RowDefinitions>
 
         <!-- Barre d'outils : navigation + adresse en pilule + menu -->
-        <Border Grid.Row="0" Background="{StaticResource SurfaceBrush}"
+        <Border x:Name="Toolbar" Grid.Row="0" Background="{StaticResource SurfaceBrush}"
                 BorderBrush="{StaticResource EdgeBrush}" BorderThickness="0,0,0,1"
                 Padding="8,6">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Visible"/>
+                    <Style.Triggers>
+                        <!-- Page en plein écran : la barre d'outils s'efface. -->
+                        <DataTrigger Binding="{Binding IsFullScreen}" Value="True">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
