@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Windows;
@@ -79,8 +80,10 @@ namespace MadagascarBrowser.Shell
                 core.SetVirtualHostNameToFolderMapping(LocalHost, folder, CoreWebView2HostResourceAccessKind.DenyCors);
             }
 
-            core.AddWebResourceRequestedFilter("http://*", CoreWebView2WebResourceContext.All);
-            core.AddWebResourceRequestedFilter("https://*", CoreWebView2WebResourceContext.All);
+            foreach (var pattern in ResourceInterceptionScope.UrlPatterns)
+            {
+                core.AddWebResourceRequestedFilter(pattern, CoreWebView2WebResourceContext.All);
+            }
             core.WebResourceRequested += OnWebResourceRequested;
             core.DownloadStarting += OnDownloadStarting;
             core.NavigationStarting += OnNavigationStarting;
@@ -202,7 +205,15 @@ namespace MadagascarBrowser.Shell
             var target = NewWindowRequestResolver.Resolve(e.Uri);
 
             if (Window.GetWindow(this)?.DataContext is not TabManager tabManager)
+            {
+                // Sans gestionnaire d'onglets, la demande est perdue : on le signale
+                // plutôt que de laisser la page appelante sans retour.
+                Debug.WriteLine(
+                    $"Demande de nouvelle fenêtre ignorée (aucun gestionnaire d'onglets) : {e.Uri}");
+                Trace.TraceWarning(
+                    $"Demande de nouvelle fenêtre ignorée (aucun gestionnaire d'onglets) : {e.Uri}");
                 return;
+            }
 
             if (NewWindowRequestResolver.IsBlank(e.Uri))
             {
@@ -229,11 +240,20 @@ namespace MadagascarBrowser.Shell
                     {
                         e.NewWindow = await view.CoreReady;
                     }
+                    else
+                    {
+                        Debug.WriteLine(
+                            "Le WebView2 de l'onglet vide n'a pas démarré à temps : la page appelante perd la main.");
+                        Trace.TraceWarning(
+                            "Le WebView2 de l'onglet vide n'a pas démarré à temps : la page appelante perd la main.");
+                    }
                 }
             }
-            catch (Exception)
+            catch (Exception exception)
             {
                 // Onglet vide sans rattachement API : la page appelante perd la main.
+                Debug.WriteLine($"Rattachement de la fenêtre vide impossible : {exception}");
+                Trace.TraceError($"Rattachement de la fenêtre vide impossible : {exception}");
             }
             finally
             {
