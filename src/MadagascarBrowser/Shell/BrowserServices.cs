@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using MadagascarBrowser.Core.Blocking;
 using MadagascarBrowser.Core.Data;
 using MadagascarBrowser.Core.Navigation;
+using MadagascarBrowser.Core.Paths;
 
 namespace MadagascarBrowser.Shell
 {
@@ -27,15 +27,13 @@ namespace MadagascarBrowser.Shell
         public static void EnsureInitialized()
         {
             if (_initialized) return;
-            var dir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "MadagascarBrowser");
-            var db = new Database(Path.Combine(dir, "browser.db"));
+            var paths = BrowserPaths.Default;
+            var db = new Database(paths.DatabasePath);
             History = new HistoryService(db);
             DataSaverMetrics = new DataSaverMetricsService(db);
             Favorites = new FavoritesService(db);
             Downloads = new DownloadService(db);
-            OfflinePages = new OfflinePageService(db, Path.Combine(dir, "offline"));
+            OfflinePages = new OfflinePageService(db, paths.OfflineDirectory);
             SettingsService = new BrowserSettingsService(db);
             Profile = new BrowserProfileService(db, SettingsService);
             Sessions = new SessionService(db);
