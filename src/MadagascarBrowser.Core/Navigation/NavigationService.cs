@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Text.Encodings.Web;
 
@@ -20,6 +21,13 @@ namespace MadagascarBrowser.Core.Navigation
 
             input = input.Trim();
             if (IsAbsoluteUrl(input))
+            {
+                return input;
+            }
+
+            // Un chemin local absolu (« C:\...\page.mhtml ») est une cible de fichier :
+            // NavigationTargetResolver le convertit en URI file://.
+            if (Path.IsPathRooted(input))
             {
                 return input;
             }
@@ -69,9 +77,17 @@ namespace MadagascarBrowser.Core.Navigation
             return false;
         }
 
+        /// <summary>
+        /// Indique si la saisie porte déjà un schéma d'URL qui doit être conservé tel quel.
+        /// Les pages hors ligne (file://) et les onglets vides (about:) seraient
+        /// sinon transformés en « https://file://… », donc inaccessibles.
+        /// </summary>
         private static bool IsAbsoluteUrl(string s)
         {
-            return s.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || s.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+            return s.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                || s.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+                || s.StartsWith("file://", StringComparison.OrdinalIgnoreCase)
+                || s.StartsWith("about:", StringComparison.OrdinalIgnoreCase);
         }
     }
 }
