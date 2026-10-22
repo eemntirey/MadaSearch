@@ -98,6 +98,7 @@ namespace MadagascarBrowser
             catch
             {
                 // Windows sans DWM : la barre de titre reste en thème système.
+                AppLog.Warning("Le gestionnaire de fenêtres DWM a refusé la demande de thème.");
             }
         }
 
@@ -124,9 +125,10 @@ namespace MadagascarBrowser
                 {
                     DragMove();
                 }
-                catch (InvalidOperationException)
+                catch (InvalidOperationException exception)
                 {
                     // Le bouton a été relâché avant DragMove : ignorer.
+                    AppLog.Warning("Déplacement de la fenêtre impossible.", exception);
                 }
             }
         }

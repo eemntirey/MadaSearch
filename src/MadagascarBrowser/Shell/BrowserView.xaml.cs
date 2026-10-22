@@ -70,7 +70,8 @@ namespace MadagascarBrowser.Shell
             }
             catch (Exception exception)
             {
-               WebView.Visibility = Visibility.Collapsed;
+                AppLog.Error("Impossible d'initialiser WebView2.", exception);
+                WebView.Visibility = Visibility.Collapsed;
                 WebViewError.Visibility = Visibility.Visible;
                 WebViewErrorText.Text = $"Impossible d'initialiser WebView2 : {exception.Message}";
                 _coreReadySource.TrySetException(exception);
@@ -225,10 +226,7 @@ namespace MadagascarBrowser.Shell
                     return;
 
                 default:
-                    Debug.WriteLine(
-                        $"Demande de nouvelle fenêtre impossible ({result.Error}) : {e.Uri}");
-                Trace.TraceError(
-                        $"Demande de nouvelle fenêtre impossible ({result.Error}) : {e.Uri}");
+                    AppLog.Error($"Demande de nouvelle fenêtre impossible ({result.Error}) : {e.Uri}");
                     return;
             }
         }
@@ -248,23 +246,19 @@ namespace MadagascarBrowser.Shell
                     }
                     else
                     {
-                        Debug.WriteLine(
-                            "Le WebView2 de l'onglet vide n'a pas démarré à temps : la page appelante perd la main.");
-                        Trace.TraceWarning(
+                        AppLog.Warning(
                             "Le WebView2 de l'onglet vide n'a pas démarré à temps : la page appelante perd la main.");
                     }
                 }
                 else
                 {
-                    Debug.WriteLine("Onglet vide absent : la page appelante perd la main.");
-                    Trace.TraceWarning("Onglet vide absent : la page appelante perd la main.");
+                    AppLog.Warning("Onglet vide absent : la page appelante perd la main.");
                 }
             }
             catch (Exception exception)
             {
                 // Onglet vide sans rattachement API : la page appelante perd la main.
-                Debug.WriteLine($"Rattachement de la fenêtre vide impossible : {exception}");
-                Trace.TraceError($"Rattachement de la fenêtre vide impossible : {exception}");
+                AppLog.Error("Rattachement de la fenêtre vide impossible.", exception);
             }
             finally
             {
@@ -326,7 +320,8 @@ namespace MadagascarBrowser.Shell
             catch (ArgumentException exception)
             {
                 // Message non textuel : la commande est ignoree, mais le journal garde la trace.
-               return;
+                AppLog.Warning("Message Web non textuel reçu.", exception);
+                return;
             }
 
             var command = AcceleratorCommandResolver.Resolve(key, ctrl: true, alt: false, shift: false);
@@ -450,7 +445,8 @@ namespace MadagascarBrowser.Shell
             }
             catch (Exception exception)
             {
-               MessageBox.Show(Window.GetWindow(this), $"Impossible d'enregistrer la page : {exception.Message}",
+                AppLog.Error("Impossible d'enregistrer la page hors ligne.", exception);
+                MessageBox.Show(Window.GetWindow(this), $"Impossible d'enregistrer la page : {exception.Message}",
                     "Pages hors ligne", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -486,7 +482,8 @@ namespace MadagascarBrowser.Shell
             }
             catch (Exception exception)
             {
-               MessageBox.Show(Window.GetWindow(this), $"Impossible d'exporter le profil : {exception.Message}",
+                AppLog.Error("Impossible d'exporter le profil.", exception);
+                MessageBox.Show(Window.GetWindow(this), $"Impossible d'exporter le profil : {exception.Message}",
                     "Profil", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -511,7 +508,8 @@ namespace MadagascarBrowser.Shell
             }
             catch (Exception exception)
             {
-               MessageBox.Show(Window.GetWindow(this), $"Impossible d'importer le profil : {exception.Message}",
+                AppLog.Error("Impossible d'importer le profil.", exception);
+                MessageBox.Show(Window.GetWindow(this), $"Impossible d'importer le profil : {exception.Message}",
                     "Profil", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -638,8 +636,7 @@ namespace MadagascarBrowser.Shell
             }
             catch (Exception exception)
             {
-                System.Diagnostics.Trace.TraceError(
-                    $"Impossible d'activer l'interception des réponses pour l'économiseur de données : {exception}");
+                AppLog.Error("Impossible d'activer l'interception des réponses pour l'économiseur de données.", exception);
                 _fetchRequestPausedReceiver.DevToolsProtocolEventReceived -= OnFetchRequestPaused;
                 _fetchRequestPausedReceiver = null;
             }
@@ -740,7 +737,7 @@ namespace MadagascarBrowser.Shell
             }
             catch (Exception exception)
             {
-                System.Diagnostics.Trace.TraceError($"Erreur pendant l'interception d'une réponse Web : {exception}");
+                AppLog.Error("Erreur pendant l'interception d'une réponse Web.", exception);
                 if (!string.IsNullOrEmpty(requestId))
                 {
                     try
@@ -749,8 +746,7 @@ namespace MadagascarBrowser.Shell
                     }
                     catch (Exception continuationException)
                     {
-                        System.Diagnostics.Trace.TraceError(
-                            $"Impossible de reprendre la réponse Web interceptée : {continuationException}");
+                        AppLog.Error("Impossible de reprendre la réponse Web interceptée.", continuationException);
                     }
                 }
             }
@@ -842,7 +838,7 @@ namespace MadagascarBrowser.Shell
             }
             catch (Exception exception)
             {
-                System.Diagnostics.Trace.TraceError($"Impossible de lire les métriques du navigateur : {exception}");
+                AppLog.Error("Impossible de lire les métriques du navigateur.", exception);
             }
         }
 
@@ -854,7 +850,7 @@ namespace MadagascarBrowser.Shell
             }
             catch (Exception exception)
             {
-                System.Diagnostics.Trace.TraceError($"Impossible d'enregistrer une métrique du navigateur : {exception}");
+                AppLog.Error("Impossible d'enregistrer une métrique du navigateur.", exception);
             }
         }
 
@@ -964,10 +960,18 @@ namespace MadagascarBrowser.Shell
 
         private void WebView2Link_RequestNavigate(object sender, RequestNavigateEventArgs e)
         {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri.AbsoluteUri)
+            try
             {
-                UseShellExecute = true
-            });
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri.AbsoluteUri)
+                {
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception exception)
+            {
+                // Lien externe (protocole applicatif) : l'ouverture peut échouer.
+                AppLog.Warning($"Ouverture du lien externe '{e.Uri}' impossible.", exception);
+            }
             e.Handled = true;
         }
 
@@ -986,7 +990,14 @@ namespace MadagascarBrowser.Shell
                 _fetchRequestPausedReceiver.DevToolsProtocolEventReceived -= OnFetchRequestPaused;
                 _fetchRequestPausedReceiver = null;
             }
-            try { WebView.Dispose(); } catch { }
+            try
+            {
+                WebView.Dispose();
+            }
+            catch (Exception exception)
+            {
+                AppLog.Warning("Liberation du WebView2 incomplete.", exception);
+            }
         }
     }
 }
