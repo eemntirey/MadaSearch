@@ -131,23 +131,29 @@ namespace MadagascarBrowser.Shell
         public void Close(TabViewModel t)
         {
             if (t == null) return;
-            var idx = Tabs.IndexOf(t);
+            var index = Tabs.IndexOf(t);
+            if (index < 0) return;
+            var wasActive = ReferenceEquals(Active, t);
+
             Tabs.Remove(t);
             if (t.View is BrowserView view)
             {
                 view.Dispose();
             }
-            if (Active == t)
+
+            if (!wasActive)
+                return;
+
+            // Le retrait de l'élément sélectionné vide SelectedItem, ce qui efface
+            // Active par la liaison bidirectionnelle de la barre d'onglets : sans
+            // réaffectation explicite, la fenêtre resterait entièrement vide.
+            if (Tabs.Count == 0)
             {
-                if (Tabs.Any())
-                {
-                    Active = Tabs[Math.Max(0, idx - 1)];
-                }
-                else
-                {
-                    NewTab();
-                }
+                NewTab();
+                return;
             }
+
+            Active = Tabs[TabSelection.NextIndex(index, Tabs.Count)];
         }
     }
 }
