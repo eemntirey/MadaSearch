@@ -22,6 +22,25 @@ public class NavigationServiceTests
         Assert.Contains("histoire%20Madagascar", result);
     }
 
+    [Theory]
+    [InlineData("google", "https://www.google.mg/search?q=")]
+    [InlineData("duckduckgo", "https://duckduckgo.com/?q=")]
+    [InlineData("bing", "https://www.bing.com/search?q=")]
+    public void ResolveNavigation_ConfiguredProviderIsUsed(string provider, string expectedTemplate)
+    {
+        var navigation = new NavigationService(provider);
+
+        Assert.StartsWith(expectedTemplate, navigation.ResolveNavigation("recherche Madagascar"));
+    }
+
+    [Fact]
+    public void ResolveNavigation_UnknownProviderUsesGoogleMadagascar()
+    {
+        var navigation = new NavigationService("unsupported");
+
+        Assert.StartsWith("https://www.google.mg/search?q=", navigation.ResolveNavigation("recherche"));
+    }
+
     [Fact]
     public void LooksLikeUrl_GivenTextWithSpace_IsNotAUrl()
     {

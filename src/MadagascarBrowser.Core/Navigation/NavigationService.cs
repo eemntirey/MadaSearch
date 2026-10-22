@@ -7,11 +7,16 @@ namespace MadagascarBrowser.Core.Navigation
 {
     public class NavigationService
     {
-        private const string DefaultSearchUrl = "https://www.google.com/search?q=";
+        private readonly string _searchUrlTemplate;
+
+        public NavigationService(string? searchProvider = "google")
+        {
+            _searchUrlTemplate = SearchProviderResolver.GetSearchUrlTemplate(searchProvider);
+        }
 
         public string ResolveNavigation(string input)
         {
-            return ResolveNavigation(input, DefaultSearchUrl);
+            return ResolveNavigation(input, _searchUrlTemplate);
         }
 
         public string ResolveNavigation(string input, string searchUrlTemplate)
@@ -38,7 +43,7 @@ namespace MadagascarBrowser.Core.Navigation
             }
 
             var encoded = UrlEncoder.Default.Encode(input);
-            return (string.IsNullOrWhiteSpace(searchUrlTemplate) ? DefaultSearchUrl : searchUrlTemplate) + encoded;
+            return (string.IsNullOrWhiteSpace(searchUrlTemplate) ? _searchUrlTemplate : searchUrlTemplate) + encoded;
         }
 
         public bool LooksLikeUrl(string input)

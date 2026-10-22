@@ -24,7 +24,7 @@ namespace MadagascarBrowser.Shell
         /// </summary>
         public const string LocalHost = "startpage.localhost";
 
-        /// <summary>URL de la page d'accueil.</summary>
+        /// <summary>URL de la page d'accueil intégrée.</summary>
         public const string StartPageUrl = "https://" + LocalHost + "/index.html";
 
         /// <summary>URL de la page d'erreur du navigateur.</summary>

@@ -38,7 +38,7 @@ namespace MadagascarBrowser.Shell
             Profile = new BrowserProfileService(db, SettingsService);
             Sessions = new SessionService(db);
             CurrentSettings = SettingsService.Load();
-            Navigation = new NavigationService();
+            Navigation = new NavigationService(CurrentSettings.SearchProvider);
             AdBlock = new AdBlockService();
             ApplyAllowedDomains(CurrentSettings);
             DataSaver = new DataSaverService();
@@ -65,6 +65,7 @@ namespace MadagascarBrowser.Shell
         public static void ApplySettings(BrowserSettings settings)
         {
             CurrentSettings = settings;
+            Navigation = new NavigationService(settings.SearchProvider);
             ApplyAllowedDomains(settings);
             DataSaver.Enabled = settings.DataSaverEnabled;
             DataSaver.ImageThresholdBytes = settings.DataSaverImageThresholdKilobytes * 1024L;
@@ -74,6 +75,7 @@ namespace MadagascarBrowser.Shell
         public static void ReloadSettings()
         {
             CurrentSettings = SettingsService.Load();
+            Navigation = new NavigationService(CurrentSettings.SearchProvider);
             ApplyAllowedDomains(CurrentSettings);
             DataSaver.Enabled = CurrentSettings.DataSaverEnabled;
             DataSaver.ImageThresholdBytes = CurrentSettings.DataSaverImageThresholdKilobytes * 1024L;

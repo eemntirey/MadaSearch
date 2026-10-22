@@ -332,6 +332,36 @@ namespace MadagascarBrowser.Shell
                 return;
             }
 
+            const string searchCommandPrefix = "search:";
+            if (key?.StartsWith(searchCommandPrefix, StringComparison.Ordinal) == true)
+            {
+                if (!Uri.TryCreate(e.Source, UriKind.Absolute, out var source) ||
+                    !source.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) ||
+                    !source.Host.Equals(LocalHost, StringComparison.OrdinalIgnoreCase))
+                {
+                    AppLog.Warning($"Commande de recherche reçue hors de la page d'accueil : {e.Source}");
+                    return;
+                }
+
+                try
+                {
+                    var query = Uri.UnescapeDataString(key[searchCommandPrefix.Length..]);
+                    var destination = BrowserServices.Navigation.ResolveNavigation(query);
+                    if (!Uri.TryCreate(destination, UriKind.Absolute, out var destinationUri))
+                    {
+                        AppLog.Error($"La recherche de la page d'accueil a produit une URL invalide : {destination}");
+                        return;
+                    }
+
+                    Dispatcher.BeginInvoke(new Action(() => WebView.CoreWebView2.Navigate(destinationUri.AbsoluteUri)));
+                }
+                catch (Exception exception)
+                {
+                    AppLog.Error("Impossible de résoudre la recherche de la page d'accueil.", exception);
+                }
+                return;
+            }
+
             var command = AcceleratorCommandResolver.Resolve(key, ctrl: true, alt: false, shift: false);
             switch (command)
             {
@@ -975,13 +1005,7 @@ namespace MadagascarBrowser.Shell
 
         private static string ResolveAddress(string input)
         {
-            var searchUrl = BrowserServices.CurrentSettings.SearchProvider switch
-            {
-                "duckduckgo" => "https://duckduckgo.com/?q=",
-                "bing" => "https://www.bing.com/search?q=",
-                _ => "https://www.google.mg/search?q="
-            };
-            return BrowserServices.Navigation.ResolveNavigation(input, searchUrl);
+            return BrowserServices.Navigation.ResolveNavigation(input);
         }
 
         private void WebView2Link_RequestNavigate(object sender, RequestNavigateEventArgs e)

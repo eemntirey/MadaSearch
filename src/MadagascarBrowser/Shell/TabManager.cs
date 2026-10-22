@@ -25,9 +25,10 @@ namespace MadagascarBrowser.Shell
         public event EventHandler ActiveChanged;
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public TabViewModel NewTab(string url = WebViewEnvironment.StartPageUrl)
+        public TabViewModel NewTab(string? url = null)
         {
             BrowserServices.EnsureInitialized();
+            url ??= WebViewEnvironment.StartPageUrl;
             var kind = NavigationTargetResolver.Resolve(url, out var target, out var title);
             switch (kind)
             {
