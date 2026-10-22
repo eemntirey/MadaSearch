@@ -1,6 +1,8 @@
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 
 namespace MadagascarBrowser.Core.Data
 {
@@ -36,6 +38,12 @@ namespace MadagascarBrowser.Core.Data
                     case "data_saver_enabled":
                         settings.DataSaverEnabled = bool.TryParse(value, out var dataSaverEnabled) && dataSaverEnabled;
                         break;
+                    case "data_saver_image_threshold_kilobytes":
+                        if (!int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var thresholdKilobytes) ||
+                            thresholdKilobytes is < 1 or > 10000)
+                            throw new InvalidDataException("Le seuil d'image de l'économiseur de données enregistré est invalide.");
+                        settings.DataSaverImageThresholdKilobytes = thresholdKilobytes;
+                        break;
                     case "restore_session":
                         settings.RestoreSession = bool.TryParse(value, out var restoreSession) && restoreSession;
                         break;
@@ -69,6 +77,10 @@ namespace MadagascarBrowser.Core.Data
             SaveValue(command, "search_provider", settings.SearchProvider);
             SaveValue(command, "ad_block_enabled", settings.AdBlockEnabled.ToString());
             SaveValue(command, "data_saver_enabled", settings.DataSaverEnabled.ToString());
+            if (settings.DataSaverImageThresholdKilobytes is < 1 or > 10000)
+                throw new ArgumentOutOfRangeException(nameof(settings), "Le seuil d'image doit être compris entre 1 et 10 000 Ko.");
+            SaveValue(command, "data_saver_image_threshold_kilobytes",
+                settings.DataSaverImageThresholdKilobytes.ToString(CultureInfo.InvariantCulture));
             SaveValue(command, "restore_session", settings.RestoreSession.ToString());
             SaveValue(command, "allowed_domains", string.Join(",", settings.AllowedDomains ?? new List<string>()));
             SaveValue(command, "theme", settings.Theme);

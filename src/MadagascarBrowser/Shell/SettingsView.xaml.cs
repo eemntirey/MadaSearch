@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using MadagascarBrowser.Core.Data;
@@ -25,6 +26,7 @@ namespace MadagascarBrowser.Shell
             SelectByTag(AccentCombo, settings.Accent);
             AdBlockCheck.IsChecked = settings.AdBlockEnabled;
             DataSaverCheck.IsChecked = settings.DataSaverEnabled;
+            DataSaverImageThresholdBox.Text = settings.DataSaverImageThresholdKilobytes.ToString(CultureInfo.InvariantCulture);
             RestoreSessionCheck.IsChecked = settings.RestoreSession;
             AllowedDomainsList.ItemsSource = settings.AllowedDomains?.ToList() ?? new List<string>();
             AllowedDomainsFeedback.Text = string.Empty;
@@ -57,11 +59,17 @@ namespace MadagascarBrowser.Shell
         private BrowserSettings BuildSettings(List<string>? allowedDomains = null)
         {
             var current = BrowserServices.CurrentSettings;
+            if (!int.TryParse(DataSaverImageThresholdBox.Text, NumberStyles.None, CultureInfo.InvariantCulture, out var thresholdKilobytes) ||
+                thresholdKilobytes is < 1 or > 10000)
+                throw new ArgumentOutOfRangeException(nameof(DataSaverImageThresholdBox),
+                    "Le seuil d'image doit être un nombre de Ko compris entre 1 et 10 000.");
+
             return new BrowserSettings
             {
                 SearchProvider = SearchProviderCombo.SelectedValue?.ToString() ?? "google",
                 AdBlockEnabled = AdBlockCheck.IsChecked == true,
                 DataSaverEnabled = DataSaverCheck.IsChecked == true,
+                DataSaverImageThresholdKilobytes = thresholdKilobytes,
                 RestoreSession = RestoreSessionCheck.IsChecked == true,
                 AllowedDomains = allowedDomains ?? current.AllowedDomains?.ToList() ?? new List<string>(),
                 Theme = ThemeCombo.SelectedValue?.ToString() ?? current.Theme,
@@ -74,7 +82,9 @@ namespace MadagascarBrowser.Shell
         {
             try
             {
-                await DatabaseAccess.WriteAsync(() => BrowserServices.UpdateSettings(BuildSettings()));
+                var settings = BuildSettings();
+                await DatabaseAccess.WriteAsync(() => BrowserServices.SettingsService.Save(settings));
+                BrowserServices.ApplySettings(settings);
             }
             catch (Exception exception)
             {
@@ -128,7 +138,9 @@ namespace MadagascarBrowser.Shell
 
             try
             {
-                await DatabaseAccess.WriteAsync(() => BrowserServices.UpdateSettings(BuildSettings(allowed)));
+                var settings = BuildSettings(allowed);
+                await DatabaseAccess.WriteAsync(() => BrowserServices.SettingsService.Save(settings));
+                BrowserServices.ApplySettings(settings);
                 AllowedDomainBox.Text = string.Empty;
                 AllowedDomainsList.ItemsSource = allowed;
                 AllowedDomainsFeedback.Text = "Domaine autorisé.";
@@ -149,7 +161,9 @@ namespace MadagascarBrowser.Shell
 
             try
             {
-                await DatabaseAccess.WriteAsync(() => BrowserServices.UpdateSettings(BuildSettings(allowed)));
+                var settings = BuildSettings(allowed);
+                await DatabaseAccess.WriteAsync(() => BrowserServices.SettingsService.Save(settings));
+                BrowserServices.ApplySettings(settings);
                 AllowedDomainsList.ItemsSource = allowed;
                 AllowedDomainsFeedback.Text = "Domaine retiré.";
             }

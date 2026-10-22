@@ -5,6 +5,7 @@ namespace MadagascarBrowser.Core.Data
         public string SearchProvider { get; set; } = "google";
         public bool AdBlockEnabled { get; set; } = true;
         public bool DataSaverEnabled { get; set; }
+        public int DataSaverImageThresholdKilobytes { get; set; } = 200;
         public bool RestoreSession { get; set; }
 
         /// <summary>

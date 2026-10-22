@@ -43,6 +43,7 @@ namespace MadagascarBrowser.Shell
             ApplyAllowedDomains(CurrentSettings);
             DataSaver = new DataSaverService();
             DataSaver.Enabled = CurrentSettings.DataSaverEnabled;
+            DataSaver.ImageThresholdBytes = CurrentSettings.DataSaverImageThresholdKilobytes * 1024L;
             ThemeManager.Apply(CurrentSettings);
             _initialized = true;
         }
@@ -61,12 +62,12 @@ namespace MadagascarBrowser.Shell
             AdBlock = adBlock;
         }
 
-        public static void UpdateSettings(BrowserSettings settings)
+        public static void ApplySettings(BrowserSettings settings)
         {
-            SettingsService.Save(settings);
             CurrentSettings = settings;
             ApplyAllowedDomains(settings);
             DataSaver.Enabled = settings.DataSaverEnabled;
+            DataSaver.ImageThresholdBytes = settings.DataSaverImageThresholdKilobytes * 1024L;
             ThemeManager.Apply(settings);
         }
 
@@ -75,6 +76,7 @@ namespace MadagascarBrowser.Shell
             CurrentSettings = SettingsService.Load();
             ApplyAllowedDomains(CurrentSettings);
             DataSaver.Enabled = CurrentSettings.DataSaverEnabled;
+            DataSaver.ImageThresholdBytes = CurrentSettings.DataSaverImageThresholdKilobytes * 1024L;
             ThemeManager.Apply(CurrentSettings);
         }
     }

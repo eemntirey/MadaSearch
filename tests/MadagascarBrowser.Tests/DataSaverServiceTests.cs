@@ -39,6 +39,23 @@ public class DataSaverServiceTests
     }
 
     [Fact]
+    public void Evaluate_ImageThreshold_IsConfigurable()
+    {
+        var service = new DataSaverService { Enabled = true, ImageThresholdBytes = 100_000 };
+
+        Assert.Equal(DataSaverDecision.Pass, service.Evaluate(new Uri("https://x.com/image"), "image/jpeg", 100_000));
+        Assert.Equal(DataSaverDecision.Placeholder, service.Evaluate(new Uri("https://x.com/image"), "image/jpeg", 100_001));
+    }
+
+    [Fact]
+    public void ImageThresholdBytes_NonPositiveValue_IsRejected()
+    {
+        var service = new DataSaverService();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => service.ImageThresholdBytes = 0);
+    }
+
+    [Fact]
     public void Evaluate_ImageWithoutContentLength_ReturnsPass()
     {
         var ds = new DataSaverService { Enabled = true };

@@ -10,7 +10,15 @@ namespace MadagascarBrowser.Core.Blocking
         public const long DefaultImageThresholdBytes = 200 * 1024;
 
         public bool Enabled { get; set; }
-        public long ImageThresholdBytes { get; set; } = DefaultImageThresholdBytes;
+        private long _imageThresholdBytes = DefaultImageThresholdBytes;
+
+        public long ImageThresholdBytes
+        {
+            get => _imageThresholdBytes;
+            set => _imageThresholdBytes = value > 0
+                ? value
+                : throw new ArgumentOutOfRangeException(nameof(value), "Le seuil d'image doit être supérieur à zéro.");
+        }
 
         public DataSaverService()
         {

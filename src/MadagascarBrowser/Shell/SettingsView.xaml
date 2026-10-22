@@ -52,6 +52,17 @@
                                   Style="{StaticResource DarkCheckBox}" Margin="0,0,0,10"/>
                         <CheckBox x:Name="DataSaverCheck" Content="Économiser les données (images et vidéos)"
                                   Style="{StaticResource DarkCheckBox}" Margin="0,0,0,10"/>
+                        <Grid MaxWidth="320" HorizontalAlignment="Left" Margin="24,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="100"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Seuil de remplacement des images (Ko)"
+                                       Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"
+                                       TextWrapping="Wrap" Margin="0,0,8,0"/>
+                            <TextBox x:Name="DataSaverImageThresholdBox" Grid.Column="1"
+                                     Style="{StaticResource DarkTextBox}" VerticalContentAlignment="Center"/>
+                        </Grid>
                         <CheckBox x:Name="RestoreSessionCheck" Content="Restaurer les onglets au démarrage"
                                   Style="{StaticResource DarkCheckBox}"/>
                     </StackPanel>

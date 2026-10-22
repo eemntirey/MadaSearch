@@ -25,12 +25,14 @@ public class BrowserSettingsServiceTests
             Assert.True(defaults.AdBlockEnabled);
             Assert.False(defaults.DataSaverEnabled);
             Assert.False(defaults.RestoreSession);
+            Assert.Equal(200, defaults.DataSaverImageThresholdKilobytes);
 
             settingsService.Save(new BrowserSettings
             {
                 SearchProvider = "duckduckgo",
                 AdBlockEnabled = false,
                 DataSaverEnabled = true,
+                DataSaverImageThresholdKilobytes = 350,
                 RestoreSession = true
             });
 
@@ -39,6 +41,7 @@ public class BrowserSettingsServiceTests
             Assert.Equal("duckduckgo", reloaded.SearchProvider);
             Assert.False(reloaded.AdBlockEnabled);
             Assert.True(reloaded.DataSaverEnabled);
+            Assert.Equal(350, reloaded.DataSaverImageThresholdKilobytes);
             Assert.True(reloaded.RestoreSession);
             Assert.Empty(reloaded.AllowedDomains);
         }

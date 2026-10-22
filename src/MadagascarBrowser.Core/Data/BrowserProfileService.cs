@@ -1,6 +1,7 @@
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -78,6 +79,8 @@ namespace MadagascarBrowser.Core.Data
             SaveSetting(command, "search_provider", profile.Settings!.SearchProvider);
             SaveSetting(command, "ad_block_enabled", profile.Settings.AdBlockEnabled.ToString());
             SaveSetting(command, "data_saver_enabled", profile.Settings.DataSaverEnabled.ToString());
+            SaveSetting(command, "data_saver_image_threshold_kilobytes",
+                profile.Settings.DataSaverImageThresholdKilobytes.ToString(CultureInfo.InvariantCulture));
             SaveSetting(command, "restore_session", profile.Settings.RestoreSession.ToString());
             SaveSetting(command, "allowed_domains", string.Join(",", profile.Settings.AllowedDomains ?? new List<string>()));
             SaveSetting(command, "theme", profile.Settings.Theme);
@@ -94,6 +97,9 @@ namespace MadagascarBrowser.Core.Data
 
             if (profile.Settings.SearchProvider is not ("google" or "duckduckgo" or "bing"))
                 throw new InvalidDataException("The profile contains an unsupported search provider.");
+
+            if (profile.Settings.DataSaverImageThresholdKilobytes is < 1 or > 10000)
+                throw new InvalidDataException("The profile contains an invalid image replacement threshold.");
 
             if (profile.Favorites.Any(favorite => favorite == null ||
                     !IsWebUrl(favorite.Url) || favorite.Title == null) ||
