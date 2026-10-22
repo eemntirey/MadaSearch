@@ -6,7 +6,7 @@ using MadagascarBrowser.Core.Navigation;
 
 namespace MadagascarBrowser.Shell
 {
-    public class TabManager : INotifyPropertyChanged
+    public class TabManager : INotifyPropertyChanged, ITabHost
     {
         public ObservableCollection<TabViewModel> Tabs { get; } = new();
         private TabViewModel _active;
@@ -25,7 +25,7 @@ namespace MadagascarBrowser.Shell
         public event EventHandler ActiveChanged;
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public TabViewModel NewTab(string url = "https://" + WebViewEnvironment.LocalHost + "/index.html")
+        public TabViewModel NewTab(string url = WebViewEnvironment.StartPageUrl)
         {
             BrowserServices.EnsureInitialized();
             var kind = NavigationTargetResolver.Resolve(url, out var target, out var title);
@@ -44,11 +44,17 @@ namespace MadagascarBrowser.Shell
             }
 
             var t = new TabViewModel { Title = title, Url = target };
-            var view = new BrowserView { DataContext = t };
+            var view = new BrowserView(this) { DataContext = t };
             t.View = view;
             Tabs.Add(t);
             Active = t;
             return t;
+        }
+
+        public void CloseActiveTab()
+        {
+            if (Active != null)
+                Close(Active);
         }
 
         public TabViewModel OpenLibrary(int selectedTab = 0)

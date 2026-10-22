@@ -24,6 +24,12 @@ namespace MadagascarBrowser.Shell
         /// </summary>
         public const string LocalHost = "startpage.localhost";
 
+        /// <summary>URL de la page d'accueil.</summary>
+        public const string StartPageUrl = "https://" + LocalHost + "/index.html";
+
+        /// <summary>URL de la page d'erreur du navigateur.</summary>
+        public const string ErrorPageUrl = "https://" + LocalHost + "/error.html";
+
         /// <summary>
         /// Dossier de profil unique : jamais à côté de l'exécutable, jamais dans le
         /// profil par défaut de WebView2 (%LocalAppData%\Microsoft\EdgeWebView2\Application).

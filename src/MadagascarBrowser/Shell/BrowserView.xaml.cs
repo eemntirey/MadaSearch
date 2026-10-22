@@ -18,12 +18,14 @@ namespace MadagascarBrowser.Shell
 {
     public partial class BrowserView : UserControl
     {
-        private const string StartPageUrl = "https://" + WebViewEnvironment.LocalHost + "/index.html";
-        private const string ErrorPageUrl = "https://" + WebViewEnvironment.LocalHost + "/error.html";
+        private const string StartPageUrl = WebViewEnvironment.StartPageUrl;
+        private const string ErrorPageUrl = WebViewEnvironment.ErrorPageUrl;
         private const string LocalHost = WebViewEnvironment.LocalHost;
         private static readonly byte[] PlaceholderGif =
             Convert.FromBase64String("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7");
 
+        private readonly ITabHost _tabHost;
+        private readonly NewWindowRequestHandler _newWindowHandler;
         private bool _coreReady;
         private bool _suppressSuggest;
         private bool _certificateError;
@@ -38,8 +40,15 @@ namespace MadagascarBrowser.Shell
         /// </summary>
         public Task<CoreWebView2> CoreReady => _coreReadySource.Task;
 
-        public BrowserView()
+        /// <summary>
+        /// Crée une vue de navigation. L'hôte d'onglets est injecté : la vue ne
+        /// dépend plus du DataContext de la fenêtre.
+        /// </summary>
+        /// <param name="tabHost">Hôte d'onglets qui portera les onglets ouverts.</param>
+        public BrowserView(ITabHost tabHost)
         {
+            _tabHost = tabHost ?? throw new ArgumentNullException(nameof(tabHost));
+            _newWindowHandler = new NewWindowRequestHandler(tabHost);
             InitializeComponent();
             BrowserServices.EnsureInitialized();
             Loaded += OnLoaded;
@@ -61,7 +70,7 @@ namespace MadagascarBrowser.Shell
             }
             catch (Exception exception)
             {
-                WebView.Visibility = Visibility.Collapsed;
+               WebView.Visibility = Visibility.Collapsed;
                 WebViewError.Visibility = Visibility.Visible;
                 WebViewErrorText.Text = $"Impossible d'initialiser WebView2 : {exception.Message}";
                 _coreReadySource.TrySetException(exception);
@@ -202,37 +211,34 @@ namespace MadagascarBrowser.Shell
         private void OnNewWindowRequested(object? sender, CoreWebView2NewWindowRequestedEventArgs e)
         {
             e.Handled = true;
-            var target = NewWindowRequestResolver.Resolve(e.Uri);
 
-            if (Window.GetWindow(this)?.DataContext is not TabManager tabManager)
+            var result = _newWindowHandler.Handle(e.Uri);
+            switch (result.Outcome)
             {
-                // Sans gestionnaire d'onglets, la demande est perdue : on le signale
-                // plutôt que de laisser la page appelante sans retour.
-                Debug.WriteLine(
-                    $"Demande de nouvelle fenêtre ignorée (aucun gestionnaire d'onglets) : {e.Uri}");
-                Trace.TraceWarning(
-                    $"Demande de nouvelle fenêtre ignorée (aucun gestionnaire d'onglets) : {e.Uri}");
-                return;
-            }
+                case NewWindowOutcome.OpenedInNewTab:
+                    return;
 
-            if (NewWindowRequestResolver.IsBlank(e.Uri))
-            {
-                // window.open sans URL : on ouvre un onglet vide et on laisse la page
-                // appelante piloter le contenu via l'API WebView2.
-                _ = OpenBlankWindowAsync(e, tabManager);
-                return;
-            }
+                case NewWindowOutcome.BlankTabOpened:
+                    // window.open sans URL : on laisse la page appelante piloter
+                    // le contenu de l'onglet vide via l'API WebView2.
+                    _ = OpenBlankWindowAsync(e, result.Tab);
+                    return;
 
-            tabManager.NewTab(target);
+                default:
+                    Debug.WriteLine(
+                        $"Demande de nouvelle fenêtre impossible ({result.Error}) : {e.Uri}");
+                Trace.TraceError(
+                        $"Demande de nouvelle fenêtre impossible ({result.Error}) : {e.Uri}");
+                    return;
+            }
         }
 
-        private async Task OpenBlankWindowAsync(CoreWebView2NewWindowRequestedEventArgs e, TabManager tabManager)
+        private async Task OpenBlankWindowAsync(CoreWebView2NewWindowRequestedEventArgs e, TabViewModel? tab)
         {
             var deferral = e.GetDeferral();
             try
             {
-                var tab = tabManager.NewTab(NewWindowRequestResolver.BlankUrl);
-                if (tab.View is BrowserView view)
+                if (tab?.View is BrowserView view)
                 {
                     // Timeout : l'onglet vide reste utilisable même si WebView2 ne démarre pas.
                     var ready = await Task.WhenAny(view.CoreReady, Task.Delay(TimeSpan.FromSeconds(5)));
@@ -247,6 +253,11 @@ namespace MadagascarBrowser.Shell
                         Trace.TraceWarning(
                             "Le WebView2 de l'onglet vide n'a pas démarré à temps : la page appelante perd la main.");
                     }
+                }
+                else
+                {
+                    Debug.WriteLine("Onglet vide absent : la page appelante perd la main.");
+                    Trace.TraceWarning("Onglet vide absent : la page appelante perd la main.");
                 }
             }
             catch (Exception exception)
@@ -312,10 +323,10 @@ namespace MadagascarBrowser.Shell
             {
                 key = e.TryGetWebMessageAsString();
             }
-            catch (ArgumentException)
+            catch (ArgumentException exception)
             {
-                // Message non textuel : ignoré.
-                return;
+                // Message non textuel : la commande est ignoree, mais le journal garde la trace.
+               return;
             }
 
             var command = AcceleratorCommandResolver.Resolve(key, ctrl: true, alt: false, shift: false);
@@ -324,16 +335,13 @@ namespace MadagascarBrowser.Shell
                 case AcceleratorCommand.NewTab:
                     Dispatcher.BeginInvoke(new Action(() =>
                     {
-                        if (Window.GetWindow(this)?.DataContext is TabManager tabManager)
-                            tabManager.NewTab();
+                        _tabHost.NewTab(StartPageUrl);
                     }));
                     break;
                 case AcceleratorCommand.CloseTab:
                     Dispatcher.BeginInvoke(new Action(() =>
                     {
-                        if (Window.GetWindow(this)?.DataContext is TabManager tabManager &&
-                            tabManager.Active != null)
-                            tabManager.Close(tabManager.Active);
+                        _tabHost.CloseActiveTab();
                     }));
                     break;
                 case AcceleratorCommand.FocusAddressBar:
@@ -376,17 +384,13 @@ namespace MadagascarBrowser.Shell
         private void MenuNewTab_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
-            if (Window.GetWindow(this)?.DataContext is TabManager tm)
-            {
-                tm.NewTab();
-            }
+            _tabHost.NewTab(StartPageUrl);
         }
 
         private void MenuSettings_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
-            if (Window.GetWindow(this)?.DataContext is TabManager tm)
-                tm.OpenSettings();
+            _tabHost.OpenSettings();
         }
 
         private async void MenuAddFavorite_Click(object sender, RoutedEventArgs e)
@@ -408,15 +412,13 @@ namespace MadagascarBrowser.Shell
         private void MenuHistory_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
-            if (Window.GetWindow(this)?.DataContext is TabManager tm)
-                tm.OpenLibrary(0);
+            _tabHost.OpenLibrary(0);
         }
 
         private void MenuFavorites_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
-            if (Window.GetWindow(this)?.DataContext is TabManager tm)
-                tm.OpenLibrary(1);
+            _tabHost.OpenLibrary(1);
         }
 
         private async void MenuSaveOffline_Click(object sender, RoutedEventArgs e)
@@ -448,7 +450,7 @@ namespace MadagascarBrowser.Shell
             }
             catch (Exception exception)
             {
-                MessageBox.Show(Window.GetWindow(this), $"Impossible d'enregistrer la page : {exception.Message}",
+               MessageBox.Show(Window.GetWindow(this), $"Impossible d'enregistrer la page : {exception.Message}",
                     "Pages hors ligne", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -456,15 +458,13 @@ namespace MadagascarBrowser.Shell
         private void MenuOfflinePages_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
-            if (Window.GetWindow(this)?.DataContext is TabManager tm)
-                tm.OpenLibrary(2);
+            _tabHost.OpenLibrary(2);
         }
 
         private void MenuDownloads_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
-            if (Window.GetWindow(this)?.DataContext is TabManager tm)
-                tm.OpenDownloads();
+            _tabHost.OpenDownloads();
         }
 
         private void MenuExportProfile_Click(object sender, RoutedEventArgs e)
@@ -486,7 +486,7 @@ namespace MadagascarBrowser.Shell
             }
             catch (Exception exception)
             {
-                MessageBox.Show(Window.GetWindow(this), $"Impossible d'exporter le profil : {exception.Message}",
+               MessageBox.Show(Window.GetWindow(this), $"Impossible d'exporter le profil : {exception.Message}",
                     "Profil", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -511,7 +511,7 @@ namespace MadagascarBrowser.Shell
             }
             catch (Exception exception)
             {
-                MessageBox.Show(Window.GetWindow(this), $"Impossible d'importer le profil : {exception.Message}",
+               MessageBox.Show(Window.GetWindow(this), $"Impossible d'importer le profil : {exception.Message}",
                     "Profil", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
