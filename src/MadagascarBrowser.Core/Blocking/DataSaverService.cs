@@ -40,7 +40,7 @@ namespace MadagascarBrowser.Core.Blocking
                 return DataSaverDecision.Block;
             }
 
-            if (string.IsNullOrWhiteSpace(mimeType) && IsKnownVideoExtension(resourceUrl))
+            if (IsKnownVideoExtension(resourceUrl))
                 return DataSaverDecision.Block;
 
             if (!string.IsNullOrWhiteSpace(mimeType) && mimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))

@@ -69,7 +69,7 @@ public class DataSaverServiceTests
         var ds = new DataSaverService { Enabled = true };
         Assert.Equal(DataSaverDecision.Block, ds.Evaluate(new Uri("https://x.com/video"), "video/mp4"));
         Assert.Equal(DataSaverDecision.Block, ds.Evaluate(new Uri("https://x.com/v.mp4"), string.Empty));
-        Assert.Equal(DataSaverDecision.Pass, ds.Evaluate(new Uri("https://x.com/v.mp4"), "text/html"));
+        Assert.Equal(DataSaverDecision.Block, ds.Evaluate(new Uri("https://x.com/v.mp4"), "text/html"));
     }
 
     [Fact]
