@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Navigation;
 using System.Text.Json;
+using System.Threading;
 using Microsoft.Win32;
 using MadagascarBrowser.Core.Blocking;
 using MadagascarBrowser.Core.Data;
@@ -23,6 +24,7 @@ namespace MadagascarBrowser.Shell
         private const string LocalHost = WebViewEnvironment.LocalHost;
         private static readonly byte[] PlaceholderGif =
             Convert.FromBase64String("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7");
+        private static readonly SemaphoreSlim StatsRefreshLock = new(1, 1);
 
         private readonly ITabHost _tabHost;
         private readonly NewWindowRequestHandler _newWindowHandler;
@@ -65,7 +67,7 @@ namespace MadagascarBrowser.Shell
                 await WebView.EnsureCoreWebView2Async(environment);
                 _coreReady = true;
                 await InitCoreAsync();
-                RefreshStats();
+                await RefreshStatsAsync();
                 _coreReadySource.TrySetResult(WebView.CoreWebView2);
             }
             catch (Exception exception)
@@ -610,8 +612,7 @@ namespace MadagascarBrowser.Shell
             if (BrowserServices.AdBlock.ShouldBlock(uri))
             {
                 SetResponse(e, 403, "Bloqué", "text/plain; charset=utf-8", Array.Empty<byte>());
-                RecordMetric(BrowserServices.DataSaverMetrics.RecordAdBlocked);
-                RefreshStats();
+                _ = RecordMetricAndRefreshAsync(BrowserServices.DataSaverMetrics.RecordAdBlocked);
             }
         }
 
@@ -701,8 +702,8 @@ namespace MadagascarBrowser.Shell
                     await WebView.CoreWebView2.CallDevToolsProtocolMethodAsync(
                         "Fetch.failRequest",
                         JsonSerializer.Serialize(new { requestId, errorReason = "BlockedByClient" }));
-                    RecordMetric(() => BrowserServices.DataSaverMetrics.RecordVideoBlocked(contentLength ?? 0));
-                    RefreshStats();
+                    _ = RecordMetricAndRefreshAsync(
+                        () => BrowserServices.DataSaverMetrics.RecordVideoBlocked(contentLength ?? 0));
                     return;
                 }
 
@@ -728,8 +729,8 @@ namespace MadagascarBrowser.Shell
                             responseHeaders = replacementHeaders,
                             body = Convert.ToBase64String(PlaceholderGif)
                         }));
-                    RecordMetric(() => BrowserServices.DataSaverMetrics.RecordImageReplaced(contentLength.Value));
-                    RefreshStats();
+                    _ = RecordMetricAndRefreshAsync(
+                        () => BrowserServices.DataSaverMetrics.RecordImageReplaced(contentLength.Value));
                     return;
                 }
 
@@ -797,7 +798,7 @@ namespace MadagascarBrowser.Shell
                 _ = DatabaseAccess.WriteAsync(() => BrowserServices.History.AddVisit(url, title));
             }
 
-            RefreshStats();
+            _ = RefreshStatsAsync();
             _suppressSuggest = true;
             AddressBar.Text = core.Source;
             _suppressSuggest = false;
@@ -823,35 +824,49 @@ namespace MadagascarBrowser.Shell
                     || url.StartsWith("https://", StringComparison.OrdinalIgnoreCase));
         }
 
-        private static void RefreshStats()
+        private static async Task RefreshStatsAsync()
         {
+            var lockTaken = false;
             try
             {
-                var metrics = BrowserServices.DataSaverMetrics.GetSnapshot();
+                await StatsRefreshLock.WaitAsync();
+                lockTaken = true;
+                var metrics = await DatabaseAccess.ReadAsync(BrowserServices.DataSaverMetrics.GetSnapshot);
                 var culture = System.Globalization.CultureInfo.CurrentCulture;
-                BrowserStats.Instance.BlockedCount = metrics.SessionBlockedAds;
-                BrowserStats.Instance.SavedDataText =
-                    $"↓ {(metrics.SessionSavedBytes / (1024d * 1024d)).ToString("N1", culture)} Mo économisés";
-                BrowserStats.Instance.SavedDataTooltip =
-                    $"Cette session : {metrics.SessionSavedBytes.ToString("N0", culture)} octets. " +
-                    $"Cumul : {metrics.TotalSavedBytes.ToString("N0", culture)} octets.";
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    BrowserStats.Instance.BlockedCount = metrics.SessionBlockedAds;
+                    BrowserStats.Instance.SavedDataText =
+                        $"↓ {(metrics.SessionSavedBytes / (1024d * 1024d)).ToString("N1", culture)} Mo économisés";
+                    BrowserStats.Instance.SavedDataTooltip =
+                        $"Cette session : {metrics.SessionSavedBytes.ToString("N0", culture)} octets. " +
+                        $"Cumul : {metrics.TotalSavedBytes.ToString("N0", culture)} octets.";
+                });
             }
             catch (Exception exception)
             {
                 AppLog.Error("Impossible de lire les métriques du navigateur.", exception);
             }
+            finally
+            {
+                if (lockTaken)
+                    StatsRefreshLock.Release();
+            }
         }
 
-        private static void RecordMetric(Action record)
+        private static async Task RecordMetricAndRefreshAsync(Action record)
         {
             try
             {
-                record();
+                await DatabaseAccess.WriteAsync(record);
             }
             catch (Exception exception)
             {
                 AppLog.Error("Impossible d'enregistrer une métrique du navigateur.", exception);
+                return;
             }
+
+            await RefreshStatsAsync();
         }
 
         private void AddressBar_KeyDown(object sender, KeyEventArgs e)

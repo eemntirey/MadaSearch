@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using System.Threading;
 
 namespace MadagascarBrowser.Core.Data;
 
@@ -35,34 +36,34 @@ public sealed class DataSaverMetricsService
             throw new InvalidOperationException("Les métriques de l'économiseur de données sont absentes.");
 
         return new DataSaverMetricsSnapshot(
-            _sessionSavedBytes,
+            Interlocked.Read(ref _sessionSavedBytes),
             reader.GetInt64(0),
-            _sessionBlockedAds,
+            Interlocked.Read(ref _sessionBlockedAds),
             reader.GetInt64(1),
-            _sessionReplacedImages,
+            Interlocked.Read(ref _sessionReplacedImages),
             reader.GetInt64(2),
-            _sessionBlockedVideos,
+            Interlocked.Read(ref _sessionBlockedVideos),
             reader.GetInt64(3));
     }
 
     public void RecordAdBlocked()
     {
         Record(0, 1, 0, 0);
-        _sessionBlockedAds++;
+        Interlocked.Increment(ref _sessionBlockedAds);
     }
 
     public void RecordImageReplaced(long contentLength)
     {
         Record(contentLength, 0, 1, 0);
-        _sessionSavedBytes += contentLength;
-        _sessionReplacedImages++;
+        Interlocked.Add(ref _sessionSavedBytes, contentLength);
+        Interlocked.Increment(ref _sessionReplacedImages);
     }
 
     public void RecordVideoBlocked(long contentLength)
     {
         Record(contentLength, 0, 0, 1);
-        _sessionSavedBytes += contentLength;
-        _sessionBlockedVideos++;
+        Interlocked.Add(ref _sessionSavedBytes, contentLength);
+        Interlocked.Increment(ref _sessionBlockedVideos);
     }
 
     private void Record(long savedBytes, long ads, long images, long videos)
