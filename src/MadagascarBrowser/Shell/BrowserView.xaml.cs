@@ -20,7 +20,6 @@ namespace MadagascarBrowser.Shell
     public partial class BrowserView : UserControl
     {
         private const string StartPageUrl = WebViewEnvironment.StartPageUrl;
-        private const string ErrorPageUrl = WebViewEnvironment.ErrorPageUrl;
         private const string LocalHost = WebViewEnvironment.LocalHost;
         private static readonly byte[] PlaceholderGif =
             Convert.FromBase64String("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7");
@@ -31,6 +30,7 @@ namespace MadagascarBrowser.Shell
         private bool _coreReady;
         private bool _suppressSuggest;
         private bool _certificateError;
+        private ulong _activeNavigationId;
         private CoreWebView2DevToolsProtocolEventReceiver? _fetchRequestPausedReceiver;
         private AsyncDebouncer? _suggestDebouncer;
         private readonly TaskCompletionSource<CoreWebView2> _coreReadySource =
@@ -54,6 +54,12 @@ namespace MadagascarBrowser.Shell
             InitializeComponent();
             BrowserServices.EnsureInitialized();
             Loaded += OnLoaded;
+        }
+
+        private void RetryFailedNavigation_Click(object sender, RoutedEventArgs e)
+        {
+            if (_coreReady)
+                WebView.CoreWebView2.Reload();
         }
 
         private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -592,13 +598,13 @@ namespace MadagascarBrowser.Shell
 
         private void OnNavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
         {
-            // La page d'erreur interne ne doit pas effacer une erreur de certificat déjà signalée.
-            if (!e.Uri.StartsWith(ErrorPageUrl, StringComparison.OrdinalIgnoreCase))
-                _certificateError = false;
+            _activeNavigationId = e.NavigationId;
+            _certificateError = false;
 
             if (DataContext is TabViewModel tab)
             {
                 tab.IsLoading = true;
+                tab.HasNavigationError = false;
                 tab.Url = e.Uri;
                 tab.SecurityState = ConnectionSecurityResolver.Resolve(e.Uri, _certificateError, LocalHost);
             }
@@ -772,6 +778,9 @@ namespace MadagascarBrowser.Shell
 
         private void OnNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
         {
+            if (e.NavigationId != _activeNavigationId)
+                return;
+
             var core = WebView.CoreWebView2;
             if (!e.IsSuccess && ConnectionSecurityResolver.IsCertificateError(e.WebErrorStatus.ToString()))
                 _certificateError = true;
@@ -784,10 +793,12 @@ namespace MadagascarBrowser.Shell
                     tab.Title = string.IsNullOrWhiteSpace(core.DocumentTitle) ? "Nouvel onglet" : core.DocumentTitle;
                     tab.Url = core.Source;
                 }
-                else if (!string.IsNullOrEmpty(core.Source) &&
-                         !core.Source.StartsWith(ErrorPageUrl, StringComparison.OrdinalIgnoreCase))
+                else
                 {
-                    core.Navigate(ErrorPageUrl + "?u=" + Uri.EscapeDataString(core.Source));
+                    var failure = NavigationFailureResolver.Resolve(e.WebErrorStatus.ToString());
+                    tab.NavigationErrorTitle = failure.Title;
+                    tab.NavigationErrorMessage = failure.Message;
+                    tab.HasNavigationError = true;
                 }
             }
 

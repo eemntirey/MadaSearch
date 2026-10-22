@@ -21,11 +21,17 @@ namespace MadagascarBrowser.Shell
         private bool _isFullScreen;
         private ConnectionSecurity _securityState = ConnectionSecurity.None;
         private SecurityIndicator _securityIndicator = SecurityIndicator.None;
+        private bool _hasNavigationError;
+        private string _navigationErrorTitle = string.Empty;
+        private string _navigationErrorMessage = string.Empty;
 
         public string Title { get => _title; set { _title = value; OnPropertyChanged(); } }
         public string Url { get => _url; set { _url = value; OnPropertyChanged(); } }
         public string Favicon { get => _favicon; set { _favicon = value; OnPropertyChanged(); } }
         public bool IsLoading { get => _isLoading; set { _isLoading = value; OnPropertyChanged(); } }
+        public bool HasNavigationError { get => _hasNavigationError; set { _hasNavigationError = value; OnPropertyChanged(); } }
+        public string NavigationErrorTitle { get => _navigationErrorTitle; set { _navigationErrorTitle = value; OnPropertyChanged(); } }
+        public string NavigationErrorMessage { get => _navigationErrorMessage; set { _navigationErrorMessage = value; OnPropertyChanged(); } }
 
         /// <summary>Vrai quand la page affichée occupe tout l'espace (plein écran).</summary>
         public bool IsFullScreen
