@@ -298,3 +298,24 @@ Les fonctionnalités de design, navigation, onglets, recherche dans la page, mé
 - **[bloqué]** Intégration de code non terminée : conflits dur documentés, aucun arbre combiné ne peut être certifié.
 - **[non vérifié]** Build/tests/CI du code combiné et recette GUI.
 - **[vérifié]** Aucune fusion vers `main` effectuée.
+
+
+---
+
+## Addendum terminal — CI de phase 4, run #52 (2026-10-23)
+
+- **[vérifié]** SHA testé : `9e56d77c63ec0e96213af216a2574071644be838`; branche `integration/audit-design-moderne`; run #52 : https://github.com/eemntirey/MadaSearch/actions/runs/39970673599.
+- **[vérifié]** Statut terminal GitHub Actions : `completed / success`.
+- **[vérifié]** Commandes réellement exécutées sur le runner Windows :
+  ```powershell
+  dotnet restore MadagascarBrowser.sln
+  dotnet build MadagascarBrowser.sln --configuration Release --no-restore
+  dotnet test MadagascarBrowser.sln --configuration Release --no-build --logger "trx;LogFileName=test-results.trx"
+  ```
+- **[vérifié]** Restore réussi. Build Release : `Build succeeded`, 0 avertissement .NET, 0 erreur. Tests découverts/exécutés : `MadagascarBrowser.Tests` = 170 réussis, 0 échec, 0 ignoré ; `MadagascarBrowser.Shell.Tests` = 14 réussis, 0 échec, 0 ignoré ; total runner **184 réussis, 0 échec, 0 ignoré**.
+- **[vérifié]** Correction de l’écart de comptage : 184 était non confirmé dans les preuves de phase 3, mais il est maintenant confirmé par les sorties de test du run #52 sur l’arbre feature-only. Le calcul statique 189 (132 `[Fact]` + 57 `[InlineData]`) reste un inventaire statique qui surestime de 5 le total découvert par ce runner ; les causes précises de l’écart ne sont pas encore isolées.
+- **[bloqué]** Important : le SHA #52 contient le code de `feat/design-moderne` plus le rapport et le workflow de CI de phase 4 ; il ne contient pas encore les correctifs de code des 12 fichiers communs. Le succès CI valide donc le build/test de la branche feature seule, pas une intégration des deux branches.
+- **[vérifié]** Comparaison Git API : `feat/design-moderne` est un ancêtre de `integration/audit-design-moderne` ; comparaison `status=ahead`, `ahead_by=2`, `behind_by=0`, merge-base `357f4ed5e84383fa0a42802f69eecec74b9e8e5d`.
+- **[vérifié]** PR #4 de suivi : https://github.com/eemntirey/MadaSearch/pull/4, base `fix/audit-madagascar-browser`, head `integration/audit-design-moderne`, `mergeable=false`, `mergeable_state=dirty`, brouillon, non fusionnée. Le blocage reste lié aux fichiers de code communs.
+- **[non exécutée]** Recette GUI Windows/WebView2 : aucun environnement interactif disponible.
+- **[vérifié]** Aucune fusion vers `main` effectuée.
