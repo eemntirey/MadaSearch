@@ -130,17 +130,26 @@ namespace MadagascarBrowser.Shell
             PrivateProfile?.Dispose();
         }
 
-        public async Task ClearWebViewDataAsync(bool clearCookies, bool clearCache)
+        public async Task ClearWebViewDataAsync(bool clearHistory, bool clearCookies, bool clearCache)
         {
-            if (!clearCookies && !clearCache)
+            if (!clearHistory && !clearCookies && !clearCache)
                 return;
 
-            var view = Tabs.Select(tab => tab.View).OfType<BrowserView>()
-                .FirstOrDefault(browserView => browserView.IsCoreReady);
+            var views = Tabs.Select(tab => tab.View).OfType<BrowserView>().ToList();
+            var view = views.FirstOrDefault(browserView => browserView.IsCoreReady);
             if (view == null)
-                throw new InvalidOperationException("Aucun onglet WebView2 initialisé ne permet d'effacer les données.");
+            {
+                var pending = views.FirstOrDefault();
+                if (pending == null)
+                    throw new InvalidOperationException("Aucun onglet WebView2 ne permet d'effacer les données.");
 
-            await view.ClearWebViewDataAsync(clearCookies, clearCache);
+                await pending.CoreReady;
+                if (!pending.IsCoreReady)
+                    throw new InvalidOperationException("WebView2 n'est pas prêt pour effacer les données.");
+                view = pending;
+            }
+
+            await view.ClearWebViewDataAsync(clearHistory, clearCookies, clearCache);
         }
 
         public void RestoreSession(MadagascarBrowser.Core.Data.BrowserSession session)

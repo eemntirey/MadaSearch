@@ -102,11 +102,11 @@ namespace MadagascarBrowser.Shell
 
             try
             {
-                if (clearCookies || clearCache)
+                if (clearHistory || clearCookies || clearCache)
                 {
                     if (Window.GetWindow(this)?.DataContext is not TabManager tabManager)
                         throw new InvalidOperationException("Gestionnaire de navigation indisponible.");
-                    await tabManager.ClearWebViewDataAsync(clearCookies, clearCache);
+                    await tabManager.ClearWebViewDataAsync(clearHistory, clearCookies, clearCache);
                 }
 
                 if (clearHistory)
@@ -118,7 +118,7 @@ namespace MadagascarBrowser.Shell
                 }
 
                 ClearDataFeedback.Text = "Effacement terminé : " + string.Join(", ", selected) +
-                    ". L'historique a été vérifié si cette catégorie était sélectionnée.";
+                    ". WebView2 a confirmé la fin de l'opération; l'historique SQLite a été vérifié s'il était sélectionné.";
             }
             catch (Exception exception)
             {

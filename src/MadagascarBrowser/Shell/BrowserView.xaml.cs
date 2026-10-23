@@ -868,19 +868,34 @@ namespace MadagascarBrowser.Shell
 
         public bool IsCoreReady => _coreReady && WebView.CoreWebView2 != null;
 
-        public Task ClearWebViewDataAsync(bool clearCookies, bool clearCache)
+        internal static CoreWebView2BrowsingDataKinds ResolveBrowsingDataKinds(
+            bool clearHistory,
+            bool clearCookies,
+            bool clearCache)
+        {
+            var kinds = (CoreWebView2BrowsingDataKinds)0;
+            if (clearHistory)
+                kinds |= CoreWebView2BrowsingDataKinds.BrowsingHistory;
+            if (clearCookies)
+                // AllSite includes cookies and site storage (local storage, IndexedDB,
+                // service workers and related site data), not just HTTP cookies.
+                kinds |= CoreWebView2BrowsingDataKinds.AllSite;
+            if (clearCache)
+                kinds |= CoreWebView2BrowsingDataKinds.DiskCache;
+            return kinds;
+        }
+
+        public Task ClearWebViewDataAsync(bool clearHistory, bool clearCookies, bool clearCache)
         {
             if (!IsCoreReady)
                 throw new InvalidOperationException("WebView2 is not initialized.");
 
-            var kinds = (CoreWebView2BrowsingDataKinds)0;
-            if (clearCookies)
-                kinds |= CoreWebView2BrowsingDataKinds.Cookies;
-            if (clearCache)
-                kinds |= CoreWebView2BrowsingDataKinds.DiskCache;
+            var kinds = ResolveBrowsingDataKinds(clearHistory, clearCookies, clearCache);
             if ((int)kinds == 0)
                 return Task.CompletedTask;
 
+            // Completion of this API call is the WebView2 acknowledgement that the selected
+            // categories were cleared; SQLite history is independently verified by SettingsView.
             return WebView.CoreWebView2.Profile.ClearBrowsingDataAsync(kinds);
         }
 
