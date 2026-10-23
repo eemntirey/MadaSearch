@@ -330,3 +330,100 @@ Les fonctionnalités de design, navigation, onglets, recherche dans la page, mé
 - **[vérifié]** Ce SHA ne change que le workflow CI par rapport au commit de rapport précédent ; le code applicatif reste celui de `feat/design-moderne`. Cette réussite ne prouve pas l’intégration des correctifs audit dans les 12 fichiers communs.
 - **[vérifié]** Le run #53 sur le commit documentaire `224cbdcbdbdc8a2e240f22fecc67d449a57aed5b` a été annulé lorsque le run #54 a été lancé sur le nouveau SHA. Le run #54 est terminal et réussi.
 - **[bloqué]** Le SHA d’un arbre de code combiné audit + feature n’existe pas encore. Le résultat de CI ci-dessus est celui du candidat feature-only et de ses fichiers de rapport/workflow.
+
+
+---
+
+# Clôture phase de résolution — arbre combiné audit + design (2026-10-23)
+
+## 1. SHA et état Git
+
+- **[vérifié]** Commit combiné de code : `38ee4a1686cb1915e76a81a793037863fbce1f47`.
+- **[vérifié]** Arbre Git de code combiné : `90118482263a3eecc4b3f60be4cd03217c1e23ea`.
+- **[vérifié]** Comparaison `feat/design-moderne` → commit combiné : `status=ahead`, `ahead_by=9`, `behind_by=0`; merge-base = `357f4ed5e84383fa0a42802f69eecec74b9e8e5d`. La branche feature est donc un ancêtre du commit combiné.
+- **[vérifié]** Les 12 fichiers partagés sont résolus et écrits en blobs Git ; aucun marqueur de conflit n’a été ajouté.
+- **[vérifié]** Le run #55 est clos : `completed / success`, SHA `56d8864038a2a67a12b95e41cfffa9de7e70d6c8`, https://github.com/eemntirey/MadaSearch/actions/runs/39971764202. Il valide le candidat antérieur, pas l’arbre combiné.
+- **[vérifié]** Aucune fusion vers `main` n’a été effectuée.
+
+## 2. Réconciliation des 12 fichiers
+
+Les SHA « base », « audit » et « feature » sont les blobs relevés par l’API GitHub sur les références correspondantes. « Fusionné » est le blob du fichier dans l’arbre combiné final.
+
+| Fichier | Blob base | Blob audit | Blob feature | Blob fusionné | Intentions audit conservées | Intentions feature conservées |
+|---|---|---|---|---|---|---|
+| `src/MadagascarBrowser.Core/Data/DownloadService.cs` | `25b183ddb51851e0dfdf222ea9ef6fcd95a736ba` | `9e5c4633713a5c52d2be87268f5abd84e438f71f` | `29f4208614ae5286e68e497e9705dae3b95a2f28` | `cb030bae77986c41b37774908b9bfb28d6996113` | Récupération après arrêt, taille exacte, date de modification compatible, état `Interrupted`. | Contrat de service de téléchargement et structure des données conservés pour l’interface feature. |
+| `src/MadagascarBrowser/AssemblyInfo.cs` | `cc29e7f74114aefdbef8164f7696c6e31d85d150` | `663b114cb61088018e1c451c6c2afeccaf860f05` | `b0ec827578bab22ee9959849b4a2e11ecfc228c0` | `dee3641c7dbdb3926c0cdbb7030549462d8e82f1` | `InternalsVisibleTo` pour les tests d’audit et accès aux helpers internes. | `ThemeInfo` WPF conservé ; les deux assemblages de tests sont déclarés. |
+| `src/MadagascarBrowser/MainWindow.xaml` | `15b50e64530427304b7ec6de6247a984ce7ccaad` | `6c616b3b5b5393b64945597680d63dedc4bd742b` | `2b105e75157034d5e417fd1e7ebb09c4f3ab608e` | `ad88673a4dbe0b2953881c3ea67a722c450f194b` | Le contrat visuel reste compatible avec les commandes de fenêtre et les paramètres de session. | Barre de titre personnalisée, WindowChrome, onglets, statut et design moderne conservés. |
+| `src/MadagascarBrowser/MainWindow.xaml.cs` | `e4ec7fdc0a549245161945776c9bdd9efdd91df2` | `8e8f3c29e1cd8a402376544f9f8a247b5b63c249` | `4ae676bff5191667c5f57aa61363e2a4453ee8d9` | `464102ed8f74f5792c79eef403a4f0ce48c46adf` | Fenêtre privée, non-persistance de sa session et snapshots périodiques de la session normale. | Raccourcis, plein écran, barre de titre, déplacement/épinglage, fermeture et cycle de vie WPF conservés. |
+| `src/MadagascarBrowser/Shell/BrowserServices.cs` | `27c74d9f1cafba755fae7f5cc42407788af85576` | `94ce3c097ed500defecbbfd0057c17800b7aa535` | `9c0bad362e99f44de1fd2a5e5406137b8ae0d5bf` | `1ef5205330e21f9acd63fd6d6b338a76f8ba3743` | Récupération des téléchargements au démarrage. | Métriques DataSaver, paramètres, navigation, chemins BrowserPaths et services feature conservés. |
+| `src/MadagascarBrowser/Shell/BrowserView.xaml` | `4ab06096ab894ab6a64374f8e1e857322ebd9aa1` | `d645aa869c976d020ab1def8b7034bf58d8afe3d` | `dd5cf3b239b3e1131a0e8ff5ee671175c1848603` | `a5f9fb1bff6783a008af5d87c9d6c746540a88eb` | Entrée de menu pour fenêtre privée et états de sécurité. | Indicateur de sécurité, navigation, menu et styles feature conservés. |
+| `src/MadagascarBrowser/Shell/BrowserView.xaml.cs` | `fab74a84aa5d07803d82e1c3510ef286374514ad` | `a610148640f5cd766e45bd42240ad6f23fb23cce` | `6be445e6083499a2c3ef6a767028e86a3f3ab43c` | `5b2581e856b4f4890bdff2d615b3c4c062222529` | Origine stricte fail-closed, liste blanche des commandes natives, profil privé, garde-fous de persistance et effacement WebView2 sélectif. | Recherche de la page d’accueil, ITabHost, navigation, pages hors ligne, DataSaver, métriques, recherche dans la page et cycle de vie WebView2 conservés. |
+| `src/MadagascarBrowser/Shell/SettingsView.xaml` | `5bfbb579b4e0ab166940163f6f73af036c5b696d` | `df80bb29a28140dae60bb426d3ae13d1a05f3ae4` | `262abf715cfa37f1afdf84a61be53bb1f468a7bf` | `62c08f97b1c56a3fa7106b7a6cd1b1ad2288d3f0` | Cases d’effacement historique/cookies/cache et feedback utilisateur. | Contrôle DataSaver, seuil d’image et restauration de session conservés. |
+| `src/MadagascarBrowser/Shell/SettingsView.xaml.cs` | `3e94aef3426703815beb968bd72151671e5cd870` | `41512943eb3e70029a9f65d26a1bd873fd1b2a5c` | `817e2d5273ef1b9c2cee061dc6c3a59620bab2b2` | `bc112d0cafe55bb5bee8ab80201df418181935e1` | Confirmation avant effacement, contrôle du profil privé, vérification de l’historique SQLite et feedback d’échec. | Validation et persistance du seuil DataSaver, thème, densité et paramètres conservés. |
+| `src/MadagascarBrowser/Shell/TabManager.cs` | `318d920a592c4a791473580e4811bb15a16c8afd` | `137b15cce6c0f341560c7470780a8a88726016c7` | `32fa9309a8e8e05fec31304ffcc778967299ba8c` | `403c8d2050cf75e717ad745e14345018c85cd777` | Cycle de vie du profil privé, nettoyage et effacement sélectif. | ITabHost, changement d’onglet, réouverture, favoris, plein écran et sélection après fermeture conservés. |
+| `src/MadagascarBrowser/Shell/TabViewModel.cs` | `fbb9f8cb8c7f39ccdb3abbd8e225af264b61e697` | `36fe22842bbb17c08ded6d242eda73731c38e61f` | `02b91e440799f968677289dc87dfc545a6bbd293` | `796a146301e0deecdd5bbadce9486e54cac9be94` | Marqueurs `IsPrivate` et chemin de profil temporaire. | État d’indicateur de sécurité, erreurs de navigation et notifications UI feature conservés. |
+| `src/MadagascarBrowser/Shell/WebViewEnvironment.cs` | `4dc4439f835e5cde48d971aa6624a3afe51b9437` | `d2d1102d5721e8f55b06f40ffe8d45af9e04848e` | `a8ccf61365058cbad81608d3c7d969b7a49cec7a` | `2daad57298cfe1de8d162448a62ac1d4bc0b92a9` | Un environnement par profil, profil privé temporaire isolé, oubli de profil et possibilité de retenter après échec. | URLs de démarrage/erreur, chemin BrowserPaths et avertissement des anciens profils conservés. |
+
+## 3. Preuves des six correctifs obligatoires
+
+- **[vérifié] Origine native fail-closed :** `BrowserView.xaml.cs` appelle `NativeWebMessagePolicy.IsAllowedOrigin(e.Source, LocalHost)` avant de traiter un message ; le dispatch est limité à `NewTab`, `CloseTab` et `FocusAddressBar`. La commande de recherche reste autorisée uniquement après validation de l’origine.
+- **[vérifié] Profil privé temporaire :** `PrivateProfileSession` crée un dossier aléatoire sous `LocalAppData/MadagascarBrowser/PrivateProfiles`, maintient un verrou exclusif, supprime le dossier à la fermeture et recherche les profils orphelins. `WebViewEnvironment.GetAsync(profileFolder)` sépare les environnements par chemin.
+- **[vérifié] Snapshots :** `MainWindow.xaml.cs` utilise un `DispatcherTimer` de 15 secondes et `SaveSessionSnapshot()`; la persistance est refusée pour les fenêtres privées.
+- **[vérifié] Récupération des téléchargements :** `RecoverInProgressDownloads()` vérifie `FileInfo.Length == TotalBytes` et `LastWriteTimeUtc >= StartedAt`; les téléchargements incomplets passent à `Interrupted`. L’enum `DownloadState` contient désormais cet état.
+- **[vérifié] Effacement sélectif vérifié :** les catégories historique, cookies/données de site et cache sont sélectionnées indépendamment ; confirmation explicite ; appel `ClearBrowsingDataAsync` ; vérification que l’historique SQLite est vide si cette catégorie a été choisie.
+- **[vérifié] État `Interrupted` :** le modèle et les tests de récupération ont été mis à jour ; les tests couvrent un fichier partiel conservé, un fichier préexistant qui ne doit pas être déclaré terminé et un fichier complet avec taille/date compatibles.
+
+## 4. Commits créés via l’API Git Data
+
+- **[vérifié]** `45c6bfd630aa89141ba96b63833b5622cd66b8dd` — premier arbre combiné, arbre `d131cb4653cd53e3f2a21ffea6187deaceeb6d17`.
+- **[vérifié]** `e23d72ab6634ac61957a73924cca2c2dc30e01c9` — ajout de `DownloadState.Interrupted` et tests de récupération, arbre `30221698107fc5630f75c4d6b6a0f608a652bfd0`.
+- **[vérifié]** `07a05c42f01ab0ec127bd7a3142301c0611e595a` — correction du chemin offline, déplacement des tests WPF vers le projet Shell et déclaration d’accès interne, arbre `c75e69e9797a8e3a7ad064032d8ee4ce5c39fafb`.
+- **[vérifié]** `38ee4a1686cb1915e76a81a793037863fbce1f47` — utilisation de la politique d’origine stricte dans le pont WebMessage, arbre de code final `90118482263a3eecc4b3f60be4cd03217c1e23ea`.
+- **[vérifié]** Les mises à jour de référence ont été effectuées avec `force=false`. Aucun force-push n’a été fait.
+
+## 5. Build Release et tests sur le code combiné
+
+- **[vérifié]** Run #59, SHA exact `38ee4a1686cb1915e76a81a793037863fbce1f47`, statut terminal `completed / success` : https://github.com/eemntirey/MadaSearch/actions/runs/39975203181.
+- **[vérifié]** Commandes exécutées par le runner Windows :
+  ```powershell
+  dotnet restore MadagascarBrowser.sln
+  dotnet build MadagascarBrowser.sln --configuration Release --no-restore
+  dotnet test MadagascarBrowser.sln --configuration Release --no-build --logger "trx;LogFileName=test-results.trx"
+  ```
+- **[vérifié]** Restore réussi ; Build Release réussi avec **0 avertissement et 0 erreur**.
+- **[vérifié]** `MadagascarBrowser.Tests` : 194 réussis, 0 échoué, 0 ignoré.
+- **[vérifié]** `MadagascarBrowser.Shell.Tests` : 21 réussis, 0 échoué, 0 ignoré.
+- **[vérifié]** Total combiné : **215 réussis, 0 échoué, 0 ignoré**.
+- **[vérifié]** L’itération précédente run #58 a également terminé `completed / success`, 215 tests réussis : https://github.com/eemntirey/MadaSearch/actions/runs/39974674018.
+- **[vérifié]** Les échecs intermédiaires #56 et #57 ont été corrigés : l’état `Interrupted` a été ajouté au modèle ; les chemins, les tests WPF et le gestionnaire XAML manquant ont été corrigés. Aucun test n’a été désactivé, supprimé ou ignoré.
+
+## 6. Réconciliation exacte du comptage 189 / 184
+
+- **[vérifié]** Les deux projets utilisent xUnit 2.5.3 et Microsoft.NET.Test.Sdk 17.8.0.
+- **[vérifié]** `MadagascarBrowser.Tests` cible `net8.0` ; `MadagascarBrowser.Shell.Tests` cible `net8.0-windows` avec WPF.
+- **[vérifié]** Sur `feat/design-moderne`, l’inventaire source complet donne **117 `[Fact]` Core + 10 `[Fact]` Shell = 127 `[Fact]`**, **13 `[Theory]`**, et **53 `[InlineData]` Core + 4 Shell = 57 `[InlineData]`**. Il n’y a pas de `[MemberData]`, `[ClassData]` ni de `Skip=` dans cet inventaire.
+- **[vérifié]** Le nombre statique correct est donc **127 + 57 = 184 cas**, ce qui correspond exactement au runner feature-only : 170 Core + 14 Shell = 184.
+- **[vérifié]** Le total **189** provenait d’un mélange de périmètres : cinq `[Fact]` de `BrowsingDataClearTests.cs`, fichier audit-only absent de `feat/design-moderne`, ont été inclus dans le décompte statique de la branche feature. Ces cinq tests ont ensuite été ajoutés au projet Shell de l’arbre combiné. Ce n’était pas cinq cas ignorés par xUnit.
+- **[vérifié]** `[InlineData(null)]` dans `NewWindowRequestHandlerTests.cs` est une ligne de données de théorie ordinaire et est découverte par le runner ; elle n’explique aucun écart. Aucun test n’a été modifié pour faire correspondre artificiellement les chiffres.
+- **[vérifié]** L’arbre combiné a 215 tests découverts/exécutés, car il inclut les tests d’audit ajoutés et les tests de récupération de téléchargement.
+
+## 7. Statuts CI et run #55
+
+- **[vérifié]** Run #55 : `completed / success`, SHA `56d8864038a2a67a12b95e41cfffa9de7e70d6c8` — https://github.com/eemntirey/MadaSearch/actions/runs/39971764202.
+- **[vérifié]** Run #59 : `completed / success`, SHA combiné `38ee4a1686cb1915e76a81a793037863fbce1f47` — https://github.com/eemntirey/MadaSearch/actions/runs/39975203181.
+- **[vérifié]** Le statut vert s’applique au SHA combiné cité, et non aux runs #55–#57 pris isolément.
+
+## 8. Recette Windows/WebView2
+
+- **[non exécutée]** La recette GUI manuelle n’a pas été exécutée : le runner Windows GitHub Actions est sans session interactive WPF/WebView2 exploitable dans cette tâche.
+- **[non vérifié]** L’isolation réelle des cookies, du local storage et du cache entre fenêtres, la fermeture forcée de WebView2, le nettoyage après crash et la navigation sur certificat invalide nécessitent une recette GUI interactive distincte.
+- **[vérifié]** Le build Release et les tests automatisés passent ; cela ne remplace pas ces vérifications runtime.
+
+## 9. Risques résiduels et état des PR
+
+- **[non vérifié]** Le comportement visuel de l’indicateur de sécurité, les parcours de fenêtre privée et l’effacement réel du profil WebView2 n’ont pas été observés en recette GUI.
+- **[non vérifié]** La suppression physique d’un profil temporaire peut être différée si un processus WebView2 conserve un handle ; le nettoyage orphelin réessaie au prochain démarrage.
+- **[vérifié]** PR #2 et PR #4 restent ouvertes en brouillon/non fusionnées ; leur état de fusion n’est pas déclaré propre. PR #2 : https://github.com/eemntirey/MadaSearch/pull/2 ; PR #4 : https://github.com/eemntirey/MadaSearch/pull/4.
+- **[vérifié]** Issue #3 reste ouverte pour suivre la recette GUI restante : https://github.com/eemntirey/MadaSearch/issues/3.
+- **[vérifié]** La sauvegarde `backup/audit-backup-ea5461d` est conservée.
+- **[vérifié]** **Aucune fusion vers `main` effectuée.**
