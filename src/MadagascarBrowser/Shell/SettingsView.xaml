@@ -57,6 +57,29 @@
                     </StackPanel>
                 </Border>
 
+                <!-- Effacement sélectif avec confirmation explicite -->
+                <Border Background="{DynamicResource SurfaceHighBrush}"
+                        BorderBrush="{DynamicResource EdgeBrush}" BorderThickness="1"
+                        CornerRadius="{DynamicResource RadiusCard}"
+                        Padding="{DynamicResource CardPadding}"
+                        Margin="{DynamicResource CardMargin}">
+                    <StackPanel>
+                        <TextBlock Text="Effacer les données de navigation" Style="{StaticResource SectionLabel}"/>
+                        <TextBlock Text="Choisissez uniquement les catégories à supprimer. Les favoris, les téléchargements et les paramètres seront conservés."
+                                   Style="{StaticResource ViewSubtitle}" Margin="0,4,0,10" TextWrapping="Wrap"/>
+                        <CheckBox x:Name="ClearHistoryCheck" Content="Historique de navigation"
+                                  Style="{StaticResource DarkCheckBox}" Margin="0,0,0,8"/>
+                        <CheckBox x:Name="ClearCookiesCheck" Content="Cookies et données de session des sites"
+                                  Style="{StaticResource DarkCheckBox}" Margin="0,0,0,8"/>
+                        <CheckBox x:Name="ClearCacheCheck" Content="Cache WebView2"
+                                  Style="{StaticResource DarkCheckBox}" Margin="0,0,0,10"/>
+                        <Button Content="Effacer les données sélectionnées" Style="{StaticResource SecondaryButton}"
+                                HorizontalAlignment="Left" Click="ClearData_Click"/>
+                        <TextBlock x:Name="ClearDataFeedback" FontSize="11.5"
+                                   Foreground="{DynamicResource MutedBrush}" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+
                 <!-- Domaines autorisés -->
                 <Border Background="{DynamicResource SurfaceHighBrush}"
                         BorderBrush="{DynamicResource EdgeBrush}" BorderThickness="1"
