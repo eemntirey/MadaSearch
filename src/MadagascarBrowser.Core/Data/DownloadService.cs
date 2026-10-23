@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 
 namespace MadagascarBrowser.Core.Data
 {
@@ -47,6 +48,45 @@ namespace MadagascarBrowser.Core.Data
         public void Fail(long id)
         {
             SetState(id, DownloadState.Failed);
+        }
+
+        /// <summary>
+        /// Recovers download records left InProgress after an unclean shutdown.
+        /// Existing files are never deleted. A record is considered complete only
+        /// when a known positive expected size is present on disk in full.
+        /// </summary>
+        public int RecoverInProgressDownloads()
+        {
+            var pending = new List<(long Id, string Path, long TotalBytes)>();
+            using (var connection = new SqliteConnection($"Data Source={_path}"))
+            {
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText = "SELECT id,path,total_bytes FROM downloads WHERE state=$state";
+                command.Parameters.AddWithValue("$state", DownloadState.InProgress.ToString());
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                    pending.Add((reader.GetInt64(0), reader.GetString(1), reader.GetInt64(2)));
+            }
+
+            foreach (var item in pending)
+            {
+                var complete = item.TotalBytes > 0
+                    && File.Exists(item.Path)
+                    && new FileInfo(item.Path).Length >= item.TotalBytes;
+                using var connection = new SqliteConnection($"Data Source={_path}");
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText = "UPDATE downloads SET state=$state, bytes_received=CASE WHEN $complete=1 THEN $total ELSE bytes_received END WHERE id=$id AND state=$inProgress";
+                command.Parameters.AddWithValue("$state", (complete ? DownloadState.Completed : DownloadState.Interrupted).ToString());
+                command.Parameters.AddWithValue("$complete", complete ? 1 : 0);
+                command.Parameters.AddWithValue("$total", item.TotalBytes);
+                command.Parameters.AddWithValue("$id", item.Id);
+                command.Parameters.AddWithValue("$inProgress", DownloadState.InProgress.ToString());
+                command.ExecuteNonQuery();
+            }
+
+            return pending.Count;
         }
 
         public List<BrowserDownload> GetRecent(int limit = 50)
