@@ -695,3 +695,18 @@ Les SHA « base », « audit » et « feature » sont les blobs relevés par l�
 - **[vérifié]** La PR est maintenue en brouillon par décision conservatrice : une tentative précédente de promotion a immédiatement rendu `mergeable_state=unstable`, et la recette GUI n’est toujours pas exécutée. Aucun code n’est fusionné.
 - **[bloqué]** GUI-01 à GUI-13 demeurent NON EXÉCUTÉ et doivent tous être PASS avec preuves avant toute fusion future.
 - **[vérifié]** Aucune fusion vers main effectuée.
+
+
+---
+
+# Phase 8 — automatisation UI, attributs xUnit et handoff humain
+
+- **O1** : script scripts/recette/Compare-TestAttributes.ps1 ajouté. Statut non vérifié avant exécution sur le SHA final; les compteurs statiques ne sont pas un TRX, les renommages avec modification restent à examiner.
+- **O2** : workflow .github/workflows/recette-ui.yml sur windows-latest et projet tests/MadagascarBrowser.UiTests avec FlaUI.UIA3. Le test implémenté vérifie uniquement le démarrage de la fenêtre WPF. GUI-01 à GUI-13 restent non exécutés — manuel; aucun PASS de scénario n'est inféré du smoke test.
+- **O3** : handoff humain versionné dans docs/recette/handoff-humain.md; preuves via commentaire issue #3 ou docs/recette/preuves/<sha-court>/<GUI-xx>/.
+- **O4** : PR #5 reste en brouillon; pas de Ready for review tant que les critères GUI/O1/CI ne sont pas satisfaits.
+- **O5** : CI terminale sur le nouveau SHA à vérifier après push.
+- **O6** : verdict provisoire **non prêt — bloqueurs de recette GUI et preuve O1**.
+- Risques : automatisation métier partielle; profil WebView2 réel et isolation cookies/stockage non prouvés; renommages avec modification à revoir; CI verte seule ne vaut pas recette GUI verte.
+
+**Aucune fusion vers main effectuée.**
