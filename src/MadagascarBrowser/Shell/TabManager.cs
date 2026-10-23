@@ -25,6 +25,16 @@ namespace MadagascarBrowser.Shell
         public event EventHandler ActiveChanged;
         public event PropertyChangedEventHandler PropertyChanged;
 
+        public bool IsPrivate { get; }
+        public PrivateProfileSession? PrivateProfile { get; }
+
+        public TabManager(bool isPrivate = false)
+        {
+            IsPrivate = isPrivate;
+            if (isPrivate)
+                PrivateProfile = new PrivateProfileSession();
+        }
+
         public TabViewModel NewTab(string url = "https://" + WebViewEnvironment.LocalHost + "/index.html")
         {
             BrowserServices.EnsureInitialized();
@@ -43,7 +53,7 @@ namespace MadagascarBrowser.Shell
                     break;
             }
 
-            var t = new TabViewModel { Title = title, Url = target };
+            var t = new TabViewModel { Title = title, Url = target, IsPrivate = IsPrivate, PrivateProfileFolder = PrivateProfile?.DirectoryPath };
             var view = new BrowserView { DataContext = t };
             t.View = view;
             Tabs.Add(t);
@@ -105,6 +115,19 @@ namespace MadagascarBrowser.Shell
         private void OpenUrlInNewTab(string url)
         {
             NewTab(url);
+        }
+
+        public void Dispose()
+        {
+            foreach (var tab in Tabs.ToList())
+            {
+                if (tab.View is BrowserView view)
+                    view.Dispose();
+            }
+
+            Tabs.Clear();
+            Active = null!;
+            PrivateProfile?.Dispose();
         }
 
         public async Task ClearWebViewDataAsync(bool clearCookies, bool clearCache)
