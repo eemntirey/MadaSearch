@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
+using MadagascarBrowser.Core.Paths;
 using Microsoft.Web.WebView2.Core;
 
 namespace MadagascarBrowser.Shell
@@ -33,11 +34,10 @@ namespace MadagascarBrowser.Shell
         /// <summary>
         /// Dossier de profil unique : jamais à côté de l'exécutable, jamais dans le
         /// profil par défaut de WebView2 (%LocalAppData%\Microsoft\EdgeWebView2\Application).
+        /// L'emplacement est celui de BrowserPaths : une seule source de vérité
+        /// pour les données écrites par le navigateur.
         /// </summary>
-        public static string UserDataFolder { get; } = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "MadagascarBrowser",
-            "WebView2");
+        public static string UserDataFolder { get; } = BrowserPaths.Default.WebViewProfilePath;
 
         private static readonly object Sync = new();
         private static Task<CoreWebView2Environment>? _environment;
@@ -62,6 +62,7 @@ namespace MadagascarBrowser.Shell
             {
                 if (!Directory.Exists(UserDataFolder))
                     Directory.CreateDirectory(UserDataFolder);
+                WarnAboutDefaultProfileLeftovers();
             }
             catch (Exception exception)
             {
@@ -83,6 +84,36 @@ namespace MadagascarBrowser.Shell
                     _environment = null;
                 }
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// Signale les profils WebView2 par défaut restés à côté de l'exécutable.
+        /// Leur présence est sans danger pour l'utilisateur, mais elle indique que
+        /// l'application tourne encore avec un dossier de profil non imposé.
+        /// </summary>
+        private static void WarnAboutDefaultProfileLeftovers()
+        {
+            try
+            {
+                var applicationName = Path.GetFileNameWithoutExtension(Environment.ProcessPath) ?? "MadagascarBrowser";
+                var leftovers = BrowserPaths.FindDefaultProfileLeftovers(
+                    AppContext.BaseDirectory,
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    applicationName);
+
+                foreach (var leftover in leftovers)
+                {
+                    var message = $"Un profil WebView2 par défaut subsiste à l'emplacement « {leftover} ». " +
+                                  "Le profil utilisé est « " + UserDataFolder + " ».";
+                    Debug.WriteLine(message);
+                    Trace.TraceWarning(message);
+                }
+            }
+            catch (Exception exception)
+            {
+                Debug.WriteLine($"Impossible de vérifier les profils WebView2 par défaut : {exception}");
+                Trace.TraceWarning($"Impossible de vérifier les profils WebView2 par défaut : {exception}");
             }
         }
     }
