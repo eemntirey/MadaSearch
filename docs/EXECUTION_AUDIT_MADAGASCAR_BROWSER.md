@@ -710,3 +710,34 @@ Les SHA « base », « audit » et « feature » sont les blobs relevés par l�
 - Risques : automatisation métier partielle; profil WebView2 réel et isolation cookies/stockage non prouvés; renommages avec modification à revoir; CI verte seule ne vaut pas recette GUI verte.
 
 **Aucune fusion vers main effectuée.**
+
+
+---
+
+# Phase 8 — résultats CI observés et corrections O1
+
+Date : 2026-10-23. SHA d'observation : 51a8013bbce1100bbcad4cad6e54121b16abe881.
+
+## Preuves du run UI
+- Run recette UI : https://github.com/eemntirey/MadaSearch/actions/runs/39983047980 — completed / success sur le SHA 51a8013bbce1100bbcad4cad6e54121b16abe881.
+- Build Release : succès.
+- Tests de régression : 194 Core + 21 Shell = 215 réussis, 0 échec, 0 ignoré.
+- FlaUI/UIA3 : 1 test de démarrage WPF réussi. Ce résultat ne valide pas GUI-01 à GUI-13.
+- Artefacts : https://github.com/eemntirey/MadaSearch/actions/runs/39983047980/artifacts/12514965443 (TRX, JSON recette et JSON/Markdown attributs).
+
+## O1 — interprétation du premier inventaire
+Le premier inventaire a retourné « bloqué — revue requise », car la boucle comparait directement les deux références de base (feature et audit), qui ne sont pas des snapshots successifs d'une même chaîne. Cela a créé 12 candidats sans prouver une suppression effective. Le contrôle a relevé 0 occurrence de Skip= sur les huit SHA et deux déplacements exacts entre e23d72a et 07a05c4 :
+- tests/MadagascarBrowser.Tests/BrowsingDataClearTests.cs → tests/MadagascarBrowser.Shell.Tests/BrowsingDataClearTests.cs;
+- tests/MadagascarBrowser.Tests/PrivateProfileSessionTests.cs → tests/MadagascarBrowser.Shell.Tests/PrivateProfileSessionTests.cs.
+
+Le script a été corrigé pour comparer uniquement la chaîne historique ordonnée à partir de 45c6bfd, sans interpréter feature → audit comme suppression séquentielle. Le statut O1 définitif dépend du nouvel artefact sur le SHA final; aucun PASS O1 n'est attribué avant cette exécution.
+
+## Correction de la CI standard
+Le run .NET validation https://github.com/eemntirey/MadaSearch/actions/runs/39983048083 a échoué parce que la commande de tests standard incluait le projet FlaUI sans variable MADAGASCARBROWSER_EXE. La commande standard est corrigée pour exclure le projet UI; recette-ui exécute ce test séparément avec le chemin du binaire défini. Le run de validation sur le SHA suivant doit être terminal completed / success avant de conclure.
+
+## Décision de livraison
+- PR #5 reste brouillon : https://github.com/eemntirey/MadaSearch/pull/5.
+- GUI-01 à GUI-13 restent non exécuté — manuel; les critères stricts de promotion ne sont pas satisfaits.
+- Verdict actuel : non prêt — scénarios GUI non prouvés et O1 définitif à confirmer.
+
+**Aucune fusion vers main effectuée.**
