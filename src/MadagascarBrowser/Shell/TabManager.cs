@@ -9,8 +9,8 @@ namespace MadagascarBrowser.Shell
     public class TabManager : INotifyPropertyChanged
     {
         public ObservableCollection<TabViewModel> Tabs { get; } = new();
-        private TabViewModel _active;
-        public TabViewModel Active
+        private TabViewModel? _active;
+        public TabViewModel? Active
         {
             get => _active;
             set
@@ -22,8 +22,8 @@ namespace MadagascarBrowser.Shell
             }
         }
 
-        public event EventHandler ActiveChanged;
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event EventHandler? ActiveChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         public bool IsPrivate { get; }
         private PrivateProfileSession? PrivateProfile { get; }
@@ -126,7 +126,7 @@ namespace MadagascarBrowser.Shell
             }
 
             Tabs.Clear();
-            Active = null!;
+            Active = null;
             PrivateProfile?.Dispose();
         }
 
