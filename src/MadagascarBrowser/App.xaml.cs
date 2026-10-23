@@ -15,6 +15,7 @@ public partial class App : Application
         // Les durées d'animation sont résolues au chargement des styles : on applique
         // donc la préférence système avant l'ouverture de la fenêtre.
         Motion.ApplyPreference();
+        AppLog.EnableFileSink();
         base.OnStartup(e);
     }
 }
