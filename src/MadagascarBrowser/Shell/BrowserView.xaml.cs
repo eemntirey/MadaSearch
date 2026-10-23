@@ -49,7 +49,8 @@ namespace MadagascarBrowser.Shell
             {
                 // Environnement explicite : le profil utilisateur WebView2 vit dans
                 // %LocalAppData%\MadagascarBrowser\WebView2, jamais à côté de l'exe.
-                var environment = await WebViewEnvironment.GetAsync();
+                var tabViewModel = DataContext as TabViewModel;
+                var environment = await WebViewEnvironment.GetAsync(tabViewModel?.PrivateProfileFolder);
                 await WebView.EnsureCoreWebView2Async(environment);
                 _coreReady = true;
                 InitCore();
@@ -374,6 +375,12 @@ namespace MadagascarBrowser.Shell
         private async void MenuAddFavorite_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
+            if ((DataContext as TabViewModel)?.IsPrivate == true)
+            {
+                MenuFeedback.Text = "Les favoris sont désactivés en navigation privée.";
+                MenuPopup.IsOpen = true;
+                return;
+            }
             if (!Uri.TryCreate(WebView.CoreWebView2?.Source, UriKind.Absolute, out var uri) ||
                 (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
             {
@@ -404,6 +411,12 @@ namespace MadagascarBrowser.Shell
         private async void MenuSaveOffline_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
+            if ((DataContext as TabViewModel)?.IsPrivate == true)
+            {
+                MessageBox.Show(Window.GetWindow(this), "L'enregistrement hors ligne est désactivé en navigation privée.",
+                    "Navigation privée", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
             if (!_coreReady || !Uri.TryCreate(WebView.CoreWebView2.Source, UriKind.Absolute, out var uri) ||
                 (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
             {
@@ -526,6 +539,12 @@ namespace MadagascarBrowser.Shell
 
             e.ResultFilePath = dialog.FileName;
             e.Handled = true;
+
+            // The user explicitly selected this destination; keep the file, but never persist
+            // private download metadata in the normal download database.
+            if ((DataContext as TabViewModel)?.IsPrivate == true)
+                return;
+
             var download = await DatabaseAccess.WriteAsync(() =>
                 BrowserServices.Downloads.Start(operation.Uri, e.ResultFilePath));
             DownloadsView.Register(download.Id, operation);
@@ -674,7 +693,7 @@ namespace MadagascarBrowser.Shell
                 }
             }
 
-            if (e.IsSuccess && IsHistoryWorthy(core.Source))
+            if (e.IsSuccess && IsHistoryWorthy(core.Source) && (DataContext as TabViewModel)?.IsPrivate != true)
             {
                 var url = core.Source;
                 var title = core.DocumentTitle ?? string.Empty;
