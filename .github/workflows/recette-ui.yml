@@ -8,7 +8,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: recette-ui-\${{ github.ref }}
+  group: recette-ui-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   recette-ui:
@@ -26,8 +26,8 @@ jobs:
       - name: Inventaire xUnit par SHA
         shell: pwsh
         env:
-          GITHUB_TOKEN: \${{ github.token }}
-          GITHUB_SHA: \${{ github.sha }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_SHA: ${{ github.sha }}
         run: ./scripts/recette/Compare-TestAttributes.ps1
       - name: Tests .NET avec TRX
         shell: pwsh
@@ -35,7 +35,7 @@ jobs:
       - name: Test UI FlaUI/UIA3
         shell: pwsh
         env:
-          MADAGASCARBROWSER_EXE: \${{ github.workspace }}\src\MadagascarBrowser\bin\Release\net8.0-windows\MadagascarBrowser.exe
+          MADAGASCARBROWSER_EXE: ${{ github.workspace }}\src\MadagascarBrowser\bin\Release\net8.0-windows\MadagascarBrowser.exe
         run: |
           if (-not (Test-Path -LiteralPath $env:MADAGASCARBROWSER_EXE)) { throw "WPF executable missing: $env:MADAGASCARBROWSER_EXE" }
           dotnet test tests/MadagascarBrowser.UiTests/MadagascarBrowser.UiTests.csproj --configuration Release --logger "trx;LogFileName=ui-tests.trx" --results-directory artifacts/ui-trx
@@ -45,13 +45,13 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force artifacts/recette | Out-Null
           $ids=@("GUI-01","GUI-02","GUI-03","GUI-04","GUI-05","GUI-06","GUI-07","GUI-08","GUI-09","GUI-10","GUI-11","GUI-12","GUI-13")
-          $rows=foreach($id in $ids){[pscustomobject]@{scenario=$id;status="non exécuté — manuel";sha="\${{ github.sha }}";evidence=@();reason="Le smoke test UI ne valide pas ce scénario; aucune assertion métier liée à ses preuves n'est implémentée.";exit_criteria="Automatiser l'action et l'assertion ou déposer les preuves humaines."}}
-          [pscustomobject]@{generated_at=[DateTimeOffset]::UtcNow.ToString("o");sha="\${{ github.sha }}";workflow="\${{ github.server_url }}/\${{ github.repository }}/actions/runs/\${{ github.run_id }}";scenarios=@($rows)} | ConvertTo-Json -Depth 8 | Set-Content artifacts/recette/recette-resultats.json -Encoding utf8
-          @("# Résultats GUI","","SHA: \${{ github.sha }}","GUI-01 à GUI-13: non exécuté — manuel; aucun PASS n'est inféré du smoke test.") | Set-Content artifacts/recette/recette-resultats.md -Encoding utf8
+          $rows=foreach($id in $ids){[pscustomobject]@{scenario=$id;status="non exécuté — manuel";sha="${{ github.sha }}";evidence=@();reason="Le smoke test UI ne valide pas ce scénario; aucune assertion métier liée à ses preuves n'est implémentée.";exit_criteria="Automatiser l'action et l'assertion ou déposer les preuves humaines."}}
+          [pscustomobject]@{generated_at=[DateTimeOffset]::UtcNow.ToString("o");sha="${{ github.sha }}";workflow="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}";scenarios=@($rows)} | ConvertTo-Json -Depth 8 | Set-Content artifacts/recette/recette-resultats.json -Encoding utf8
+          @("# Résultats GUI","","SHA: ${{ github.sha }}","GUI-01 à GUI-13: non exécuté — manuel; aucun PASS n'est inféré du smoke test.") | Set-Content artifacts/recette/recette-resultats.md -Encoding utf8
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: recette-ui-\${{ github.sha }}
+          name: recette-ui-${{ github.sha }}
           if-no-files-found: warn
           retention-days: 30
           path: |
