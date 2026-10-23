@@ -49,6 +49,29 @@ public class SessionServiceTests
         }
     }
 
+    [Fact]
+    public void SavedSnapshot_CanBeLoadedByANewServiceInstanceAfterAbruptStop()
+    {
+        var (directory, databasePath) = CreateDatabasePath();
+
+        try
+        {
+            var snapshot = new BrowserSession(
+                new List<string> { "https://one.example", "https://two.example", "https://three.example" }, 2);
+
+            // Simulates the last periodic snapshot being committed before process termination.
+            new SessionService(new Database(databasePath)).Save(snapshot);
+
+            var recovered = new SessionService(new Database(databasePath)).Load();
+            Assert.Equal(snapshot.Urls, recovered.Urls);
+            Assert.Equal(2, recovered.ActiveTabIndex);
+        }
+        finally
+        {
+            ClearDatabase(directory, databasePath);
+        }
+    }
+
     private static (string Directory, string DatabasePath) CreateDatabasePath()
     {
         var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
