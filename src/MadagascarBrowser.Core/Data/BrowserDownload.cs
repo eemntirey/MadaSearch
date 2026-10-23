@@ -5,6 +5,7 @@ namespace MadagascarBrowser.Core.Data
         InProgress,
         Completed,
         Cancelled,
+        Interrupted,
         Failed
     }
 
