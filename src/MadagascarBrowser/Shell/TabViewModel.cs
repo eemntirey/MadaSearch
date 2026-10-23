@@ -40,6 +40,12 @@ namespace MadagascarBrowser.Shell
             set { _securityState = value; OnPropertyChanged(); }
         }
 
+        /// <summary>Indicates that this tab belongs to an isolated private window.</summary>
+        public bool IsPrivate { get; set; }
+
+        /// <summary>Temporary WebView2 profile folder for a private tab.</summary>
+        public string? PrivateProfileFolder { get; set; }
+
         public TabKind Kind { get; set; } = TabKind.Page;
         public object View { get; set; }
 
