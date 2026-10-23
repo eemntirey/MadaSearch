@@ -343,10 +343,7 @@ namespace MadagascarBrowser.Shell
         private void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
         {
             // Fail closed: only the trusted local HTTPS origin may issue native commands.
-            if (!Uri.TryCreate(e.Source, UriKind.Absolute, out var source) ||
-                !source.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) ||
-                !source.Host.Equals(LocalHost, StringComparison.OrdinalIgnoreCase) ||
-                !source.IsDefaultPort)
+            if (!NativeWebMessagePolicy.IsAllowedOrigin(e.Source, LocalHost))
             {
                 System.Diagnostics.Debug.WriteLine("WebMessageRejected: untrusted origin.");
                 return;
