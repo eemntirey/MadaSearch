@@ -659,3 +659,12 @@ Les SHA « base », « audit » et « feature » sont les blobs relevés par l�
 - **[vérifié]** Cette promotion permet la revue humaine uniquement ; elle ne signifie pas que la recette est acceptée. GUI-01 à GUI-13 restent `NON EXÉCUTÉ` jusqu’à preuve sur un poste Windows interactif.
 - **[vérifié]** À la décision, GitHub renvoyait `mergeable=true`; l’état textuel mergeable doit être recontrôlé après les nouveaux checks documentaires.
 - **[vérifié]** La PR n’est pas fusionnée. `main` reste la base inchangée `2b80b96b6ceea52913079667db49d265cdd1cd67`.
+
+
+### Rectification finale du statut de PR #5
+
+- **[vérifié]** Run #76 est `completed / success` sur SHA `8775132ac128807ee12df555b9bfed359a1a0c6d`, 215 tests réussis, 0 échec, 0 ignoré : https://github.com/eemntirey/MadaSearch/actions/runs/39979102047.
+- **[vérifié]** Lors du dernier contrôle API après ce run, PR #5 était `mergeable=true` mais `mergeable_state=unstable`. Cet état ne satisfait pas la condition stricte de promotion en revue, qui n’accepte que `clean` ou `blocked` uniquement par des checks non obligatoires.
+- **[vérifié]** En conséquence, la PR a été reconvertie en brouillon. Aucun merge n’a eu lieu. La recette GUI reste un bloqueur de fusion et GUI-01 à GUI-13 restent `NON EXÉCUTÉ`.
+- **[bloqué]** Une nouvelle vérification de `mergeable_state` sera nécessaire après stabilisation des checks GitHub ; le dernier état observé reste `unstable`.
+- **[vérifié]** `main` reste au SHA `2b80b96b6ceea52913079667db49d265cdd1cd67`. Aucune fusion vers main effectuée.
