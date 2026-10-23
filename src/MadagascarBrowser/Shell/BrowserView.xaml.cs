@@ -505,6 +505,12 @@ namespace MadagascarBrowser.Shell
         private void MenuImportProfile_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
+            if ((DataContext as TabViewModel)?.IsPrivate == true)
+            {
+                MessageBox.Show(Window.GetWindow(this), "L'import du profil normal est désactivé en navigation privée.",
+                    "Navigation privée", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
             var dialog = new OpenFileDialog { Filter = "Profil Madagascar Browser (*.json)|*.json" };
             if (dialog.ShowDialog(Window.GetWindow(this)) != true)
                 return;
