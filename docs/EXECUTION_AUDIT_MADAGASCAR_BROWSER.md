@@ -427,3 +427,122 @@ Les SHA « base », « audit » et « feature » sont les blobs relevés par l�
 - **[vérifié]** Issue #3 reste ouverte pour suivre la recette GUI restante : https://github.com/eemntirey/MadaSearch/issues/3.
 - **[vérifié]** La sauvegarde `backup/audit-backup-ea5461d` est conservée.
 - **[vérifié]** **Aucune fusion vers `main` effectuée.**
+
+
+---
+
+# Phase 6 — audit de cohérence, topologie de livraison et recette GUI (2026-10-23)
+
+## 1. Inventaire reproductible des tests et réconciliation 132 / 127
+
+### Méthode et périmètre
+
+- **[vérifié]** La branche inspectée pour l'inventaire statique feature est le SHA `357f4ed5e84383fa0a42802f69eecec74b9e8e5d`. L'arbre Git a été listé via l'API, puis chaque fichier C# de test a été lu par chemin avec ce ref explicite.
+- **[vérifié]** Les 28 fichiers de tests C# présents sous `tests/` sont les trois fichiers Shell et les 25 fichiers Core listés ci-dessous. Aucun `[MemberData]`, `[ClassData]` ni `Skip=` n'a été trouvé dans cet inventaire.
+- **[vérifié]** Décompte reproductible par fichier : les colonnes Fact / Theory / InlineData sont des occurrences d'attributs source. Les cas attendus xUnit sont `Fact + InlineData` pour les fichiers recensés ; les attributs Theory ne sont pas ajoutés séparément car les lignes InlineData représentent leurs cas.
+  
+| Projet | Fichier | Fact | Theory | InlineData | MemberData / ClassData / Skip |
+|---|---|---:|---:|---:|---:|
+| Shell.Tests | `AppLogTests.cs` | 1 | 0 | 0 | 0 / 0 / 0 |
+| Shell.Tests | `NewWindowRequestHandlerTests.cs` | 4 | 1 | 4 | 0 / 0 / 0 |
+| Shell.Tests | `TabSelectionTests.cs` | 5 | 0 | 0 | 0 / 0 / 0 |
+| Tests (Core) | `AcceleratorCommandTests.cs` | 6 | 2 | 12 | 0 / 0 / 0 |
+| Tests (Core) | `AdBlockServiceTests.cs` | 8 | 0 | 0 | 0 / 0 / 0 |
+| Tests (Core) | `AsyncDebouncerTests.cs` | 3 | 0 | 0 | 0 / 0 / 0 |
+| Tests (Core) | `BrowserPathsTests.cs` | 7 | 0 | 0 | 0 / 0 / 0 |
+| Tests (Core) | `BrowserProfileServiceTests.cs` | 2 | 0 | 0 | 0 / 0 / 0 |
+| Tests (Core) | `BrowserSettingsServiceTests.cs` | 2 | 0 | 0 | 0 / 0 / 0 |
+| Tests (Core) | `ConnectionSecurityTests.cs` | 7 | 2 | 10 | 0 / 0 / 0 |
+| Tests (Core) | `DataSaverMetricsServiceTests.cs` | 1 | 0 | 0 | 0 / 0 / 0 |
+| Tests (Core) | `DataSaverServiceTests.cs` | 9 | 0 | 0 | 0 / 0 / 0 |
+| Tests (Core) | `DateTimeStorageTests.cs` | 4 | 0 | 0 | 0 / 0 / 0 |
+| Tests (Core) | `DownloadFileNameResolverTests.cs` | 4 | 0 | 0 | 0 / 0 / 0 |
+| Tests (Core) | `DownloadProgressWriterTests.cs` | 6 | 0 | 0 | 0 / 0 / 0 |
+| Tests (Core) | `DownloadServiceTests.cs` | 2 | 0 | 0 | 0 / 0 / 0 |
+| Tests (Core) | `FavoritesServiceTests.cs` | 1 | 0 | 0 | 0 / 0 / 0 |
+| Tests (Core) | `FindInPageStateTests.cs` | 9 | 0 | 0 | 0 / 0 / 0 |
+| Tests (Core) | `HistoryServiceTests.cs` | 3 | 0 | 0 | 0 / 0 / 0 |
+| Tests (Core) | `NavigationFailureResolverTests.cs` | 2 | 1 | 6 | 0 / 0 / 0 |
+| Tests (Core) | `NavigationServiceTests.cs` | 12 | 1 | 3 | 0 / 0 / 0 |
+| Tests (Core) | `NavigationTargetTests.cs` | 6 | 0 | 0 | 0 / 0 / 0 |
+| Tests (Core) | `NewWindowRequestTests.cs` | 5 | 1 | 5 | 0 / 0 / 0 |
+| Tests (Core) | `OfflinePageServiceTests.cs` | 1 | 0 | 0 | 0 / 0 / 0 |
+| Tests (Core) | `ResourceInterceptionScopeTests.cs` | 2 | 3 | 10 | 0 / 0 / 0 |
+| Tests (Core) | `SecurityIndicatorTests.cs` | 5 | 0 | 0 | 0 / 0 / 0 |
+| Tests (Core) | `SessionServiceTests.cs` | 2 | 0 | 0 | 0 / 0 / 0 |
+| Tests (Core) | `SqliteRobustnessTests.cs` | 7 | 0 | 0 | 0 / 0 / 0 |
+| Tests (Core) | `ZoomLevelTests.cs` | 1 | 2 | 7 | 0 / 0 / 0 |
+| **TOTAL** | **28 fichiers** | **127** | **13** | **57** | **0 / 0 / 0** |
+
+- **[vérifié]** Les totaux exacts sont 127 `[Fact]`, 13 `[Theory]`, 57 `[InlineData]`, donc 184 cas statiques attendus (127 + 57).
+- **[vérifié]** La phase 4 qui indiquait 132 `[Fact]` était erronée de cinq occurrences. La clôture phase 4 qui indiquait 127 `[Fact]` était correcte. L'erreur vient d'un comptage statique précédent, pas d'un fichier supprimé/renommé ni d'un attribut dérivé. Le nombre 189 est donc retiré pour la branche feature.
+- **[vérifié]** La CI feature-only run #52 a découvert/exécuté 170 Core + 14 Shell = 184 tests, conforme à l'inventaire source. Le runner et l'inventaire portent sur le même SHA de feature avec les fichiers de tests recensés.
+- **[vérifié]** Branche audit seule : le rapport d'audit recense 75 `[Fact]`, 10 `[Theory]`, 43 `[InlineData]` dans 21 fichiers et run de CI d'audit à 118 réussis. Arbre combiné : run #59, 194 Core + 21 Shell = 215 réussis. Ces chiffres ne doivent pas être additionnés naïvement car des tests et projets sont partagés et l'arbre combiné contient des tests de non-régression additionnels.
+- **[vérifié]** Les cinq tests de `BrowsingDataClearTests.cs` étaient ajoutés dans le commit combiné, pas présents dans le SHA feature. Ils ne justifient pas un total feature de 189.
+
+## 2. Runs #56 et #57 — causes et non-désactivation des tests
+
+### Run #56
+
+- **[vérifié]** Run #56 : SHA `45c6bfd630aa89141ba96b63833b5622cd66b8dd`, conclusion `failure`, étapes Restore réussie, Build Release échouée, Test non exécutée car conditionnée à la réussite du build : https://github.com/eemntirey/MadaSearch/actions/runs/39973962889.
+- **[vérifié]** Le commit #56 introduit la récupération des téléchargements qui référence `DownloadState.Interrupted`, mais l'enum `DownloadState` ne contenait pas encore cette valeur à ce SHA.
+- **[vérifié]** La correction correspondante est le commit `e23d72ab6634ac61957a73924cca2c2dc30e01c9`, qui ajoute `Interrupted` dans `src/MadagascarBrowser.Core/Data/BrowserDownload.cs` et ajoute des tests de récupération dans `tests/MadagascarBrowser.Tests/DownloadServiceTests.cs`.
+- **[non vérifié]** Le connecteur GitHub donne le statut et les étapes mais ne restitue pas le contenu de l'archive des logs du run; l'erreur de compilation exacte (texte/numéro CS) n'a donc pas pu être citée. La cause de compilation est établie par le diff du commit correctif, mais pas par la ligne de log brute.
+
+### Run #57
+
+- **[vérifié]** Run #57 : SHA `e23d72ab6634ac61957a73924cca2c2dc30e01c9`, conclusion `failure`, Restore réussie, Build Release échouée, étape Test non exécutée : https://github.com/eemntirey/MadaSearch/actions/runs/39974314474.
+- **[vérifié]** Le commit suivant `07a05c42f01ab0ec127bd7a3142301c0611e595a` corrige le contrat `OfflinePageService` (`paths.OfflinePagesPath` remplacé par `paths.OfflineDirectory`), ajoute `InternalsVisibleTo("MadagascarBrowser.Shell.Tests")` et déplace les tests WPF `BrowsingDataClearTests.cs` et `PrivateProfileSessionTests.cs` du projet Core vers `tests/MadagascarBrowser.Shell.Tests`.
+- **[vérifié]** Ces changements expliquent les familles de causes de compilation de l'itération #57 : contrat de chemin non aligné et tests WPF placés dans le mauvais projet/assemblage. Les logs bruts n'étant pas accessibles via le connecteur, le message d'erreur exact reste **[non vérifié]**.
+- **[vérifié]** Run #58 sur le commit correctif `07a05c42f01ab0ec127bd7a3142301c0611e595a` est `completed / success`, 215 tests réussis : https://github.com/eemntirey/MadaSearch/actions/runs/39974674018. Run #59 valide ensuite le SHA final combiné.
+
+### Contrôle de non-désactivation
+
+- **[vérifié]** Le diff #56 ajoute des fichiers de politique et de tests (`NativeWebMessagePolicyTests.cs`, `PrivateBrowsingPolicyTests.cs`, `PrivateProfileSessionTests.cs`, `BrowsingDataClearTests.cs`) ; aucun fichier de test n'y est supprimé.
+- **[vérifié]** Le diff #57 ajoute des tests de récupération dans `DownloadServiceTests.cs) et ajoute l'état du modèle ; il ne supprime pas de test.
+- **[vérifié]** Le diff #58 renomme/déplace deux fichiers de tests entre projets, sans suppression de contenu, et ajoute une déclaration `InternalsVisibleTo`.
+- **[vérifié]** Les étapes `Test` marquées `skipped` dans #56/#57 sont sautées par le workflow parce que le build a échoué, et non parce que les tests xUnit ont été désactivés.
+- **[non vérifié]** Une comparaison exhaustive ligne par ligne de chaque attribut xUnit à tous les SHA intermédiaires n'est pas attestée par un artefact automatisé conservé. Les diffs de commits disponibles ne montrent toutefois aucune suppression de tests ni ajout de `Skip`.
+
+## 3. PR #2 et PR #4 — décision appliquée
+
+- **[vérifié] PR #2 fermée sans fusion** : PR de diagnostic `feat/design-moderne → fix/audit-madagascar-browser` devenue redondante pour la livraison, car la branche d'intégration contient déjà le code feature dans son arbre combiné. Un commentaire de fermeture renvoie vers la PR de livraison #5. PR : https://github.com/eemntirey/MadaSearch/pull/2.
+- **[vérifié] PR #4 fermée sans fusion** : PR WIP `integration/audit-design-moderne → fix/audit-madagascar-browser` avec historique divergent et état non fusionnable. La branche d'intégration reste la candidate de livraison; le code combiné n'est pas rapatrié dans la branche audit historique. Un commentaire renvoie vers PR #5. PR : https://github.com/eemntirey/MadaSearch/pull/4.
+- **[vérifié]** Les deux fermetures sont accompagnées de commentaires explicatifs. Aucune PR n'a été fusionnée.
+
+## 4. Topologie de livraison retenue
+
+- **[vérifié]** Branche candidate : `integration/audit-design-moderne`, HEAD documentaire `256c166911ae1bbf30d5b476ba2ddff3eb3a7231`, parent direct code combiné `38ee4a1686cb1915e76a81a793037863fbce1f47`.
+- **[vérifié]** Branche audit historique `fix/audit-madagascar-browser` : `4707cbe95a9f3aba92349c521d695c254740ca8c). Compare audit → intégration signale une divergence de 51 commits de chaque côté autour de l'ancêtre commun `main`; elle n'est donc pas fast-forwardable.
+- **[vérifié]** La branche audit n'a pas été déplacée ni réécrite. La branche de sauvegarde `backup/audit-backup-ea5461d` reste conservée. La candidate de livraison est l'intégration, car elle contient le code combiné testé et le rapport de clôture.
+- **[vérifié]** `main` demeure `2b80b96b6ceea52913079667db49d265cdd1cd67`.
+
+## 5. Plan de recette GUI inscrit dans issue #3
+
+- **[vérifié]** Plan exécutable ajouté comme commentaire à l'issue #3 : https://github.com/eemntirey/MadaSearch/issues/3#issuecomment-6368210751.
+- **[vérifié]** Le plan décrit environnement Windows 10/11, .NET 8 Desktop Runtime, WebView2 Evergreen, profil utilisateur vierge, critères PASS/FAIL/NON EXÉCUTÉ, captures PNG, journaux et treize scénarios : navigation, téléchargements terminé/annulé/interrompu, isolation privée, fermeture normale/forcée, effacement sélectif par catégorie, annulation de confirmation, restauration après arrêt brutal et certificat invalide.
+- **[non exécutée]** Aucun bureau Windows interactif n'est disponible via le runner actuel. Les 13 scénarios restent `NON EXÉCUTÉ`; aucune observation GUI n'est inventée.
+
+## 6. PR de livraison draft #5
+
+- **[vérifié]** PR #5 créée : https://github.com/eemntirey/MadaSearch/pull/5.
+- **[vérifié]** Base `main` SHA `2b80b96b6ceea52913079667db49d265cdd1cd67`; head `integration/audit-design-moderne` SHA `256c166911ae1bbf30d5b476ba2ddff3eb3a7231).
+- **[vérifié]** État : ouverte, `draft=true), non fusionnée. API Pull Request : `mergeable=true`, `mergeable_state=clean` au contrôle après création.
+- **[vérifié]** La PR contient une checklist de livraison, les preuves CI #59/#60, les risques résiduels et les bloqueurs. Elle n'a pas été marquée ready for review.
+- **[vérifié]** Le statut clean signifie que GitHub estime le merge techniquement possible à cet instant; il ne lève ni le bloqueur GUI ni les exigences de preuve documentaire. Toute modification ultérieure nécessite une nouvelle vérification CI sur le SHA exact.
+
+## 7. Risques résiduels consolidés
+
+1. **[bloqué]** Recette WPF/WebView2 interactive non exécutée : isolation cookies/cache/localStorage, fermeture forcée, nettoyage des profils orphelins, effacement sélectif réel, restauration après crash et certificat invalide.
+2. **[non vérifié]** Les logs bruts des runs #56/#57 ne sont pas accessibles via le connecteur GitHub utilisé; les causes sont déduites des diffs correctifs et des étapes échouées, sans numéro/message de compilation exact.
+3. **[non vérifié]** Le contrôle d'attributs xUnit est reproductible pour la feature (table ci-dessus), mais aucun rapport machine dédié n'a été archivé pour comparer intégralement les attributs à chaque SHA intermédiaire.
+4. **[vérifié]** PR #2 et #4 sont fermées sans fusion; issue #3, branche audit et branche de sauvegarde sont conservées.
+5. **[vérifié]** La PR de livraison #5 reste en brouillon; sa mergeabilité clean ne constitue pas une autorisation de fusion.
+
+## 8. Conclusion phase 6
+
+- **[vérifié]** Le décompte unique de la feature est 127 `[Fact]` + 57 `[InlineData]` = 184 cas; le chiffre 132 de la phase 4 était une erreur de comptage.
+- **[vérifié]** Runs #56/#57 terminaux en échec; causes de compilation documentées à partir des commits correctifs, avec limite explicite sur l'accès aux logs bruts. Aucun diff examiné ne supprime ou ne désactive des tests.
+- **[vérifié]** PR #2/#4 fermées avec explication; PR #5 draft créée et mergeability `clean` vérifiée.
+- **[vérifié]** Plan GUI inscrit dans issue #3; recette encore non exécutée.
+- **[vérifié]** **Aucune fusion vers main effectuée.**
