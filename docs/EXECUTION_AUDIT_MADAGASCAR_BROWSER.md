@@ -1,143 +1,103 @@
 # Rapport d’exécution — audit de MadagascarBrowser
 
 Date : 2026-10-23  
-Branche de travail : `fix/audit-madagascar-browser`  
-Dernier commit de code validé par CI au moment de la rédaction : `22415efd7eb5d75a992abd7ca230394441c285a6`
+Branche : `fix/audit-madagascar-browser`
 
-## 1. Résumé
+## 1. État et commits
 
-Les cinq lots de correction sont présents sur la branche d’audit. Deux corrections complémentaires ont été ajoutées pendant cette reprise :
+- État avant cette mise à jour : `ea5461d235ddd749370baa11948242638cd744c3`.
+- Commit correctif code testé précédemment : `22415efd7eb5d75a992abd7ca230394441c285a6`.
+- Correctif effacement sélectif : `8397968fc87824bd2a7351d5f86f90ed58fa19ac`.
+- Commit documentaire précédent : `ea5461d235ddd749370baa11948242638cd744c3`.
+- Référence de sauvegarde distante créée pendant la phase 2 : `backup/audit-backup-ea5461d`, pointant sur `ea5461d235ddd749370baa11948242638cd744c3`.
+- Aucun tag Git distant n’a été créé : les outils Git disponibles dans cet environnement exposent la lecture des références et la création de branches, mais pas la création d’un objet tag. La branche de sauvegarde fournit une référence distante de sécurité sans réécrire l’historique.
 
-- l’effacement WebView2 traite désormais séparément l’historique, les données de site et le cache ;
-- la récupération des téléchargements ne considère plus un fichier préexistant comme terminé sur la seule base de sa taille.
+## 2. Cinq lots d’audit déjà présents
 
-Aucune fusion vers `main` n’a été effectuée.
-
-## 2. Détail des lots
-
-### P0.1 — Canal `WebMessageReceived`
-
-Fichiers principaux :
-- `src/MadagascarBrowser.Core/Security/NativeWebMessagePolicy.cs`
-- `src/MadagascarBrowser/Shell/BrowserView.xaml.cs`
-- `tests/MadagascarBrowser.Tests/NativeWebMessagePolicyTests.cs`
-
-La politique échoue de manière fermée : origine HTTPS du seul hôte virtuel `startpage.localhost`, absence d’identifiants intégrés et de port non standard, liste blanche stricte des commandes `t`, `w`, `l`. Les messages inconnus et les charges non textuelles sont ignorés ; le journal ne contient ni URL ni contenu du message. Le pont JavaScript limite également son usage à un événement clavier utilisateur de premier niveau.
-
-Tests ciblés : commandes autorisées, origines distantes/non sûres, URL avec identifiants, port non standard, payloads et messages inconnus.
+### P0.1 — Canal WebMessageReceived
+Fichiers principaux : `src/MadagascarBrowser.Core/Security/NativeWebMessagePolicy.cs`, `src/MadagascarBrowser/Shell/BrowserView.xaml.cs`, `tests/MadagascarBrowser.Tests/NativeWebMessagePolicyTests.cs`. La politique applique une liste blanche stricte des commandes et valide l’origine ; les messages non autorisés sont rejetés. Tests de politique d’origine, de commande et de payload présents.
 
 ### P0.2 — Navigation privée
-
-Fichiers principaux :
-- `src/MadagascarBrowser/Shell/PrivateProfileSession.cs`
-- `src/MadagascarBrowser/Shell/WebViewEnvironment.cs`
-- `src/MadagascarBrowser/Shell/TabManager.cs`
-- `src/MadagascarBrowser/Shell/TabViewModel.cs`
-- `src/MadagascarBrowser/MainWindow.xaml.cs`
-- `src/MadagascarBrowser.Core/Security/PrivateBrowsingPolicy.cs`
-- tests `PrivateProfileSessionTests.cs` et `PrivateBrowsingPolicyTests.cs`
-
-Chaque fenêtre privée reçoit un dossier WebView2 distinct. Un verrou exclusif distingue les profils actifs des profils abandonnés ; les vues sont disposées avant la fermeture de la session de profil. Le nettoyage normal supprime le profil temporaire ; au prochain démarrage, les profils orphelins sont réessayés sans toucher aux dossiers qui restent verrouillés.
-
-La politique privée interdit la persistance de l’historique, des favoris, des pages hors ligne, des métadonnées de téléchargement et de la session normale. Les fichiers explicitement enregistrés par l’utilisateur ne sont pas supprimés par le nettoyage du profil.
-
-Limite : les tests automatisés couvrent les chemins de profil, le verrouillage/nettoyage et les règles de persistance. L’isolation effective de cookies/stockage par deux instances WebView2 et le nettoyage après un véritable arrêt forcé nécessitent encore la recette Windows décrite plus bas.
+Fichiers principaux : `src/MadagascarBrowser/Shell/PrivateProfileSession.cs`, `WebViewEnvironment.cs`, `TabManager.cs`, `TabViewModel.cs`, `MainWindow.xaml.cs`, ainsi que les tests `PrivateProfileSessionTests.cs` et `PrivateBrowsingPolicyTests.cs`. Le profil WebView2 privé est distinct, temporaire et nettoyé à la fermeture ou lors de la récupération des profils orphelins. L’isolation réelle cookies/stockage entre instances WebView2 n’a pas encore été vérifiée par recette GUI.
 
 ### P1 — Sessions et téléchargements
+La session normale est sauvegardée périodiquement et à la fermeture. Les téléchargements interrompus sont réconciliés au démarrage sans supprimer les fichiers utilisateur. Le correctif `22415efd7eb5d75a992abd7ca230394441c285a6` empêche de déclarer terminé un fichier préexistant uniquement parce que sa taille correspond ; date et taille sont contrôlées. Tests de non-régression ajoutés.
 
-Fichiers principaux :
-- `src/MadagascarBrowser/MainWindow.xaml.cs`
-- `src/MadagascarBrowser.Core/Data/BrowserDownload.cs`
-- `src/MadagascarBrowser.Core/Data/DownloadService.cs`
-- `src/MadagascarBrowser/Shell/BrowserServices.cs`
-- tests `SessionServiceTests.cs` et `DownloadServiceTests.cs`
+### P1 — Effacement sélectif
+Le correctif `8397968fc87824bd2a7351d5f86f90ed58fa19ac` sépare historique, données de site/cookies et cache disque WebView2. L’historique SQLite est vérifié après effacement ; les favoris, téléchargements et paramètres ne sont pas supprimés par ces catégories. Tests dans `BrowsingDataClearTests.cs`.
 
-La session normale est sauvegardée toutes les 15 secondes et à la fermeture normale. Les URL et l’index de l’onglet actif sont conservés ; les URL non HTTP(S) ne sont pas restaurées comme pages web.
+### P1 — Livraison
+Workflow Windows .NET présent : `.github/workflows/dotnet.yml`. La branche reste distincte de `main`. La recette GUI Windows/WebView2 demeure nécessaire pour confirmer navigation, téléchargement, mode privé, effacement, restauration après arrêt brutal et certificat invalide.
 
-Au démarrage, les téléchargements restés `InProgress` sont réconciliés. Un fichier n’est considéré comme complet que si sa taille correspond exactement à la taille attendue et si sa date de modification n’est pas antérieure au démarrage enregistré du téléchargement. Dans les autres cas, l’état devient `Interrupted`. Aucun fichier utilisateur n’est supprimé par cette récupération.
+## 3. État des branches et réconciliation
 
-Tests ciblés : snapshot relu par une nouvelle instance de service, fichier partiel conservé et marqué interrompu, fichier préexistant conservé sans être faussement déclaré terminé, fichier complet simulé reconnu.
+Références observées par GitHub :
+- `main` : `2b80b96b6ceea52913079667db49d265cdd1cd67`.
+- `feat/design-moderne` : `357f4ed5e84383fa0a42802f69eecec74b9e8e5d`.
+- `fix/audit-madagascar-browser` : `ea5461d235ddd749370baa11948242638cd744c3` avant cette mise à jour du rapport.
+- Ancêtre commun des branches : `2b80b96b6ceea52913079667db49d265cdd1cd67`.
 
-### P1 — Effacement sélectif des données
+Le comparatif GitHub confirme que `feat/design-moderne` est exactement 42 commits devant `main`. La branche d’audit a 48 commits propres par rapport à l’ancêtre commun et ne contient pas les 42 commits de fonctionnalité. Le comparatif `feat/design-moderne` contre la branche d’audit indique une divergence (`ahead_by=42`, `behind_by=48`). Les changements se chevauchent dans les fichiers critiques, notamment `MainWindow.xaml.cs`, `BrowserView.xaml.cs`, `TabManager.cs`, `WebViewEnvironment.cs`, `DownloadService.cs`, les projets de tests et la solution.
 
-Fichiers principaux :
-- `src/MadagascarBrowser/Shell/SettingsView.xaml`
-- `src/MadagascarBrowser/Shell/SettingsView.xaml.cs`
-- `src/MadagascarBrowser/Shell/TabManager.cs`
-- `src/MadagascarBrowser/Shell/BrowserView.xaml.cs`
-- `tests/MadagascarBrowser.Tests/BrowsingDataClearTests.cs`
-- `tests/MadagascarBrowser.Tests/HistoryServiceTests.cs`
+Une PR exploratoire #1 a été créée puis fermée sans fusion parce que GitHub n’a pas confirmé une fusion propre. Aucun merge vers `main` ou vers `feat/design-moderne` n’a eu lieu.
 
-L’interface exige une confirmation et permet de sélectionner indépendamment :
-- l’historique de navigation (historique WebView2 et historique SQLite) ;
-- les cookies et données de site (catégorie WebView2 `AllSite`) ;
-- le cache disque WebView2.
+### Blocage de réconciliation — documenté, non contourné artificiellement
 
-L’historique SQLite est relu après effacement pour vérifier qu’il est vide. L’appel asynchrone de WebView2 est attendu ; si l’opération échoue, l’interface signale un effacement incomplet. Les favoris, téléchargements et paramètres ne sont pas supprimés par ces catégories.
+La stratégie prévue est une fusion explicite avec résolution fichier par fichier, ou une branche d’intégration basée sur `feat/design-moderne` avec reprise des commits d’audit. Elle ne peut pas être exécutée de façon sûre dans cet environnement : aucun checkout local du dépôt n’est disponible et la tentative de clonage a échoué avec une erreur DNS `Could not resolve host: github.com`. Les outils GitHub accessibles ici permettent de lire des refs/fichiers et de créer des commits de contenu, mais ne fournissent pas une session Git locale avec merge/cherry-pick, résolution interactive des conflits et exécution de .NET. Fabriquer une fusion de l’extérieur en remplaçant des fichiers entiers serait risqué et contraire à l’exigence de préserver les deux intentions.
 
-Tests ciblés : correspondance des catégories WebView2, sélection vide, catégories isolées, combinaison des catégories et non-régression garantissant que vider l’historique ne supprime pas les favoris.
+**Conclusion : la réconciliation n’est pas terminée.** Aucun commit de fusion ni cherry-pick n’a été créé. Le contrôle `git merge-base --is-ancestor origin/feat/design-moderne HEAD` ne peut donc pas être revendiqué comme réussi. Ce blocage est une limite d’environnement vérifiée, pas une fusion propre.
 
-Limite : WebView2 confirme la fin de l’opération, mais ne fournit pas de requête globale permettant de relire indépendamment toutes les données de site/cache après effacement. La vérification indépendante automatisée porte sur l’historique SQLite ; la recette manuelle doit compléter le contrôle des cookies et du cache.
+## 4. Build, tests et CI
 
-## 3. Build et tests automatisés
-
-Workflow : [`.github/workflows/dotnet.yml`](../.github/workflows/dotnet.yml) sur un runner Windows.
-
-Commande exécutée par CI :
+Commandes réellement exécutées par le workflow Windows sur le commit de code `22415efd7eb5d75a992abd7ca230394441c285a6` :
 ```powershell
 dotnet restore MadagascarBrowser.sln
 dotnet build MadagascarBrowser.sln --configuration Release --no-restore
 dotnet test MadagascarBrowser.sln --configuration Release --no-build --logger "trx;LogFileName=test-results.trx"
 ```
 
-Résultat réel sur le commit `22415efd7eb5d75a992abd7ca230394441c285a6` :
-- Build Release : réussi, 0 avertissement, 0 erreur.
+Résultat de cette exécution :
+- Build Release : succès, 0 avertissement, 0 erreur.
 - Tests : 118 réussis, 0 échec, 0 ignoré.
-- Run GitHub Actions : https://github.com/eemntirey/MadaSearch/actions/runs/39965989504
+- [Run de validation du code](https://github.com/eemntirey/MadaSearch/actions/runs/39965989504).
 
-Le checkout local n’est pas présent dans l’environnement d’exécution de cette reprise ; le clonage direct a échoué car la résolution DNS de `github.com` est indisponible. Le build et les tests ont donc été exécutés par le runner Windows de GitHub Actions, pas localement.
+### CI terminale du commit documentaire précédent
 
-## 4. Réconciliation Git
+- SHA : `ea5461d235ddd749370baa11948242638cd744c3`.
+- Run : [39966578453](https://github.com/eemntirey/MadaSearch/actions/runs/39966578453).
+- État final observé via l’API GitHub : `completed`, conclusion `success`.
+- Job `build-and-test` : Restore, Build Release et Test terminés avec succès.
 
-Références vérifiées :
-- `main` : `2b80b96b6ceea52913079667db49d265cdd1cd67`
-- `feat/design-moderne` : `357f4ed5e84383fa0a42802f69eecec74b9e8e5d`
-- `fix/audit-madagascar-browser` avant les derniers correctifs : `a8662f79fbb542146f4aa5acf958733f4c5fc855`
-- Correctif effacement sélectif : `8397968fc87824bd2a7351d5f86f90ed58fa19ac`
-- Correctif récupération téléchargements : `22415efd7eb5d75a992abd7ca230394441c285a6`
+Cette CI verte ne valide que le commit `ea5461d`, qui précède la mise à jour documentaire présente. La CI du nouveau commit de rapport doit être consultée sur son SHA propre ; aucune réussite anticipée n’est affirmée ici.
 
-`feat/design-moderne` est 42 commits devant `main`. La branche d’audit a également été construite à partir de `main`, et non de `feat/design-moderne`. Les deux branches ont des modifications concurrentes sur 12 fichiers. Une PR d’intégration exploratoire (#1) a été créée puis fermée sans fusion après que GitHub n’a pas confirmé une fusion propre ; elle n’a touché ni `main` ni la branche de fonctionnalité.
+### Écart 184 / 118 tests
 
-La branche d’audit conserve donc ses corrections et sa CI verte, mais elle ne contient pas automatiquement les 42 commits propres à `feat/design-moderne`. Il ne faut pas présenter cette branche comme une fusion intégrée de la version livrable de la fonctionnalité. La réconciliation finale des deux lignes doit se faire avec une résolution de conflits et une CI complète sur le résultat combiné.
+Le nombre de 184 tests annoncé dans un résumé antérieur ne correspond pas à l’exécution GitHub vérifiée sur `22415ef`, qui a rapporté 118 tests. Aucun test n’a été désactivé pour obtenir ce résultat. L’environnement actuel ne permet pas d’inspecter localement la solution ni de lancer un inventaire indépendant ; la différence de périmètre entre ces deux chiffres reste donc non résolue et doit être rapprochée des projets de tests et des résultats TRX lors d’une exécution locale/runner accessible.
 
-## 5. Recette manuelle Windows/WebView2
+## 5. Recette Windows/WebView2
 
-À exécuter sur un poste Windows avec le runtime WebView2 installé. Cocher chaque ligne uniquement après observation réelle.
+**Non exécutée dans cette phase.** Aucun environnement GUI Windows/WebView2 interactif n’est accessible depuis l’environnement de travail courant. La CI exécute le build et les tests automatisés, mais ne simule pas une recette manuelle du navigateur.
 
-- [ ] Démarrage installé sous `Program Files`, page de démarrage et navigation HTTP(S).
-- [ ] Site externe : tentative d’envoi de messages natifs non autorisés ; aucune commande d’interface déclenchée.
-- [ ] Raccourcis `Ctrl+T`, `Ctrl+W`, `Ctrl+L` depuis la page d’accueil.
-- [ ] Télécharger un fichier avec un nom fourni par `Content-Disposition`, puis annuler un téléchargement.
-- [ ] Mode privé : ouvrir une page qui pose un cookie, vérifier que le profil normal ne le reçoit pas ; visiter des pages puis vérifier que l’historique normal reste inchangé.
-- [ ] Fermer normalement la fenêtre privée ; vérifier que son dossier temporaire disparaît.
-- [ ] Arrêter de force le processus avec un profil privé actif ; relancer le navigateur et vérifier le nettoyage du profil orphelin sans suppression de fichiers de téléchargement.
-- [ ] Effacer uniquement l’historique ; vérifier que favoris, téléchargements et paramètres restent présents.
-- [ ] Effacer uniquement les cookies/données de site ; vérifier le déconnexion des sites et la conservation de l’historique/favoris.
-- [ ] Effacer uniquement le cache ; vérifier le rechargement des ressources sans perte des autres catégories.
-- [ ] Ouvrir plusieurs onglets, laisser passer au moins 15 secondes, tuer le processus, relancer et vérifier l’ordre et l’onglet actif restaurés.
-- [ ] Vérifier qu’un téléchargement partiel est affiché comme interrompu après redémarrage et qu’un fichier complet n’est jamais supprimé.
-- [ ] Tester un certificat invalide et une coupure réseau.
+Checklist à exécuter sur Windows avec WebView2 :
+- [ ] Navigation HTTP(S), démarrage et commandes clavier.
+- [ ] Téléchargement terminé, annulé et interrompu.
+- [ ] Mode privé : cookie créé dans une fenêtre privée absent du profil normal ; historique normal inchangé ; cache/stockage séparé.
+- [ ] Fermeture normale : suppression du profil privé temporaire.
+- [ ] Arrêt forcé : nettoyage au redémarrage sans toucher aux fichiers utilisateur.
+- [ ] Effacement séparé de l’historique, des cookies/données de site et du cache ; conservation des catégories non sélectionnées.
+- [ ] Restauration de la session après arrêt brutal.
+- [ ] Certificat invalide et coupure réseau.
 
-Aucune de ces vérifications GUI n’a été exécutée par le runner CI ; elles restent explicitement à faire.
+Le point critique non prouvé est l’isolation effective des cookies, du stockage local et du cache dans le moteur WebView2 réel, ainsi que le nettoyage après un crash réel.
 
-## 6. Risques restants
+## 6. Risques résiduels et décision de livraison
 
-1. Réconciliation `feat/design-moderne` / `fix/audit-madagascar-browser` non terminée : divergence et modifications concurrentes sur 12 fichiers.
-2. Recette réelle WebView2 non exécutée : isolation cookies/stockage, fermeture forcée, certificat invalide, coupure réseau et rendu GUI.
-3. La vérification des données WebView2 après effacement repose sur la fin réussie de l’API ; la vérification post-opération indépendante est limitée par l’API disponible.
-4. Les snapshots périodiques limitent la perte de session à la fenêtre entre deux snapshots (15 secondes), sans garantir la récupération d’une navigation en cours au moment du crash.
+1. **Intégration incomplète** : les 42 commits de `feat/design-moderne` ne sont pas intégrés dans la branche d’audit.
+2. **Aucun build/test de l’état combiné** : l’état final fusionné n’existe pas encore.
+3. **Recette GUI absente** : isolation privée, nettoyage après crash, certificat invalide et comportements de téléchargement doivent être vérifiés sur Windows.
+4. **Comptage de tests à rapprocher** : 184 annoncés antérieurement contre 118 observés dans la CI citée.
+5. **Tag de sauvegarde absent** : la branche distante `backup/audit-backup-ea5461d` est créée au même SHA comme référence de sécurité.
 
-## 7. Fusion
+La branche d’audit peut être utilisée comme base de travail pour reprendre l’intégration dans un checkout Git local fonctionnel, mais elle ne doit pas être déclarée livrable combinée avec `feat/design-moderne` tant que les conflits n’ont pas été résolus et que la CI du résultat fusionné n’est pas verte.
 
-**Aucune fusion vers `main` effectuée.**  
-La CI Windows du commit de code cité ci-dessus est verte. Le prochain contrôle de livraison devra porter sur la branche fusionnée qui réconcilie les 42 commits de `feat/design-moderne` avec les correctifs de cette branche, puis sur la recette manuelle Windows/WebView2.
+**Aucune fusion vers `main` effectuée.**
