@@ -202,3 +202,14 @@ Résoudre les conflits en conservant la navigation et les fonctionnalités réce
 - **[vérifié]** L’accès API GitHub a été utilisé pour comparer les branches, récupérer les trois versions des 12 fichiers candidats, créer la PR de diagnostic #2 et l’issue #3.
 - **[bloqué]** L’intégration reste non réalisée en raison de la PR `mergeable_state=dirty`, de l’absence d’un checkout Git opérationnel et de l’impossibilité d’exécuter les tests .NET sur un arbre combiné.
 - **[vérifié]** Aucune fusion vers `main` effectuée.
+
+
+### Addendum de vérification CI — 2026-10-23, après fin du run
+
+- **[vérifié]** Le SHA `b629946657346352a3f6f9ec389dd39af6650ede` a une CI terminale `completed / success`, run #50 : https://github.com/eemntirey/MadaSearch/actions/runs/39969133614.
+- **[vérifié]** Les logs du runner Windows confirment :
+  - `dotnet restore MadagascarBrowser.sln` : réussi ;
+  - `dotnet build MadagascarBrowser.sln --configuration Release --no-restore` : `Build succeeded`, 0 avertissement, 0 erreur ;
+  - `dotnet test MadagascarBrowser.sln --configuration Release --no-build --logger "trx;LogFileName=test-results.trx"` : 118 réussis, 0 échec, 0 ignoré.
+- **[vérifié]** Cette CI valide la branche d’audit seule, sans les 42 commits de `feat/design-moderne`. Elle ne valide donc pas un arbre fusionné, puisque cet arbre n’a pas été créé.
+- **[vérifié]** Le statut de la CI du commit `b629946657346352a3f6f9ec389dd39af6650ede` est terminal. Le présent ajout documentaire sera un nouveau commit et déclenchera son propre workflow ; son résultat doit être lu sur le run correspondant et ne peut pas être présumé à partir du run #50.
