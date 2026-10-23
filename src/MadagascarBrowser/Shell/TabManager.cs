@@ -26,7 +26,7 @@ namespace MadagascarBrowser.Shell
         public event PropertyChangedEventHandler PropertyChanged;
 
         public bool IsPrivate { get; }
-        public PrivateProfileSession? PrivateProfile { get; }
+        private PrivateProfileSession? PrivateProfile { get; }
 
         public TabManager(bool isPrivate = false)
         {
