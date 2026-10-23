@@ -7,6 +7,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Threading;
 using MadagascarBrowser.Shell;
+using MadagascarBrowser.Core.Security;
 
 namespace MadagascarBrowser
 {
@@ -34,7 +35,7 @@ namespace MadagascarBrowser
             Title = isPrivate ? "Madagascar Browser — Navigation privée" : "Madagascar Browser";
             _tabManager = new TabManager(isPrivate);
             BrowserServices.EnsureInitialized();
-            if (!_isPrivate && BrowserServices.CurrentSettings.RestoreSession)
+            if (PrivateBrowsingPolicy.ShouldPersistSession(_isPrivate) && BrowserServices.CurrentSettings.RestoreSession)
                 _tabManager.RestoreSession(BrowserServices.Sessions.Load());
             if (_tabManager.Tabs.Count == 0)
                 _tabManager.NewTab();
@@ -53,7 +54,7 @@ namespace MadagascarBrowser
         private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
             _sessionSnapshotTimer.Stop();
-            if (!_isPrivate)
+            if (PrivateBrowsingPolicy.ShouldPersistSession(_isPrivate))
                 SaveSessionSnapshot();
         }
 
@@ -62,7 +63,7 @@ namespace MadagascarBrowser
         /// </summary>
         private void SaveSessionSnapshot()
         {
-            if (_isPrivate)
+            if (!PrivateBrowsingPolicy.ShouldPersistSession(_isPrivate))
                 return;
             var urls = new List<string>();
             var activeIndex = -1;
