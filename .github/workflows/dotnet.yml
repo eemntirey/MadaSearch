@@ -1,0 +1,37 @@
+name: .NET validation
+
+on:
+  push:
+    branches:
+      - main
+      - feat/design-moderne
+      - fix/audit-madagascar-browser
+      - integration/audit-design-moderne
+  pull_request:
+    branches:
+      - fix/audit-madagascar-browser
+
+permissions:
+  contents: read
+
+concurrency:
+  group: audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Restore
+        run: dotnet restore MadagascarBrowser.sln
+      - name: Build Release
+        run: dotnet build MadagascarBrowser.sln --configuration Release --no-restore
+      - name: Test
+        run: dotnet test MadagascarBrowser.sln --configuration Release --no-build --logger "trx;LogFileName=test-results.trx"
