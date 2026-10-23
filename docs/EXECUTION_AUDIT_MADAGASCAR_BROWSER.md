@@ -319,3 +319,14 @@ Les fonctionnalités de design, navigation, onglets, recherche dans la page, mé
 - **[vérifié]** PR #4 de suivi : https://github.com/eemntirey/MadaSearch/pull/4, base `fix/audit-madagascar-browser`, head `integration/audit-design-moderne`, `mergeable=false`, `mergeable_state=dirty`, brouillon, non fusionnée. Le blocage reste lié aux fichiers de code communs.
 - **[non exécutée]** Recette GUI Windows/WebView2 : aucun environnement interactif disponible.
 - **[vérifié]** Aucune fusion vers `main` effectuée.
+
+
+---
+
+## Addendum terminal — validation du SHA de branche d’intégration (run #54)
+
+- **[vérifié]** SHA `00cb82df44ef3b3fa16bb892d5756372e98c66dd` — [run #54](https://github.com/eemntirey/MadaSearch/actions/runs/39971215760) — statut terminal `completed / success`.
+- **[vérifié]** Restore réussi ; build Release réussi avec 0 avertissement .NET et 0 erreur ; tests : 170 Core + 14 Shell = **184 réussis, 0 échec, 0 ignoré**.
+- **[vérifié]** Ce SHA ne change que le workflow CI par rapport au commit de rapport précédent ; le code applicatif reste celui de `feat/design-moderne`. Cette réussite ne prouve pas l’intégration des correctifs audit dans les 12 fichiers communs.
+- **[vérifié]** Le run #53 sur le commit documentaire `224cbdcbdbdc8a2e240f22fecc67d449a57aed5b` a été annulé lorsque le run #54 a été lancé sur le nouveau SHA. Le run #54 est terminal et réussi.
+- **[bloqué]** Le SHA d’un arbre de code combiné audit + feature n’existe pas encore. Le résultat de CI ci-dessus est celui du candidat feature-only et de ses fichiers de rapport/workflow.
