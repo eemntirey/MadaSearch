@@ -825,6 +825,24 @@ namespace MadagascarBrowser.Shell
             e.Handled = true;
         }
 
+        public bool IsCoreReady => _coreReady && WebView.CoreWebView2 != null;
+
+        public Task ClearWebViewDataAsync(bool clearCookies, bool clearCache)
+        {
+            if (!IsCoreReady)
+                throw new InvalidOperationException("WebView2 is not initialized.");
+
+            var kinds = (CoreWebView2BrowsingDataKinds)0;
+            if (clearCookies)
+                kinds |= CoreWebView2BrowsingDataKinds.Cookies;
+            if (clearCache)
+                kinds |= CoreWebView2BrowsingDataKinds.DiskCache;
+            if ((int)kinds == 0)
+                return Task.CompletedTask;
+
+            return WebView.CoreWebView2.Profile.ClearBrowsingDataAsync(kinds);
+        }
+
         public void FocusAddressBar()
         {
             AddressBar.Focus();
