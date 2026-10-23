@@ -183,8 +183,8 @@ namespace MadagascarBrowser.Shell
             // Messages Web : activés, nécessaire pour les pages hors ligne et l'hôte virtuel.
             settings.IsWebMessageEnabled = true;
 
-            // DevTools : activés pour le diagnostic, sans impact sur l'utilisateur final.
-            settings.AreDevToolsEnabled = true;
+            // DevTools : désactivés pour éviter une fenêtre détachée du navigateur.
+            settings.AreDevToolsEnabled = false;
 
             // Diapositives au doigt : désactivées, la navigation tactile n'a pas lieu d'être.
             settings.IsSwipeNavigationEnabled = false;
@@ -610,8 +610,14 @@ namespace MadagascarBrowser.Shell
 
             e.ResultFilePath = dialog.FileName;
             e.Handled = true;
+            // Les membres de WebView2 ne sont lisibles que sur le thread UI :
+            // on capture avant l'écriture asynchrone en base (sinon InvalidOperationException
+            // « CoreWebView2DownloadOperation members can only be accessed from the UI thread »
+            // qui tuait l'application après le téléchargement).
+            var uri = operation.Uri;
+            var resultFilePath = e.ResultFilePath;
             var download = await DatabaseAccess.WriteAsync(() =>
-                BrowserServices.Downloads.Start(operation.Uri, e.ResultFilePath));
+                BrowserServices.Downloads.Start(uri, resultFilePath));
             DownloadsView.Register(download.Id, operation);
 
             // L'avancement n'est plus écrit à chaque événement : l'écriture est
