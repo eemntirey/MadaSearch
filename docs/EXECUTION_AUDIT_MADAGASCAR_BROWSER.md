@@ -668,3 +668,12 @@ Les SHA « base », « audit » et « feature » sont les blobs relevés par l�
 - **[vérifié]** En conséquence, la PR a été reconvertie en brouillon. Aucun merge n’a eu lieu. La recette GUI reste un bloqueur de fusion et GUI-01 à GUI-13 restent `NON EXÉCUTÉ`.
 - **[bloqué]** Une nouvelle vérification de `mergeable_state` sera nécessaire après stabilisation des checks GitHub ; le dernier état observé reste `unstable`.
 - **[vérifié]** `main` reste au SHA `2b80b96b6ceea52913079667db49d265cdd1cd67`. Aucune fusion vers main effectuée.
+
+
+### Résolution finale du statut GitHub après stabilisation
+
+- **[vérifié]** Run #77 a terminé `completed / success` sur SHA `2765d9604e5fa2b3e936b95b98fc067b4d62912f` : https://github.com/eemntirey/MadaSearch/actions/runs/39979546219.
+- **[vérifié]** Le contrôle API après la fin du run #77 renvoie `mergeable=true`, `mergeable_state=clean` pour PR #5, base `main` inchangée et HEAD `2765d9604e5fa2b3e936b95b98fc067b4d62912f`.
+- **[vérifié]** La recette GUI n’est pas exécutée ; toutefois, le paquet exécutable est versionné et la décision de revue humaine avec GUI comme bloqueur de fusion est explicitement consignée dans la description de PR et l’issue #3. Selon la règle de phase 7, ces conditions permettent la revue humaine, mais pas la fusion.
+- **[vérifié]** PR #5 est donc autorisée à passer à `Ready for review` uniquement pour revue humaine, avec GUI-01 à GUI-13 toujours bloqueurs obligatoires de fusion. Aucun statut PASS n’est attribué à ces scénarios.
+- **[vérifié]** Aucune fusion vers `main` effectuée.
