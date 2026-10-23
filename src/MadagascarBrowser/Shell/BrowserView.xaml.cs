@@ -587,11 +587,7 @@ namespace MadagascarBrowser.Shell
         private async void OnDownloadStarting(object? sender, CoreWebView2DownloadStartingEventArgs e)
         {
             var operation = e.DownloadOperation;
-            var fileName = Uri.TryCreate(operation.Uri, UriKind.Absolute, out var uri)
-                ? Path.GetFileName(uri.LocalPath)
-                : "download";
-            if (string.IsNullOrWhiteSpace(fileName))
-                fileName = "download";
+            var fileName = DownloadFileNameResolver.Resolve(operation.ContentDisposition, operation.Uri);
 
             var dialog = new SaveFileDialog
             {
@@ -1179,28 +1175,44 @@ namespace MadagascarBrowser.Shell
         /// </summary>
         private async Task RunFindAsync()
         {
-            var query = FindInput.Text;
-            _findState.Start(query);
-            UpdateFindCounter();
-
-            if (!_coreReady || string.IsNullOrWhiteSpace(query) || _environment is null)
+            if (_findRunning)
                 return;
 
             _findRunning = true;
             try
             {
-                var options = _environment.CreateFindOptions();
-                options.FindTerm = query;
-                options.IsCaseSensitive = false;
-                options.ShouldHighlightAllMatches = true;
-                options.ShouldMatchWord = false;
-                options.SuppressDefaultFindDialog = true;
+                while (true)
+                {
+                    var query = FindInput.Text;
+                    _findState.Start(query);
+                    UpdateFindCounter();
 
-                await WebView.CoreWebView2.Find.StartAsync(options);
-                _findState.ReportMatches(
-                    WebView.CoreWebView2.Find.MatchCount,
-                    WebView.CoreWebView2.Find.ActiveMatchIndex);
-                UpdateFindCounter();
+                    if (!_coreReady || _environment is null)
+                        return;
+
+                    if (string.IsNullOrWhiteSpace(query))
+                    {
+                        WebView.CoreWebView2.Find.Stop();
+                        return;
+                    }
+
+                    var options = _environment.CreateFindOptions();
+                    options.FindTerm = query;
+                    options.IsCaseSensitive = false;
+                    options.ShouldHighlightAllMatches = true;
+                    options.ShouldMatchWord = false;
+                    options.SuppressDefaultFindDialog = true;
+
+                    await WebView.CoreWebView2.Find.StartAsync(options);
+                    if (!string.Equals(query, FindInput.Text, StringComparison.Ordinal))
+                        continue;
+
+                    _findState.ReportMatches(
+                        WebView.CoreWebView2.Find.MatchCount,
+                        WebView.CoreWebView2.Find.ActiveMatchIndex);
+                    UpdateFindCounter();
+                    return;
+                }
             }
             catch (Exception exception)
             {

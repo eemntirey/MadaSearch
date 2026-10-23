@@ -9,6 +9,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -247,7 +248,7 @@
             </Grid>
         </Border>
 
-        <wv2:WebView2 x:Name="WebView" Grid.Row="1"/>
+        <wv2:WebView2 x:Name="WebView" Grid.Row="2"/>
 
         <!-- Recherche dans la page (Ctrl+F) : barre en haut à droite -->
         <Border x:Name="FindBar" Grid.Row="1" Visibility="Collapsed"
@@ -278,7 +279,7 @@
             </StackPanel>
         </Border>
 
-        <StackPanel x:Name="WebViewError" Grid.Row="1" Visibility="Collapsed" Margin="24" VerticalAlignment="Center">
+        <StackPanel x:Name="WebViewError" Grid.Row="2" Visibility="Collapsed" Margin="24" VerticalAlignment="Center">
             <TextBlock x:Name="WebViewErrorText"
                        Text="WebView2 est indisponible sur cette machine."
                        Foreground="{DynamicResource TextBrush}" FontSize="16"/>
@@ -289,7 +290,7 @@
                            RequestNavigate="WebView2Link_RequestNavigate">téléchargement officiel</Hyperlink>
             </TextBlock>
         </StackPanel>
-        <Border Grid.Row="1" Background="{DynamicResource BgBrush}" Padding="24">
+        <Border Grid.Row="2" Background="{DynamicResource BgBrush}" Padding="24">
             <Border.Style>
                 <Style TargetType="Border">
                     <Setter Property="Visibility" Value="Collapsed"/>
