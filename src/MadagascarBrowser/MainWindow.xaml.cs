@@ -66,7 +66,7 @@ namespace MadagascarBrowser
                 return;
             var urls = new List<string>();
             var activeIndex = -1;
-            var currentIndex = _tabManager.Tabs.IndexOf(_tabManager.Active);
+            var currentIndex = _tabManager.Active is { } activeTab ? _tabManager.Tabs.IndexOf(activeTab) : -1;
             for (var index = 0; index < _tabManager.Tabs.Count; index++)
             {
                 var url = _tabManager.Tabs[index].Url;
