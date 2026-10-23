@@ -782,3 +782,21 @@ Contrôle effectué sur le SHA de travail 2159e6f59c734883c82e38879b02e0f4c29a06
 Le run UI Phase 8 sur ff8d9f6 a terminé avec succès, et les compteurs vérifiés donnent 194 tests Core et 1 smoke test UI réussis. Le journal de job confirme également 21 tests Shell réussis, mais l'artefact a montré que le paramètre LogFileName écrasait le TRX précédent lors de l'exécution multi-projet de la solution. Pour que chaque groupe de tests ait un TRX distinct et que les preuves soient opposables, les deux workflows utilisent maintenant LogFilePrefix au lieu de LogFileName. Cette correction ne modifie aucun test applicatif; elle change uniquement le nommage des fichiers de résultats.
 
 Le prochain run doit confirmer que Core, Shell et UiTests publient chacun leur propre TRX sur le SHA final. Jusqu'à ce run terminal, la validation de l'archivage complet reste non vérifiée.
+
+
+## Clôture de l'archivage TRX — preuve terminale
+
+Run de référence : https://github.com/eemntirey/MadaSearch/actions/runs/39984705052 — completed / success sur le SHA 885d86fb9d44e57c0e3fcd544b2751780f796e2a. Artefact : https://github.com/eemntirey/MadaSearch/actions/runs/39984705052/artifacts/12515271747.
+
+L'artefact contient maintenant un TRX par projet et le TRX UI séparé :
+- Core : 194 réussis, 0 échec, 0 ignoré.
+- Shell : 21 réussis, 0 échec, 0 ignoré.
+- UiTests : 1 réussi, 0 échec, 0 ignoré.
+- Un TRX vide correspond au projet UI inclus dans l'appel de solution filtré; il ne représente aucun PASS supplémentaire.
+- Build Release : succès; inventaire O1 : statut vérifié, 0 Skip, 0 candidat de suppression non justifiée, 2 déplacements exacts.
+
+La recette UI demeure distincte : GUI-01 à GUI-13 sont explicitement non exécutés — manuel. Le smoke test de démarrage n'est pas assimilé à une recette fonctionnelle. La PR reste en brouillon, notamment car mergeable_state a été observé unstable et les critères GUI stricts ne sont pas satisfaits.
+
+Le commit documentaire courant déclenche à nouveau les workflows; la CI terminale de ce nouveau SHA doit être vérifiée avant la clôture technique.
+
+**Aucune fusion vers main effectuée.**
