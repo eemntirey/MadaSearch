@@ -1,7 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
@@ -22,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\MadagascarBrowser.Core\MadagascarBrowser.Core.csproj" />
+    <ProjectReference Include="..\..\src\MadagascarBrowser\MadagascarBrowser.csproj" />
   </ItemGroup>
 
 </Project>
