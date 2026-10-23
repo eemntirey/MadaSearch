@@ -9,6 +9,7 @@ using Microsoft.Win32;
 using MadagascarBrowser.Core.Blocking;
 using MadagascarBrowser.Core.Data;
 using MadagascarBrowser.Core.Navigation;
+using MadagascarBrowser.Core.Security;
 using Microsoft.Web.WebView2.Core;
 
 namespace MadagascarBrowser.Shell
@@ -260,12 +261,13 @@ namespace MadagascarBrowser.Shell
         /// Script injecté dans chaque page : relaie les raccourcis applicatifs
         /// (Ctrl+T / Ctrl+W / Ctrl+L) vers l'hôte via le canal WebMessage.
         /// </summary>
-        private const string AcceleratorBridgeScript = @"
+        private static string AcceleratorBridgeScript => @"
 (function () {
+  if (location.protocol !== 'https:' || location.hostname !== '__LOCAL_HOST__') { return; }
   if (window.__madagascarAcceleratorBridge) { return; }
   window.__madagascarAcceleratorBridge = true;
   document.addEventListener('keydown', function (event) {
-    if (!event.ctrlKey || event.altKey || event.metaKey) { return; }
+    if (!event.isTrusted || !event.ctrlKey || event.altKey || event.metaKey) { return; }
     var key = (event.key || '').toLowerCase();
     if (key !== 't' && key !== 'w' && key !== 'l') { return; }
     try {
@@ -274,25 +276,31 @@ namespace MadagascarBrowser.Shell
       /* canal de messages indisponible */
     }
   }, true);
-})();";
+})();".Replace("__LOCAL_HOST__", LocalHost, StringComparison.Ordinal);
 
         /// <summary>
         /// Réception d'un raccourci applicatif relayé par la page.
         /// </summary>
         private void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
         {
-            string? key;
+            string? message;
             try
             {
-                key = e.TryGetWebMessageAsString();
+                message = e.TryGetWebMessageAsString();
             }
             catch (ArgumentException)
             {
-                // Message non textuel : ignoré.
+                System.Diagnostics.Debug.WriteLine("WebMessageRejected: non-text payload.");
                 return;
             }
 
-            var command = AcceleratorCommandResolver.Resolve(key, ctrl: true, alt: false, shift: false);
+            if (!NativeWebMessagePolicy.TryResolveCommand(e.Source, message, LocalHost, out var command))
+            {
+                // Ne pas journaliser l'URL ni le contenu : ils peuvent contenir des données privées.
+                System.Diagnostics.Debug.WriteLine("WebMessageRejected: origin or message not allowed.");
+                return;
+            }
+
             switch (command)
             {
                 case AcceleratorCommand.NewTab:
