@@ -31,7 +31,7 @@ jobs:
         run: ./scripts/recette/Compare-TestAttributes.ps1
       - name: Tests .NET avec TRX
         shell: pwsh
-        run: dotnet test MadagascarBrowser.sln --configuration Release --no-build --logger "trx;LogFileName=test-results.trx" --results-directory artifacts/test-results
+        run: dotnet test MadagascarBrowser.sln --configuration Release --no-build --filter "FullyQualifiedName!~MadagascarBrowser.UiTests" --logger "trx;LogFileName=test-results.trx" --results-directory artifacts/test-results
       - name: Test UI FlaUI/UIA3
         shell: pwsh
         env:
