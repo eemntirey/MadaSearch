@@ -546,3 +546,97 @@ Les SHA « base », « audit » et « feature » sont les blobs relevés par l�
 - **[vérifié]** PR #2/#4 fermées avec explication; PR #5 draft créée et mergeability `clean` vérifiée.
 - **[vérifié]** Plan GUI inscrit dans issue #3; recette encore non exécutée.
 - **[vérifié]** **Aucune fusion vers main effectuée.**
+
+
+---
+
+# Phase 7 — fermeture CI, logs historiques et paquet de recette (2026-10-23)
+
+## 1. Run #61 — statut terminal
+
+- **[vérifié]** Run #61 : `completed / success`, SHA exact `9458bfab340d066f844ce557d3894e5efe00a447`, URL https://github.com/eemntirey/MadaSearch/actions/runs/39977222391.
+- **[vérifié]** Le run #61 valide le commit documentaire de phase 6, pas les commits de paquet de recette ajoutés ensuite. Les commits de recette ont déclenché de nouveaux checks ; le SHA courant doit être vérifié séparément.
+- **[vérifié]** Aucune correction du code produit n'a été nécessaire pour clore le run #61.
+
+## 2. Récupération des logs bruts #56 et #57
+
+### Méthodes tentées et résultats observés
+
+| Méthode | Run #56 | Run #57 | Résultat |
+|---|---|---|---|
+| GET `/actions/runs/{id}` | HTTP JSON via connecteur | HTTP JSON via connecteur | **[vérifié]** Métadonnées du run récupérées |
+| GET `/actions/runs/{id}/jobs` | job ID `120483618132` | job ID `120484838269` | **[vérifié]** Build Release failure, Test skipped |
+| GET `/actions/jobs/{job_id}/logs` via outil de logs de job | contenu décodé récupéré | contenu décodé récupéré | **[vérifié]** Logs bruts exploitables, extraits ci-dessous |
+| GET `/actions/runs/{id}/logs` via fetch générique | corps vide dans le connecteur | corps vide dans le connecteur | **[bloqué pour cette voie]** Le wrapper renvoie un contenu vide sans statut HTTP de transport exploitable |
+| GET `/actions/runs/{id}/artifacts` | `artifacts: []` | `artifacts: []` | **[vérifié]** Aucun artefact publié sur ces runs |
+| Artefact TRX | aucun artefact exposé | aucun artefact exposé | **[vérifié]** Aucun TRX récupérable via l’API d’artefacts |
+| Annotations check-run | URL directe rejetée par la liste d’URL autorisées du connecteur (erreur outil 400, sans réponse HTTP GitHub) | idem | **[bloqué]** La voie annotations n’a pas fourni de réponse GitHub ; les logs de job ont permis d’obtenir les erreurs exactes |
+
+### Run #56 — extrait exact
+
+- **[vérifié]** Run : https://github.com/eemntirey/MadaSearch/actions/runs/39973962889 ; job `120483618132`.
+- Extrait du log Build Release : `DownloadService.cs(87,111): error CS0117: 'DownloadState' does not contain a definition for 'Interrupted'`.
+- **[vérifié]** Cause : le code de récupération référençait `DownloadState.Interrupted` avant que l’enum soit aligné.
+- **[vérifié]** Correction : commit `e23d72ab6634ac61957a73924cca2c2dc30e01c9`, ajout de l’état et tests de récupération.
+
+### Run #57 — extraits exacts
+
+- **[vérifié]** Run : https://github.com/eemntirey/MadaSearch/actions/runs/39974314474 ; job `120484838269`.
+- Erreurs exactes du Build Release :
+  - `BrowsingDataClearTests.cs(1,25): error CS0234: The type or namespace name 'Shell' does not exist in the namespace 'MadagascarBrowser'`
+  - `BrowsingDataClearTests.cs(2,17): error CS0234: The type or namespace name 'Web' does not exist in the namespace 'Microsoft'`
+  - `PrivateProfileSessionTests.cs(3,25): error CS0234: The type or namespace name 'Shell' does not exist in the namespace 'MadagascarBrowser'`
+  - `BrowserServices.cs(37,61): error CS1061: 'BrowserPaths' does not contain a definition for 'OfflinePagesPath'`
+  - `BrowserView.xaml(178,108): error CS1061: 'BrowserView' does not contain a definition for 'MenuPrivateWindow_Click'`
+- **[vérifié]** Le log indique `5 Error(s)`, puis `Process completed with exit code 1`. L’étape Test a été sautée parce que le build échouait.
+- **[vérifié]** Le commit correctif suivant `07a05c42f01ab0ec127bd7a3142301c0611e595a` réaligne `OfflineDirectory`, déplace les tests WPF dans le projet Shell.Tests et expose les membres internes requis. Le run #58 sur ce correctif a terminé success : https://github.com/eemntirey/MadaSearch/actions/runs/39974674018.
+
+### Non-désactivation des tests
+
+- **[vérifié]** Sur #56 et #57, le statut `skipped` de l’étape de workflow Test est la conséquence de l’échec du build ; ce n’est pas un attribut xUnit `Skip`.
+- **[vérifié]** Les diffs des commits correctifs ajoutent des tests et déplacent deux fichiers de test, sans suppression de test observée.
+- **[non vérifié]** Aucun rapport automatisé d’égalité de tous les attributs xUnit entre chaque SHA intermédiaire n’a été produit. La conclusion est limitée aux diffs examinés et aux logs disponibles.
+
+## 3. Recette GUI — variante B, paquet versionné
+
+- **[vérifié]** Aucun environnement Windows interactif avec bureau et fenêtre WebView2 contrôlable n’est exposé par l’environnement d’exécution de cette session. Le runner GitHub Windows est un runner CI non interactif ; son existence ne permet pas de déclarer une recette manuelle exécutée.
+- **[vérifié]** Paquet ajouté sous `docs/recette/` et `scripts/recette/` sur la branche d’intégration :
+  - `docs/recette/recette-gui.md` — checklist opposable GUI-01 à GUI-13, prérequis, étapes, attendus et champs de preuve ;
+  - `scripts/recette/Test-Prerequisites.ps1` — Windows, .NET runtimes et détection registre WebView2 ;
+  - `scripts/recette/Invoke-AppProfile.ps1` — lancement du binaire et empreinte SHA-256, avec avertissement que le profil isolé n’est pas le profil effectif sans support applicatif explicite ;
+  - `scripts/recette/Test-PrivateProfileCleanup.ps1` — contrôle d’existence d’un chemin de profil réel ;
+  - `scripts/recette/Test-HistoryClear.ps1` — inspection SQLite en lecture seule du schéma ;
+  - `scripts/recette/Test-InterruptedDownload.ps1` — inspection SQLite en lecture seule, sans tuer de processus ;
+  - `scripts/recette/Test-InvalidCertificate.ps1` — préparation d’un certificat local auto-signé pour test manuel TLS ;
+  - `scripts/recette/Collect-Evidence.ps1` — collecte des versions et empreintes et consignes de capture ;
+  - `scripts/recette/run-all.ps1` — collecte de prérequis et génération de `recette-resultats.md`, qui marque les 13 scénarios NON EXÉCUTÉ.
+- **[non exécuté]** `run-all.ps1` n’a pas été lancé dans cette session : aucun PowerShell Windows avec binaire WPF/WebView2 local n’est attaché à l’environnement. Commande côté Windows :
+  `pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/recette/run-all.ps1 -AppPath C:\\chemin\\MadagascarBrowser.exe -EvidenceRoot artifacts\\recette\\run-001`.
+- **[non exécuté]** GUI-01 à GUI-13 restent chacun NON EXÉCUTÉ. Les scripts automatisent la collecte et l’inspection préliminaire ; les actions visuelles, la vérification du profil WebView2 effectif et les preuves de comportement restent à réaliser sur un poste Windows. Aucun PASS n’est attribué.
+- **[vérifié]** Le paquet est référencé dans l’issue #3 via commentaire après publication du commit de recette.
+
+## 4. PR #5 — décision finale de phase 7
+
+- **[vérifié]** Run #61 est success sur `9458bfab340d066f844ce557d3894e5efe00a447`, URL https://github.com/eemntirey/MadaSearch/actions/runs/39977222391.
+- **[vérifié]** Run #59 reste success sur le code combiné `38ee4a1686cb1915e76a81a793037863fbce1f47`, 215 tests réussis : https://github.com/eemntirey/MadaSearch/actions/runs/39975203181.
+- **[vérifié]** La PR #5 est maintenue en brouillon, URL https://github.com/eemntirey/MadaSearch/pull/5. Le statut a été observé `mergeable=true`, `mergeable_state=clean` après les derniers commits de paquet, avant vérification de la CI de ces nouveaux SHAs.
+- **[bloqué]** La condition de promotion en revue n’est pas retenue : la recette GUI intégrale n’est pas PASS, et le paquet n’a pas encore été exécuté sur Windows. La PR reste draft même si son état Git est clean.
+- **[vérifié]** Aucun merge vers `main` n’a été exécuté.
+
+## 5. Risques résiduels
+
+1. **[bloqué]** GUI-01 à GUI-13 nécessitent une exécution sur Windows 10/11 avec l’application WPF/WebView2 et la collecte de captures/journaux.
+2. **[non vérifié]** Le script de profil ne peut pas imposer un profil WebView2 tant que le binaire n’expose pas de contrat d’argument/configuration confirmé ; le chemin créé ne prouve pas le stockage réellement utilisé.
+3. **[non vérifié]** L’inspection SQLite est volontairement en lecture seule et ne suppose aucun nom de table ; les requêtes de comparaison avant/après doivent être adaptées au schéma réel.
+4. **[non exécuté]** Le paquet de recette n’a pas été exécuté dans cette session.
+5. **[vérifié]** Les logs bruts de build #56/#57 ont maintenant été récupérés par l’API de logs de job ; les erreurs CS exactes ci-dessus remplacent l’incertitude antérieure sur leur texte.
+6. **[vérifié]** La branche `main` n’a pas été modifiée.
+
+## 6. Conclusion phase 7
+
+- **[vérifié]** Run #61 : `completed / success` sur SHA `9458bfab340d066f844ce557d3894e5efe00a447`.
+- **[vérifié]** Les logs bruts #56/#57 sont récupérés ; causes de compilation et codes CS documentés.
+- **[vérifié]** Le paquet de recette est versionné et la checklist couvre GUI-01 à GUI-13.
+- **[non exécuté]** La recette interactive et `run-all.ps1` restent à exécuter sur un poste Windows.
+- **[vérifié]** PR #5 reste draft ; la promotion n’est pas autorisée tant que les scénarios GUI n’ont pas des preuves réelles.
+- **[vérifié]** **Aucune fusion vers main effectuée.**
