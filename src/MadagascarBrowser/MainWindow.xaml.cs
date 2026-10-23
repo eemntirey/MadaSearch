@@ -24,7 +24,9 @@ namespace MadagascarBrowser
         private readonly bool _isPrivate;
         private readonly DispatcherTimer _sessionSnapshotTimer = new() { Interval = TimeSpan.FromSeconds(15) };
 
-        public MainWindow(bool isPrivate = false)
+        public MainWindow() : this(false) { }
+
+        public MainWindow(bool isPrivate)
         {
             InitializeComponent();
             _isPrivate = isPrivate;
