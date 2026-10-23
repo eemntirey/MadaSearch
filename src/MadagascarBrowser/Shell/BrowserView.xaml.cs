@@ -191,14 +191,16 @@ namespace MadagascarBrowser.Shell
         }
 
         /// <summary>
-        /// Erreur de certificat détectée par WebView2 : c'est le signal le plus fiable
-        /// (la navigation est annulée et l'état d'erreur de navigation peut être
-        /// générique). L'action par défaut de WebView2 est conservée : le certificat
-        /// n'est pas accepté, la navigation échoue.
+        /// Erreur de certificat détectée : le certificat est rejeté explicitement
+        /// (phase 4.3). L'action par défaut de WebView2 afficherait son interstitiel
+        /// TLS avec une route « continuer quand même » ; ici la requête est annulée,
+        /// la requête échoue et la page d'erreur maison s'affiche via
+        /// NavigationCompleted, le glyph de sécurité passant en état d'erreur.
         /// </summary>
         private void OnServerCertificateErrorDetected(object? sender, CoreWebView2ServerCertificateErrorDetectedEventArgs e)
         {
             _certificateError = true;
+            e.Action = CoreWebView2ServerCertificateErrorAction.Cancel;
         }
 
         /// <summary>
