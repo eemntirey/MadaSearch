@@ -264,7 +264,7 @@ namespace MadagascarBrowser.Shell
         /// </summary>
         private static string AcceleratorBridgeScript => @"
 (function () {
-  if (location.protocol !== 'https:' || location.hostname !== '__LOCAL_HOST__') { return; }
+  if (location.protocol !== 'https:' || location.hostname !== '__LOCAL_HOST__' || window.top !== window) { return; }
   if (window.__madagascarAcceleratorBridge) { return; }
   window.__madagascarAcceleratorBridge = true;
   document.addEventListener('keydown', function (event) {
