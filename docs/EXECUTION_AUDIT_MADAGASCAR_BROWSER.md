@@ -640,3 +640,13 @@ Les SHA « base », « audit » et « feature » sont les blobs relevés par l�
 - **[non exécuté]** La recette interactive et `run-all.ps1` restent à exécuter sur un poste Windows.
 - **[vérifié]** PR #5 reste draft ; la promotion n’est pas autorisée tant que les scénarios GUI n’ont pas des preuves réelles.
 - **[vérifié]** **Aucune fusion vers main effectuée.**
+
+
+### Addendum — résultat terminal du paquet de recette
+
+- **[vérifié]** Run #74 a terminé `completed / success` sur SHA `30a3f56d5087f19d940ab1b564aa4dd9ad61c018` : https://github.com/eemntirey/MadaSearch/actions/runs/39978105394.
+- **[vérifié]** Logs du job `120498347056` : Build Release `Build succeeded`, `0 Warning(s)`, `0 Error(s)`; `MadagascarBrowser.Shell.Tests.dll` : 21 réussis, 0 échec, 0 ignoré ; `MadagascarBrowser.Tests.dll` : 194 réussis, 0 échec, 0 ignoré. Total : 215 réussis, 0 échec, 0 ignoré.
+- **[vérifié]** Run #74 a été observé pending puis in_progress puis completed/success pendant le polling. Il n'a pas expiré.
+- **[vérifié]** Au contrôle après run #74, PR #5 était ouverte en draft, `mergeable=true`, `mergeable_state=clean`. Cette propriété Git ne lève pas le bloqueur GUI.
+- **[vérifié]** Le commentaire de l’issue #3 contenant le paquet et la commande Windows est https://github.com/eemntirey/MadaSearch/issues/3#issuecomment-6368393445.
+- **[non exécuté]** Le paquet PowerShell n’a pas été lancé depuis un poste Windows dans cette session. Le run CI compile et teste le code .NET ; il ne constitue pas l’exécution de GUI-01 à GUI-13.
