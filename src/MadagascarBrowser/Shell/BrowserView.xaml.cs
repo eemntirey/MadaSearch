@@ -365,6 +365,22 @@ namespace MadagascarBrowser.Shell
             }
         }
 
+        private void MenuPrivateWindow_Click(object sender, RoutedEventArgs e)
+        {
+            MenuPopup.IsOpen = false;
+            try
+            {
+                var privateWindow = new MainWindow(isPrivate: true);
+                privateWindow.Show();
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(Window.GetWindow(this),
+                    "Impossible d'ouvrir une fenêtre privée : " + exception.Message,
+                    "Navigation privée", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         private void MenuSettings_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
