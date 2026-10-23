@@ -9,7 +9,9 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
+using System.Windows.Threading;
 using MadagascarBrowser.Shell;
+using MadagascarBrowser.Core.Security;
 
 namespace MadagascarBrowser
 {
@@ -24,16 +26,23 @@ namespace MadagascarBrowser
         private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int valueSize);
 
         private readonly TabManager _tabManager;
-        private bool _isPinMode = false;
+        private readonly bool _isPrivate;
+        private readonly DispatcherTimer _sessionSnapshotTimer = new() { Interval = TimeSpan.FromSeconds(15) };
+        private bool _isPinMode;
         private Point _lastMousePosition;
-        private bool _isDragging = false;
+        private bool _isDragging;
 
-        public MainWindow()
+        public MainWindow() : this(false) { }
+
+        public MainWindow(bool isPrivate)
         {
             InitializeComponent();
-            _tabManager = new TabManager();
+            _isPrivate = isPrivate;
+            PrivateProfileSession.CleanupOrphanedProfiles();
+            Title = isPrivate ? "Madagascar Browser — Navigation privée" : "Madagascar Browser";
+            _tabManager = new TabManager(isPrivate);
             BrowserServices.EnsureInitialized();
-            if (BrowserServices.CurrentSettings.RestoreSession)
+            if (PrivateBrowsingPolicy.ShouldPersistSession(_isPrivate) && BrowserServices.CurrentSettings.RestoreSession)
                 _tabManager.RestoreSession(BrowserServices.Sessions.Load());
             if (_tabManager.Tabs.Count == 0)
                 _tabManager.NewTab();
@@ -42,13 +51,31 @@ namespace MadagascarBrowser
             SourceInitialized += OnSourceInitialized;
             PreviewKeyDown += OnPreviewKeyDown;
             Closing += OnClosing;
+            Closed += (_, _) => _tabManager.Dispose();
+            if (!_isPrivate)
+            {
+                _sessionSnapshotTimer.Tick += (_, _) => SaveSessionSnapshot();
+                _sessionSnapshotTimer.Start();
+            }
         }
 
         private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
+            _sessionSnapshotTimer.Stop();
+            if (PrivateBrowsingPolicy.ShouldPersistSession(_isPrivate))
+                SaveSessionSnapshot();
+        }
+
+        /// <summary>
+        /// Persists a recoverable tab snapshot periodically, not only during normal shutdown.
+        /// </summary>
+        private void SaveSessionSnapshot()
+        {
+            if (!PrivateBrowsingPolicy.ShouldPersistSession(_isPrivate))
+                return;
             var urls = new List<string>();
             var activeIndex = -1;
-            var currentIndex = _tabManager.Tabs.IndexOf(_tabManager.Active);
+            var currentIndex = _tabManager.Active is { } activeTab ? _tabManager.Tabs.IndexOf(activeTab) : -1;
             for (var index = 0; index < _tabManager.Tabs.Count; index++)
             {
                 var url = _tabManager.Tabs[index].Url;
@@ -61,7 +88,15 @@ namespace MadagascarBrowser
                 urls.Add(uri.AbsoluteUri);
             }
 
-            BrowserServices.Sessions.Save(new MadagascarBrowser.Core.Data.BrowserSession(urls, activeIndex));
+            try
+            {
+                BrowserServices.Sessions.Save(new MadagascarBrowser.Core.Data.BrowserSession(urls, activeIndex));
+            }
+            catch (Exception exception)
+            {
+                // Keep the UI responsive; log the exception type without URLs or user data.
+                System.Diagnostics.Debug.WriteLine($"SessionSnapshotFailed: {exception.GetType().Name}");
+            }
         }
 
         private void OnPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)

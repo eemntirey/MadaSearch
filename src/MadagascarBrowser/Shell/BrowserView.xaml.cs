@@ -13,6 +13,7 @@ using Microsoft.Win32;
 using MadagascarBrowser.Core.Blocking;
 using MadagascarBrowser.Core.Data;
 using MadagascarBrowser.Core.Navigation;
+using MadagascarBrowser.Core.Security;
 using Microsoft.Web.WebView2.Core;
 
 namespace MadagascarBrowser.Shell
@@ -44,6 +45,7 @@ namespace MadagascarBrowser.Shell
         /// fenêtre demandée par une page à l'onglet vide correspondant.
         /// </summary>
         public Task<CoreWebView2> CoreReady => _coreReadySource.Task;
+        public bool IsCoreReady => _coreReady && WebView.CoreWebView2 != null;
 
         /// <summary>
         /// Crée une vue de navigation. L'hôte d'onglets est injecté : la vue ne
@@ -73,7 +75,8 @@ namespace MadagascarBrowser.Shell
             {
                 // Environnement explicite : le profil utilisateur WebView2 vit dans
                 // %LocalAppData%\MadagascarBrowser\WebView2, jamais à côté de l'exe.
-                var environment = await WebViewEnvironment.GetAsync();
+                var tabViewModel = DataContext as TabViewModel;
+                var environment = await WebViewEnvironment.GetAsync(tabViewModel?.PrivateProfileFolder);
                 _environment = environment;
                 await WebView.EnsureCoreWebView2Async(environment);
                 _coreReady = true;
@@ -339,55 +342,40 @@ namespace MadagascarBrowser.Shell
         /// </summary>
         private void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
         {
-            string? key;
-            try
+            // Fail closed: only the trusted local HTTPS origin may issue native commands.
+            if (!Uri.TryCreate(e.Source, UriKind.Absolute, out var source) ||
+                !source.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) ||
+                !source.Host.Equals(LocalHost, StringComparison.OrdinalIgnoreCase) ||
+                !source.IsDefaultPort)
             {
-                key = e.TryGetWebMessageAsString();
-            }
-            catch (ArgumentException exception)
-            {
-                // Message non textuel : la commande est ignoree, mais le journal garde la trace.
-                AppLog.Warning("Message Web non textuel reçu.", exception);
+                System.Diagnostics.Debug.WriteLine("WebMessageRejected: untrusted origin.");
                 return;
             }
 
-            if (string.IsNullOrEmpty(key))
-                return;
+            string? key;
+            try { key = e.TryGetWebMessageAsString(); }
+            catch (ArgumentException) { return; }
+            if (string.IsNullOrWhiteSpace(key)) return;
 
             const string searchCommandPrefix = "search:";
             if (key.StartsWith(searchCommandPrefix, StringComparison.Ordinal))
             {
-                if (!Uri.TryCreate(e.Source, UriKind.Absolute, out var source) ||
-                    !source.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) ||
-                    !source.Host.Equals(LocalHost, StringComparison.OrdinalIgnoreCase))
-                {
-                    AppLog.Warning($"Commande de recherche reçue hors de la page d'accueil : {e.Source}");
-                    return;
-                }
-
                 try
                 {
                     var query = Uri.UnescapeDataString(key[searchCommandPrefix.Length..]);
                     var destination = BrowserServices.Navigation.ResolveNavigation(query);
-                    if (!Uri.TryCreate(destination, UriKind.Absolute, out var destinationUri))
-                    {
-                        AppLog.Error($"La recherche de la page d'accueil a produit une URL invalide : {destination}");
+                    if (!Uri.TryCreate(destination, UriKind.Absolute, out var destinationUri) ||
+                        (destinationUri.Scheme != Uri.UriSchemeHttp && destinationUri.Scheme != Uri.UriSchemeHttps))
                         return;
-                    }
-
                     Dispatcher.BeginInvoke(new Action(() => WebView.CoreWebView2.Navigate(destinationUri.AbsoluteUri)));
                 }
-                catch (Exception exception)
-                {
-                    AppLog.Error("Impossible de résoudre la recherche de la page d'accueil.", exception);
-                }
+                catch (Exception exception) { AppLog.Warning("Recherche de la page d'accueil rejetée.", exception); }
                 return;
             }
 
             var command = ParseAcceleratorCommand(key);
-            if (command == AcceleratorCommand.None)
+            if (command is not (AcceleratorCommand.NewTab or AcceleratorCommand.CloseTab or AcceleratorCommand.FocusAddressBar))
                 return;
-
             Dispatcher.BeginInvoke(new Action(() => _tabHost.Execute(command)));
         }
 
@@ -463,6 +451,12 @@ namespace MadagascarBrowser.Shell
         private async void MenuAddFavorite_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
+            if (!PrivateBrowsingPolicy.ShouldPersistFavorites((DataContext as TabViewModel)?.IsPrivate == true))
+            {
+                MenuFeedback.Text = "Les favoris sont désactivés en navigation privée.";
+                MenuPopup.IsOpen = true;
+                return;
+            }
             if (!Uri.TryCreate(WebView.CoreWebView2?.Source, UriKind.Absolute, out var uri) ||
                 (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
             {
@@ -491,6 +485,11 @@ namespace MadagascarBrowser.Shell
         private async void MenuSaveOffline_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
+            if (!PrivateBrowsingPolicy.ShouldPersistOfflinePages((DataContext as TabViewModel)?.IsPrivate == true))
+            {
+                MessageBox.Show(Window.GetWindow(this), "L'enregistrement hors ligne est désactivé en navigation privée.", "Navigation privée", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
             if (!_coreReady || !Uri.TryCreate(WebView.CoreWebView2.Source, UriKind.Absolute, out var uri) ||
                 (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
             {
@@ -610,6 +609,9 @@ namespace MadagascarBrowser.Shell
 
             e.ResultFilePath = dialog.FileName;
             e.Handled = true;
+            // Autoriser le téléchargement choisi par l'utilisateur, sans persister de métadonnées privées.
+            if (!PrivateBrowsingPolicy.ShouldPersistDownloadMetadata((DataContext as TabViewModel)?.IsPrivate == true))
+                return;
             // Les membres de WebView2 ne sont lisibles que sur le thread UI :
             // on capture avant l'écriture asynchrone en base (sinon InvalidOperationException
             // « CoreWebView2DownloadOperation members can only be accessed from the UI thread »
@@ -878,7 +880,7 @@ namespace MadagascarBrowser.Shell
                 }
             }
 
-            if (e.IsSuccess && IsHistoryWorthy(core.Source))
+            if (e.IsSuccess && PrivateBrowsingPolicy.ShouldPersistHistory((DataContext as TabViewModel)?.IsPrivate == true, IsHistoryWorthy(core.Source)))
             {
                 var url = core.Source;
                 var title = core.DocumentTitle ?? string.Empty;
@@ -1333,5 +1335,35 @@ namespace MadagascarBrowser.Shell
                 AppLog.Warning("Liberation du WebView2 incomplete.", exception);
             }
         }
+        internal static CoreWebView2BrowsingDataKinds ResolveBrowsingDataKinds(
+                    bool clearHistory,
+                    bool clearCookies,
+                    bool clearCache)
+                {
+                    var kinds = (CoreWebView2BrowsingDataKinds)0;
+                    if (clearHistory)
+                        kinds |= CoreWebView2BrowsingDataKinds.BrowsingHistory;
+                    if (clearCookies)
+                        // AllSite includes cookies and site storage (local storage, IndexedDB,
+                        // service workers and related site data), not just HTTP cookies.
+                        kinds |= CoreWebView2BrowsingDataKinds.AllSite;
+                    if (clearCache)
+                        kinds |= CoreWebView2BrowsingDataKinds.DiskCache;
+                    return kinds;
+                }
+
+        public Task ClearWebViewDataAsync(bool clearHistory, bool clearCookies, bool clearCache)
+                {
+                    if (!IsCoreReady)
+                        throw new InvalidOperationException("WebView2 is not initialized.");
+        
+                    var kinds = ResolveBrowsingDataKinds(clearHistory, clearCookies, clearCache);
+                    if ((int)kinds == 0)
+                        return Task.CompletedTask;
+        
+                    // Completion of this API call is the WebView2 acknowledgement that the selected
+                    // categories were cleared; SQLite history is independently verified by SettingsView.
+                    return WebView.CoreWebView2.Profile.ClearBrowsingDataAsync(kinds);
+                }
     }
 }

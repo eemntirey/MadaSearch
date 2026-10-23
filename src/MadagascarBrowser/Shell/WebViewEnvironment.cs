@@ -1,5 +1,7 @@
 using System;
 using System.Diagnostics;
+using System.Collections.Concurrent;
+using System.Threading;
 using System.IO;
 using System.Threading.Tasks;
 using MadagascarBrowser.Core.Paths;
@@ -39,52 +41,41 @@ namespace MadagascarBrowser.Shell
         /// </summary>
         public static string UserDataFolder { get; } = BrowserPaths.Default.WebViewProfilePath;
 
-        private static readonly object Sync = new();
-        private static Task<CoreWebView2Environment>? _environment;
+        private static readonly ConcurrentDictionary<string, Lazy<Task<CoreWebView2Environment>>> Environments =
+            new(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// Environnement unique, partagé par tous les onglets : un seul processus navigateur
         /// et un seul dossier de profil (WebView2 refuse deux environnements sur le même dossier).
         /// Un échec n'est pas mis en cache : la prochaine demande retente la création.
         /// </summary>
-        public static Task<CoreWebView2Environment> GetAsync()
+        public static Task<CoreWebView2Environment> GetAsync(string? userDataFolder = null)
         {
-            lock (Sync)
+            var folder = string.IsNullOrWhiteSpace(userDataFolder) ? UserDataFolder : Path.GetFullPath(userDataFolder);
+            return Environments.GetOrAdd(folder, path => new Lazy<Task<CoreWebView2Environment>>(
+                () => CreateAsync(path), LazyThreadSafetyMode.ExecutionAndPublication)).Value;
+        }
+
+        private static async Task<CoreWebView2Environment> CreateAsync(string folder)
+        {
+            try
             {
-                _environment ??= CreateAsync();
-                return _environment;
+                Directory.CreateDirectory(folder);
+                if (string.Equals(folder, UserDataFolder, StringComparison.OrdinalIgnoreCase))
+                    WarnAboutDefaultProfileLeftovers();
+                return await CoreWebView2Environment.CreateAsync(null, folder).ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                Environments.TryRemove(folder, out _); // failed creation is retriable
+                Trace.TraceError($"Création impossible de l'environnement WebView2 (profil '{folder}') : {exception.GetType().Name}");
+                throw;
             }
         }
 
-        private static async Task<CoreWebView2Environment> CreateAsync()
+        public static void Forget(string userDataFolder)
         {
-            try
-            {
-                if (!Directory.Exists(UserDataFolder))
-                    Directory.CreateDirectory(UserDataFolder);
-                WarnAboutDefaultProfileLeftovers();
-            }
-            catch (Exception exception)
-            {
-                Trace.TraceError(
-                    $"Impossible de créer le dossier de profil WebView2 '{UserDataFolder}' : {exception}");
-            }
-
-            try
-            {
-                return await CoreWebView2Environment.CreateAsync(null, UserDataFolder).ConfigureAwait(false);
-            }
-            catch (Exception exception)
-            {
-                Trace.TraceError(
-                    $"Création impossible de l'environnement WebView2 (profil '{UserDataFolder}') : {exception}");
-                lock (Sync)
-                {
-                    // L'échec n'est pas conservé : onglets suivants et redémarrages retentent.
-                    _environment = null;
-                }
-                throw;
-            }
+            Environments.TryRemove(userDataFolder, out _);
         }
 
         /// <summary>

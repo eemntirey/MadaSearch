@@ -175,6 +175,13 @@
                                     <TextBlock Text="Nouvel onglet" FontSize="12.5" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
+                            <Button Style="{StaticResource MenuRowButton}" Click="MenuPrivateWindow_Click">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets"
+                                               FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBlock Text="Nouvelle fenêtre privée" FontSize="12.5" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
                             <Button Style="{StaticResource MenuRowButton}" Click="MenuSettings_Click">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets"

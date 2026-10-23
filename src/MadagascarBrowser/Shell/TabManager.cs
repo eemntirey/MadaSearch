@@ -2,6 +2,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
 using MadagascarBrowser.Core.Navigation;
 
 namespace MadagascarBrowser.Shell
@@ -29,6 +30,14 @@ namespace MadagascarBrowser.Shell
         public event EventHandler<bool>? FullScreenChanged;
 
         private readonly List<string> _closedTabUrls = new();
+        public bool IsPrivate { get; }
+        private PrivateProfileSession? PrivateProfile { get; }
+
+        public TabManager(bool isPrivate = false)
+        {
+            IsPrivate = isPrivate;
+            if (isPrivate) PrivateProfile = new PrivateProfileSession();
+        }
 
         /// <summary>
         /// Active l'onglet suivant, avec passage à l'onglet suivant en fin de liste.
@@ -147,7 +156,7 @@ namespace MadagascarBrowser.Shell
                     break;
             }
 
-            var t = new TabViewModel { Title = title, Url = target };
+            var t = new TabViewModel { Title = title, Url = target, IsPrivate = IsPrivate, PrivateProfileFolder = PrivateProfile?.DirectoryPath };
             var view = new BrowserView(this) { DataContext = t };
             t.View = view;
             Tabs.Add(t);
@@ -217,6 +226,23 @@ namespace MadagascarBrowser.Shell
             NewTab(url);
         }
 
+        public async Task ClearWebViewDataAsync(bool clearHistory, bool clearCookies, bool clearCache)
+        {
+            if (IsPrivate) throw new InvalidOperationException("L'effacement sélectif du profil normal est désactivé en navigation privée.");
+            if (!clearHistory && !clearCookies && !clearCache) return;
+            var views = Tabs.Select(tab => tab.View).OfType<BrowserView>().ToList();
+            var view = views.FirstOrDefault(browserView => browserView.IsCoreReady);
+            if (view == null)
+            {
+                var pending = views.FirstOrDefault();
+                if (pending == null) throw new InvalidOperationException("Aucun onglet WebView2 ne permet d'effacer les données.");
+                await pending.CoreReady;
+                if (!pending.IsCoreReady) throw new InvalidOperationException("WebView2 n'est pas prêt pour effacer les données.");
+                view = pending;
+            }
+            await view.ClearWebViewDataAsync(clearHistory, clearCookies, clearCache);
+        }
+
         public void RestoreSession(MadagascarBrowser.Core.Data.BrowserSession session)
         {
             var urls = session.Urls
@@ -232,15 +258,25 @@ namespace MadagascarBrowser.Shell
             Active = Tabs[Math.Clamp(session.ActiveTabIndex, 0, Tabs.Count - 1)];
         }
 
+        public void Dispose()
+        {
+            foreach (var tab in Tabs.ToList())
+                if (tab.View is BrowserView view) view.Dispose();
+            Tabs.Clear();
+            _active = null!;
+            PrivateProfile?.Dispose();
+        }
+
         public void Close(TabViewModel t)
         {
             if (t == null) return;
             var index = Tabs.IndexOf(t);
             if (index < 0) return;
+            if (index < 0) return;
             var wasActive = ReferenceEquals(Active, t);
 
             // L'URL est mémorisée pour permettre la réouverture (Ctrl+Maj+T).
-            if (!string.IsNullOrWhiteSpace(t.Url))
+            if (!IsPrivate && !string.IsNullOrWhiteSpace(t.Url))
                 _closedTabUrls.Insert(0, t.Url);
 
             Tabs.Remove(t);

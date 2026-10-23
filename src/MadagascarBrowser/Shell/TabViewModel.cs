@@ -71,5 +71,11 @@ namespace MadagascarBrowser.Shell
 
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        /// <summary>Indicates that this tab belongs to an isolated private window.</summary>
+        public bool IsPrivate { get; set; }
+
+        /// <summary>Temporary WebView2 profile folder for a private tab.</summary>
+        public string? PrivateProfileFolder { get; set; }
+
     }
 }

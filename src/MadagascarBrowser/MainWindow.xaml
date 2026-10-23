@@ -65,7 +65,7 @@
                         VerticalAlignment="Center">
                 <TextBlock Text="M" FontFamily="Segoe UI" FontSize="13" FontWeight="Bold"
                            Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
-                <TextBlock Text="adagascar Browser" FontFamily="Segoe UI" FontSize="11.5"
+                <TextBlock Text="{Binding Title, RelativeSource={RelativeSource AncestorType=Window}}" FontFamily="Segoe UI" FontSize="11.5"
                            Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"
                            Margin="1,0,0,0"/>
             </StackPanel>
