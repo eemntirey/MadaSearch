@@ -650,3 +650,12 @@ Les SHA « base », « audit » et « feature » sont les blobs relevés par l�
 - **[vérifié]** Au contrôle après run #74, PR #5 était ouverte en draft, `mergeable=true`, `mergeable_state=clean`. Cette propriété Git ne lève pas le bloqueur GUI.
 - **[vérifié]** Le commentaire de l’issue #3 contenant le paquet et la commande Windows est https://github.com/eemntirey/MadaSearch/issues/3#issuecomment-6368393445.
 - **[non exécuté]** Le paquet PowerShell n’a pas été lancé depuis un poste Windows dans cette session. Le run CI compile et teste le code .NET ; il ne constitue pas l’exécution de GUI-01 à GUI-13.
+
+
+### Décision finale PR #5 après clôture CI (addendum)
+
+- **[vérifié]** Run #75 est `completed / success` sur SHA `d13a1637b1c3aeec2d26e870f0954455b8e7451f`, Build Release 0 avertissement/0 erreur, 194 tests Core + 21 tests Shell réussis, 0 échec, 0 ignoré : https://github.com/eemntirey/MadaSearch/actions/runs/39978629915.
+- **[vérifié]** PR #5 a été passée à `Ready for review` après la CI verte du HEAD contrôlé et la publication du paquet versionné, avec décision explicite que la recette GUI est un bloqueur de fusion : https://github.com/eemntirey/MadaSearch/pull/5.
+- **[vérifié]** Cette promotion permet la revue humaine uniquement ; elle ne signifie pas que la recette est acceptée. GUI-01 à GUI-13 restent `NON EXÉCUTÉ` jusqu’à preuve sur un poste Windows interactif.
+- **[vérifié]** À la décision, GitHub renvoyait `mergeable=true`; l’état textuel mergeable doit être recontrôlé après les nouveaux checks documentaires.
+- **[vérifié]** La PR n’est pas fusionnée. `main` reste la base inchangée `2b80b96b6ceea52913079667db49d265cdd1cd67`.
