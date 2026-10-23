@@ -1,3 +1,5 @@
+using MadagascarBrowser.Core.Navigation;
+
 namespace MadagascarBrowser.Shell
 {
     /// <summary>
@@ -11,9 +13,9 @@ namespace MadagascarBrowser.Shell
         /// <summary>
         /// Ouvre un nouvel onglet sur l'URL indiquée et l'active.
         /// </summary>
-        /// <param name="url">URL à ouvrir.</param>
+        /// <param name="url">URL à ouvrir. Absente, la page d'accueil est ouverte.</param>
         /// <returns>L'onglet créé.</returns>
-        TabViewModel NewTab(string url);
+        TabViewModel NewTab(string? url = null);
 
         /// <summary>Ferme l'onglet actif.</summary>
         void CloseActiveTab();
@@ -26,5 +28,28 @@ namespace MadagascarBrowser.Shell
 
         /// <summary>Affiche les paramètres.</summary>
         TabViewModel OpenSettings();
+
+        /// <summary>Active l'onglet suivant (Ctrl+Tab).</summary>
+        void SwitchToNextTab();
+
+        /// <summary>Active l'onglet précédent (Ctrl+Maj+Tab).</summary>
+        void SwitchToPreviousTab();
+
+        /// <summary>Rouvre le dernier onglet fermé (Ctrl+Maj+T).</summary>
+        void ReopenClosedTab();
+
+        /// <summary>Ajoute l'onglet actif aux favoris (Ctrl+D).</summary>
+        void AddFavoriteToActiveTab();
+
+        /// <summary>
+        /// Signale le passage en plein écran : la barre d'onglets et la barre d'état
+        /// sont masquées pour laisser toute la place à la page.
+        /// </summary>
+        void SetFullScreen(bool enabled);
+
+        /// <summary>
+        /// Exécute une commande applicative issue d'un raccourci clavier.
+        /// </summary>
+        void Execute(AcceleratorCommand command);
     }
 }

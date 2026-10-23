@@ -27,9 +27,12 @@ namespace MadagascarBrowser.Shell
 
         private readonly ITabHost _tabHost;
         private readonly NewWindowRequestHandler _newWindowHandler;
+        private readonly FindInPageState _findState = new();
+        private bool _findRunning;
         private bool _coreReady;
         private bool _suppressSuggest;
         private bool _certificateError;
+        private CoreWebView2Environment? _environment;
         private ulong _activeNavigationId;
         private CoreWebView2DevToolsProtocolEventReceiver? _fetchRequestPausedReceiver;
         private AsyncDebouncer? _suggestDebouncer;
@@ -54,6 +57,7 @@ namespace MadagascarBrowser.Shell
             InitializeComponent();
             BrowserServices.EnsureInitialized();
             Loaded += OnLoaded;
+            PreviewKeyDown += OnPreviewKeyDown;
         }
 
         private void RetryFailedNavigation_Click(object sender, RoutedEventArgs e)
@@ -70,6 +74,7 @@ namespace MadagascarBrowser.Shell
                 // Environnement explicite : le profil utilisateur WebView2 vit dans
                 // %LocalAppData%\MadagascarBrowser\WebView2, jamais à côté de l'exe.
                 var environment = await WebViewEnvironment.GetAsync();
+                _environment = environment;
                 await WebView.EnsureCoreWebView2Async(environment);
                 _coreReady = true;
                 await InitCoreAsync();
@@ -113,6 +118,8 @@ namespace MadagascarBrowser.Shell
             core.ServerCertificateErrorDetected += OnServerCertificateErrorDetected;
             core.WebMessageReceived += OnWebMessageReceived;
             HookAcceleratorKeys();
+            WebView.ZoomFactorChanged += OnZoomFactorChanged;
+            UpdateZoomIndicator(WebView.ZoomFactor);
             await EnableDataSaverInterceptionAsync(core);
 
             var source = core.Source;
@@ -205,6 +212,9 @@ namespace MadagascarBrowser.Shell
             {
                 if (DataContext is TabViewModel tab)
                     tab.IsFullScreen = isFullScreen;
+                // La barre d'onglets et la barre d'état de la fenêtre sont masquées :
+                // la page occupe alors toute la surface.
+                _tabHost.SetFullScreen(isFullScreen);
             }));
         }
 
@@ -303,12 +313,19 @@ namespace MadagascarBrowser.Shell
 (function () {
   if (window.__madagascarAcceleratorBridge) { return; }
   window.__madagascarAcceleratorBridge = true;
+  var handled = ['t', 'w', 'l', 'd', 'f', 'p', 'tab'];
   document.addEventListener('keydown', function (event) {
-    if (!event.ctrlKey || event.altKey || event.metaKey) { return; }
     var key = (event.key || '').toLowerCase();
-    if (key !== 't' && key !== 'w' && key !== 'l') { return; }
+    var ctrl = !!event.ctrlKey;
+    var alt = !!event.altKey;
+    var shift = !!event.shiftKey;
+    var meta = !!event.metaKey;
+    var escape = key === 'escape' && !!document.fullscreenElement;
+    if (!escape && !(ctrl && !alt && !meta && handled.indexOf(key) >= 0)) { return; }
+    event.preventDefault();
+    event.stopPropagation();
     try {
-      window.chrome.webview.postMessage(key);
+      window.chrome.webview.postMessage(JSON.stringify({ key: key, ctrl: ctrl, alt: alt, shift: shift }));
     } catch (error) {
       /* canal de messages indisponible */
     }
@@ -332,8 +349,11 @@ namespace MadagascarBrowser.Shell
                 return;
             }
 
+            if (string.IsNullOrEmpty(key))
+                return;
+
             const string searchCommandPrefix = "search:";
-            if (key?.StartsWith(searchCommandPrefix, StringComparison.Ordinal) == true)
+            if (key.StartsWith(searchCommandPrefix, StringComparison.Ordinal))
             {
                 if (!Uri.TryCreate(e.Source, UriKind.Absolute, out var source) ||
                     !source.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) ||
@@ -362,24 +382,36 @@ namespace MadagascarBrowser.Shell
                 return;
             }
 
-            var command = AcceleratorCommandResolver.Resolve(key, ctrl: true, alt: false, shift: false);
-            switch (command)
+            var command = ParseAcceleratorCommand(key);
+            if (command == AcceleratorCommand.None)
+                return;
+
+            Dispatcher.BeginInvoke(new Action(() => _tabHost.Execute(command)));
+        }
+
+        /// <summary>
+        /// Traduit le message relayed par la page en commande applicative.
+        /// Le message est un objet JSON ; une ancienne version du pont envoyait
+        /// simplement la touche, ce qui reste accepté.
+        /// </summary>
+        private static AcceleratorCommand ParseAcceleratorCommand(string message)
+        {
+            try
             {
-                case AcceleratorCommand.NewTab:
-                    Dispatcher.BeginInvoke(new Action(() =>
-                    {
-                        _tabHost.NewTab(StartPageUrl);
-                    }));
-                    break;
-                case AcceleratorCommand.CloseTab:
-                    Dispatcher.BeginInvoke(new Action(() =>
-                    {
-                        _tabHost.CloseActiveTab();
-                    }));
-                    break;
-                case AcceleratorCommand.FocusAddressBar:
-                    Dispatcher.BeginInvoke(new Action(FocusAddressBar));
-                    break;
+                using var document = JsonDocument.Parse(message);
+                var root = document.RootElement;
+                if (!root.TryGetProperty("key", out var keyElement))
+                    return AcceleratorCommand.None;
+
+                var ctrl = root.TryGetProperty("ctrl", out var ctrlElement) && ctrlElement.GetBoolean();
+                var alt = root.TryGetProperty("alt", out var altElement) && altElement.GetBoolean();
+                var shift = root.TryGetProperty("shift", out var shiftElement) && shiftElement.GetBoolean();
+                return AcceleratorCommandResolver.Resolve(keyElement.GetString(), ctrl, alt, shift);
+            }
+            catch (JsonException)
+            {
+                // Ancien format : la touche seule, toujours avec Ctrl.
+                return AcceleratorCommandResolver.Resolve(message, ctrl: true, alt: false, shift: false);
             }
         }
 
@@ -1029,6 +1061,226 @@ namespace MadagascarBrowser.Shell
         {
             AddressBar.Focus();
             AddressBar.SelectAll();
+        }
+
+        /// <summary>Recharge la page courante.</summary>
+        public void Reload()
+        {
+            if (_coreReady)
+            {
+                WebView.CoreWebView2.Reload();
+            }
+        }
+
+        /// <summary>Ouvre la fenêtre d'impression du navigateur.</summary>
+        public void Print()
+        {
+            if (!_coreReady)
+                return;
+
+            try
+            {
+                WebView.CoreWebView2.ShowPrintUI();
+            }
+            catch (Exception exception)
+            {
+                AppLog.Error("Impossible d'ouvrir la fenêtre d'impression.", exception);
+            }
+        }
+
+        /// <summary>Demande à la page de quitter le plein écran.</summary>
+        public void ExitFullScreen()
+        {
+            if (!_coreReady)
+                return;
+
+            try
+            {
+                _ = WebView.CoreWebView2.ExecuteScriptAsync(
+                    "if (document.fullscreenElement) { document.exitFullscreen(); }");
+            }
+            catch (Exception exception)
+            {
+                AppLog.Error("Sortie du plein écran impossible.", exception);
+            }
+        }
+
+        /// <summary>Ouvre la barre de recherche dans la page (Ctrl+F).</summary>
+        public void OpenFindBar()
+        {
+            FindBar.Visibility = Visibility.Visible;
+            FindInput.Focus();
+            FindInput.SelectAll();
+        }
+
+        private void CloseFindBar()
+        {
+            FindBar.Visibility = Visibility.Collapsed;
+            _findState.Clear();
+            UpdateFindCounter();
+
+            if (!_coreReady)
+                return;
+
+            try
+            {
+                WebView.CoreWebView2.Find.Stop();
+            }
+            catch (Exception exception)
+            {
+                AppLog.Error("Arrêt de la recherche dans la page impossible.", exception);
+            }
+        }
+
+        private void FindInput_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (_findRunning)
+                return;
+
+            _ = RunFindAsync();
+        }
+
+        private void FindInput_KeyDown(object sender, KeyEventArgs e)
+        {
+            switch (e.Key)
+            {
+                case Key.Enter:
+                    MoveToMatch((Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift);
+                    e.Handled = true;
+                    break;
+                case Key.Escape:
+                    CloseFindBar();
+                    e.Handled = true;
+                    break;
+            }
+        }
+
+        private void FindNext_Click(object sender, RoutedEventArgs e) => MoveToMatch(forward: true);
+
+        private void FindPrevious_Click(object sender, RoutedEventArgs e) => MoveToMatch(forward: false);
+
+        private void FindClose_Click(object sender, RoutedEventArgs e) => CloseFindBar();
+
+        /// <summary>
+        /// Lance la recherche dans la page. Le compteur et l'occurrence courante
+        /// sont fournis par WebView2 : le Core ne fait que porter l'état affiché.
+        /// </summary>
+        private async Task RunFindAsync()
+        {
+            var query = FindInput.Text;
+            _findState.Start(query);
+            UpdateFindCounter();
+
+            if (!_coreReady || string.IsNullOrWhiteSpace(query) || _environment is null)
+                return;
+
+            _findRunning = true;
+            try
+            {
+                var options = _environment.CreateFindOptions();
+                options.FindTerm = query;
+                options.IsCaseSensitive = false;
+                options.ShouldHighlightAllMatches = true;
+                options.ShouldMatchWord = false;
+                options.SuppressDefaultFindDialog = true;
+
+                await WebView.CoreWebView2.Find.StartAsync(options);
+                _findState.ReportMatches(
+                    WebView.CoreWebView2.Find.MatchCount,
+                    WebView.CoreWebView2.Find.ActiveMatchIndex);
+                UpdateFindCounter();
+            }
+            catch (Exception exception)
+            {
+                AppLog.Error("Recherche dans la page impossible.", exception);
+            }
+            finally
+            {
+                _findRunning = false;
+            }
+        }
+
+        /// <summary>
+        /// Passe à la correspondance suivante ou précédente.
+        /// </summary>
+        private void MoveToMatch(bool forward)
+        {
+            if (!_coreReady || !_findState.IsActive)
+                return;
+
+            try
+            {
+                if (forward)
+                    WebView.CoreWebView2.Find.FindNext();
+                else
+                    WebView.CoreWebView2.Find.FindPrevious();
+
+                _findState.ReportMatches(
+                    WebView.CoreWebView2.Find.MatchCount,
+                    WebView.CoreWebView2.Find.ActiveMatchIndex);
+                UpdateFindCounter();
+            }
+            catch (Exception exception)
+            {
+                AppLog.Error("Passage à la correspondance suivante impossible.", exception);
+            }
+        }
+
+        private void UpdateFindCounter()
+        {
+            if (_findState.MatchCount == 0)
+            {
+                FindCounter.Text = string.IsNullOrWhiteSpace(_findState.Query) ? string.Empty : "0/0";
+                return;
+            }
+
+            FindCounter.Text = $"{_findState.MatchIndex}/{_findState.MatchCount}";
+        }
+
+        /// <summary>Met à jour l'indicateur de niveau de zoom.</summary>
+        private void UpdateZoomIndicator(double factor)
+        {
+            ZoomIndicator.Content = ZoomLevel.Format(factor);
+        }
+
+        private void OnZoomFactorChanged(object? sender, object e)
+        {
+            var factor = WebView.ZoomFactor;
+            Dispatcher.BeginInvoke(new Action(() => UpdateZoomIndicator(factor)));
+        }
+
+        private void ZoomIndicator_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                WebView.ZoomFactor = ZoomLevel.Reset(WebView.ZoomFactor);
+                UpdateZoomIndicator(WebView.ZoomFactor);
+            }
+            catch (Exception exception)
+            {
+                AppLog.Error("Réinitialisation du zoom impossible.", exception);
+            }
+        }
+
+        /// <summary>
+        /// Raccourcis saisis dans l'interface WPF (barre d'adresse, barre de
+        /// recherche) : ceux relayés par la page sont traités par le pont Web.
+        /// </summary>
+        private void OnPreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Escape && FindBar.Visibility == Visibility.Visible)
+            {
+                CloseFindBar();
+                e.Handled = true;
+                return;
+            }
+
+            var ctrl = (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control;
+            if (e.Key == Key.F && ctrl)
+            {
+                OpenFindBar();
+                e.Handled = true;
+            }
         }
 
         public void Dispose()

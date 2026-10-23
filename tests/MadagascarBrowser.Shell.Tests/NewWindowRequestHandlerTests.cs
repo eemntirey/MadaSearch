@@ -26,6 +26,16 @@ internal sealed class RecordingTabHost : ITabHost
 
     public int SettingsOpened { get; private set; }
 
+    public int SwitchedTabs { get; private set; }
+
+    public int ReopenedTabs { get; private set; }
+
+    public int FavoritesAdded { get; private set; }
+
+    public bool FullScreen { get; private set; }
+
+    public List<AcceleratorCommand> ExecutedCommands { get; } = new();
+
     public TabViewModel NewTab(string url)
     {
         if (_shouldFail)
@@ -54,6 +64,18 @@ internal sealed class RecordingTabHost : ITabHost
         SettingsOpened++;
         return new TabViewModel();
     }
+
+    public void SwitchToNextTab() => SwitchedTabs++;
+
+    public void SwitchToPreviousTab() => SwitchedTabs--;
+
+    public void ReopenClosedTab() => ReopenedTabs++;
+
+    public void AddFavoriteToActiveTab() => FavoritesAdded++;
+
+    public void SetFullScreen(bool enabled) => FullScreen = enabled;
+
+    public void Execute(AcceleratorCommand command) => ExecutedCommands.Add(command);
 }
 
 public class NewWindowRequestHandlerTests

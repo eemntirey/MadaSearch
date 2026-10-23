@@ -35,6 +35,7 @@ namespace MadagascarBrowser
             if (_tabManager.Tabs.Count == 0)
                 _tabManager.NewTab();
             DataContext = _tabManager;
+            _tabManager.FullScreenChanged += OnFullScreenChanged;
             SourceInitialized += OnSourceInitialized;
             PreviewKeyDown += OnPreviewKeyDown;
             Closing += OnClosing;
@@ -62,24 +63,33 @@ namespace MadagascarBrowser
 
         private void OnPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
-            if (!System.Windows.Input.Keyboard.Modifiers.HasFlag(System.Windows.Input.ModifierKeys.Control))
+            // Échap est traité par la vue (barre de recherche, plein écran) : la
+            // fenêtre ne doit pas l'intercepter avant elle.
+            if (e.Key == System.Windows.Input.Key.Escape)
                 return;
 
-            switch (e.Key)
-            {
-                case System.Windows.Input.Key.T:
-                    _tabManager.NewTab();
-                    e.Handled = true;
-                    break;
-                case System.Windows.Input.Key.W:
-                    if (_tabManager.Active != null) _tabManager.Close(_tabManager.Active);
-                    e.Handled = true;
-                    break;
-                case System.Windows.Input.Key.L:
-                    (_tabManager.Active?.View as BrowserView)?.FocusAddressBar();
-                    e.Handled = true;
-                    break;
-            }
+            var ctrl = (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control;
+            var alt = (Keyboard.Modifiers & ModifierKeys.Alt) == ModifierKeys.Alt;
+            var shift = (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift;
+
+            var command = MadagascarBrowser.Core.Navigation.AcceleratorCommandResolver.Resolve(
+                e.Key.ToString(), ctrl, alt, shift);
+
+            if (command == MadagascarBrowser.Core.Navigation.AcceleratorCommand.None)
+                return;
+
+            _tabManager.Execute(command);
+            e.Handled = true;
+        }
+
+        /// <summary>
+        /// Une page passe en plein écran : la barre d'onglets et la barre d'état
+        /// sont masquées pour laisser toute la place à la page.
+        /// </summary>
+        private void OnFullScreenChanged(object? sender, bool isFullScreen)
+        {
+            TabStripBorder.Visibility = isFullScreen ? Visibility.Collapsed : Visibility.Visible;
+            StatusBarBorder.Visibility = isFullScreen ? Visibility.Collapsed : Visibility.Visible;
         }
 
         private void OnSourceInitialized(object sender, EventArgs e)

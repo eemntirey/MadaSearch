@@ -67,9 +67,9 @@ namespace MadagascarBrowser.Shell
         public string SecurityBrushKey => _securityIndicator.BrushKey;
 
         public TabKind Kind { get; set; } = TabKind.Page;
-        public object View { get; set; }
+        public object View { get; set; } = null!;
 
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }
