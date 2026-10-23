@@ -677,3 +677,12 @@ Les SHA « base », « audit » et « feature » sont les blobs relevés par l�
 - **[vérifié]** La recette GUI n’est pas exécutée ; toutefois, le paquet exécutable est versionné et la décision de revue humaine avec GUI comme bloqueur de fusion est explicitement consignée dans la description de PR et l’issue #3. Selon la règle de phase 7, ces conditions permettent la revue humaine, mais pas la fusion.
 - **[vérifié]** PR #5 est donc autorisée à passer à `Ready for review` uniquement pour revue humaine, avec GUI-01 à GUI-13 toujours bloqueurs obligatoires de fusion. Aucun statut PASS n’est attribué à ces scénarios.
 - **[vérifié]** Aucune fusion vers `main` effectuée.
+
+
+### Décision finale consolidée — maintien en brouillon
+
+- **[vérifié]** Run #78 : `completed / success` sur SHA `6052afe25b515eb482cb139bf17c8253823ec748`, Build Release 0 avertissement/0 erreur, 194 Core + 21 Shell réussis, 0 échec, 0 ignoré : https://github.com/eemntirey/MadaSearch/actions/runs/39979834031.
+- **[vérifié]** Après tentative de promotion à Ready for review, le contrôle API a de nouveau renvoyé `mergeable=true`, `mergeable_state=unstable`. Conformément à la condition stricte, PR #5 a été reconvertie en brouillon.
+- **[bloqué]** Le statut final de phase 7 est donc PR #5 ouverte en draft, car l’état de mergeabilité observé est `unstable`. En outre, GUI-01 à GUI-13 restent `NON EXÉCUTÉ`; aucun PASS n’est revendiqué.
+- **[vérifié]** Le paquet et la décision de garder la recette GUI comme bloqueur sont consignés dans PR #5 et issue #3. La PR ne sera pas fusionnée dans cette phase.
+- **[vérifié]** `main` reste au SHA `2b80b96b6ceea52913079667db49d265cdd1cd67`. Aucune fusion vers main effectuée.
