@@ -92,6 +92,10 @@
                         </Style>
                     </Button.Style>
                 </Button>
+                <Button x:Name="PinBtn" Style="{StaticResource CaptionPinButton}" Content="&#xE733;"
+                        chrome:WindowChrome.IsHitTestVisibleInChrome="True"
+                        Click="PinBtn_Click" ToolTip="Épingler / détacher l'en-tête"
+                        AutomationProperties.Name="Épingler l'en-tête"/>
                 <Button Style="{StaticResource CaptionCloseButton}" Content="&#xE8BB;"
                         chrome:WindowChrome.IsHitTestVisibleInChrome="True"
                         Click="CloseWindow_Click" ToolTip="Fermer" AutomationProperties.Name="Fermer la fenêtre"/>
@@ -99,7 +103,10 @@
         </Grid>
 
         <!-- Barre d'onglets : onglets flottants sur le fond de la fenêtre -->
-        <Border x:Name="TabStripBorder" Grid.Row="2" Background="{DynamicResource BgBrush}" BorderThickness="0">
+        <Border x:Name="TabStripBorder" Grid.Row="2" Background="{DynamicResource BgBrush}" BorderThickness="0"
+                MouseLeftButtonDown="TabStripBorder_MouseLeftButtonDown"
+                MouseLeftButtonUp="TabStripBorder_MouseLeftButtonUp"
+                MouseMove="TabStripBorder_MouseMove">
             <Grid Margin="8,2,8,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>

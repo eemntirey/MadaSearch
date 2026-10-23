@@ -24,6 +24,9 @@ namespace MadagascarBrowser
         private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int valueSize);
 
         private readonly TabManager _tabManager;
+        private bool _isPinMode = false;
+        private Point _lastMousePosition;
+        private bool _isDragging = false;
 
         public MainWindow()
         {
@@ -189,6 +192,93 @@ namespace MadagascarBrowser
             {
                 _tabManager.Close(tab);
             }
+        }
+
+        private void PinBtn_Click(object sender, RoutedEventArgs e)
+        {
+            _isPinMode = !_isPinMode;
+            UpdatePinButtonState();
+            UpdateTabStripVisibility();
+        }
+
+        private void UpdatePinButtonState()
+        {
+            if (_isPinMode)
+            {
+                // Mode épinglé - le bouton montre qu'on est en mode détachable
+                PinBtn.Content = ""; // glyphe alternatif ou on garde ⛓
+                // Tooltip géré par le style
+            }
+            else
+            {
+                PinBtn.Content = "⛓";
+            }
+        }
+
+        private void UpdateTabStripVisibility()
+        {
+            // En mode épinglé, les onglets restent visibles dans leur position normale
+            // En mode détachable, on peut les faire glisser
+            if (_isPinMode)
+            {
+                // Mode épinglé - onglets fixes, Z-index normal
+                TabStripBorder.SetValue(Canvas.ZIndexProperty, 10);
+                TabStripBorder.Cursor = Cursors.Arrow;
+            }
+            else
+            {
+                // Mode détachable - onglets flottants avec Z-index élevé
+                TabStripBorder.SetValue(Canvas.ZIndexProperty, 100);
+                TabStripBorder.Cursor = Cursors.SizeAll;
+            }
+        }
+
+        private void TabStripBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (_isPinMode)
+                return; // En mode épinglé, ignorer les clics sur les onglets
+
+            _isDragging = true;
+            _lastMousePosition = e.GetPosition(this);
+            TabCaptureMouse(e);
+        }
+
+        private void TabStripBorder_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            _isDragging = false;
+            TabStripBorder.ReleaseMouseCapture();
+        }
+
+        private void TabStripBorder_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (!_isDragging || _isPinMode)
+                return;
+
+            var currentPosition = e.GetPosition(this);
+            var delta = currentPosition - _lastMousePosition;
+
+            // Déplacement vertical seulement pour l'instant (en-dessus de la barre de titre)
+            var newTop = Canvas.GetTop(TabStripBorder) + delta.Y;
+            var newLeft = Canvas.GetLeft(TabStripBorder) + delta.X;
+
+            // Garder dans les bounds de la fenêtre
+            var maxTop = ActualHeight - TabStripBorder.ActualHeight - 40; // laisser de la place pour la barre de titre
+            var maxLeft = ActualWidth - TabStripBorder.ActualWidth - 16;
+
+            newTop = Math.Max(0, Math.Min(maxTop, newTop));
+            newLeft = Math.Max(0, Math.Min(maxLeft, newLeft));
+
+            Canvas.SetTop(TabStripBorder, newTop);
+            Canvas.SetLeft(TabStripBorder, newLeft);
+
+            _lastMousePosition = currentPosition;
+        }
+
+        private void TabCaptureMouse(MouseEventArgs e)
+        {
+            // Capturer la souris sur l'élément pour recevoir tous les événements de déplacement
+            e.Handled = true;
+            TabStripBorder.CaptureMouse();
         }
     }
 }
