@@ -101,3 +101,104 @@ Le point critique non prouvé est l’isolation effective des cookies, du stocka
 La branche d’audit peut être utilisée comme base de travail pour reprendre l’intégration dans un checkout Git local fonctionnel, mais elle ne doit pas être déclarée livrable combinée avec `feat/design-moderne` tant que les conflits n’ont pas été résolus et que la CI du résultat fusionné n’est pas verte.
 
 **Aucune fusion vers `main` effectuée.**
+
+
+---
+
+# Phase 3 — rapport de clôture d’intégration
+
+Date du contrôle : 2026-10-23. Les états ci-dessous sont qualifiés individuellement.
+
+## A. Branche, accès et références
+
+- **[vérifié]** Branche d’audit avant le présent ajout : `fix/audit-madagascar-browser`, SHA `9122f2f65b55b7508d46098ca16f40707bd08517`.
+- **[vérifié]** `main` = `2b80b96b6ceea52913079667db49d265cdd1cd67`; `feat/design-moderne` = `357f4ed5e84383fa0a42802f69eecec74b9e8e5d`; ancêtre commun retourné par l’API Compare = `2b80b96b6ceea52913079667db49d265cdd1cd67`.
+- **[vérifié]** Tentatives shell exécutées :
+  - `git ls-remote https://github.com/eemntirey/MadaSearch.git` → code 128, `Could not resolve host: github.com`.
+  - `gh auth status` et `gh repo view eemntirey/MadaSearch` → `gh: command not found`, code 127.
+  - `curl https://api.github.com/repos/eemntirey/MadaSearch` → code 6, DNS `Could not resolve host: api.github.com`.
+  - archive `https://codeload.github.com/eemntirey/MadaSearch/tar.gz/357f4ed5e84383fa0a42802f69eecec74b9e8e5d` → code 6, DNS `Could not resolve host: codeload.github.com`.
+  - `git clone --depth 1 --branch feat/design-moderne https://github.com/eemntirey/MadaSearch.git /tmp/MadaSearch-phase3` → code 128, DNS.
+  - même clone avec `GIT_CURL_VERBOSE=1` → DNS confirmé dans la trace.
+- **[vérifié]** L’API GitHub par le connecteur reste accessible. Le shell réseau et l’outil `gh` ne sont pas disponibles.
+
+## B. Variante d’intégration et résultat
+
+- **[vérifié]** Variante B — PR API de diagnostic #2 : https://github.com/eemntirey/MadaSearch/pull/2, base `fix/audit-madagascar-browser`, head `feat/design-moderne`.
+- **[vérifié]** GitHub indique `mergeable=false`, `mergeable_state=dirty`, 42 commits côté head, 79 fichiers modifiés. La PR est restée en brouillon ; aucune opération de fusion n’a été appelée.
+- **[vérifié]** Compare API : audit a 49 commits au-delà de l’ancêtre commun à la date de ce contrôle ; `feat/design-moderne` en a 42. La branche d’audit n’est donc pas un descendant de `feat/design-moderne`.
+- **[bloqué]** L’intégration n’est pas réalisée. L’API REST standard consultée ne donne pas la liste exacte des conflits de lignes ni un arbre de fusion résolu. En l’absence de checkout Git et de runner .NET, créer un arbre artificiel ou fusionner des fichiers entiers ne permettrait pas de garantir la préservation des deux côtés.
+- **[vérifié]** Les trois versions (ancêtre commun/main, audit, feature) ont été récupérées via API pour les 12 fichiers touchés par les deux branches. Ce sont des **candidats de conflit** issus du chevauchement des diffs, pas une affirmation que chacun a un conflit de ligne :
+  1. `src/MadagascarBrowser.Core/Data/DownloadService.cs`
+  2. `src/MadagascarBrowser/AssemblyInfo.cs`
+  3. `src/MadagascarBrowser/MainWindow.xaml`
+  4. `src/MadagascarBrowser/MainWindow.xaml.cs`
+  5. `src/MadagascarBrowser/Shell/BrowserServices.cs`
+  6. `src/MadagascarBrowser/Shell/BrowserView.xaml`
+  7. `src/MadagascarBrowser/Shell/BrowserView.xaml.cs`
+  8. `src/MadagascarBrowser/Shell/SettingsView.xaml`
+  9. `src/MadagascarBrowser/Shell/SettingsView.xaml.cs`
+  10. `src/MadagascarBrowser/Shell/TabManager.cs`
+  11. `src/MadagascarBrowser/Shell/TabViewModel.cs`
+  12. `src/MadagascarBrowser/Shell/WebViewEnvironment.cs`
+- **[vérifié]** Les écarts sont substantiels : `BrowserView.xaml.cs` fait 834 lignes dans la base, 916 sur audit et 1338 sur feature ; `TabManager.cs` fait respectivement 147, 192 et 267 lignes. Le correctif de reprise de téléchargement avec contrôle de date est présent sur audit et absent de feature ; les politiques `NativeWebMessagePolicy` et l’effacement sélectif sont également présents sur audit mais pas sur feature.
+- **[bloqué]** `git merge-base --is-ancestor origin/feat/design-moderne HEAD` n’a pas pu être exécuté localement et ne peut pas être revendiqué comme réussi. L’intégration est donc **bloquée — non vérifiée**, pas partielle ni terminée.
+- **[vérifié]** Issue de suivi créée : https://github.com/eemntirey/MadaSearch/issues/3.
+
+## C. Écart 184 vs 118 — inventaire statique réel
+
+Les fichiers de tests et les projets ont été lus via l’API GitHub. Le décompte statique porte sur les attributs xUnit dans les fichiers `.cs`, et non sur un TRX simulé.
+
+### Branche d’audit `fix/audit-madagascar-browser`
+
+- **[vérifié]** Un projet de test est référencé dans `MadagascarBrowser.sln` : `tests/MadagascarBrowser.Tests/MadagascarBrowser.Tests.csproj`. Le projet utilise xUnit 2.5.3 et Microsoft.NET.Test.Sdk 17.8.0.
+- **[vérifié]** 21 fichiers C# de tests ; 75 attributs `[Fact]`, 10 `[Theory]`, 43 `[InlineData]`, aucun `[MemberData]` ou `[ClassData]` constaté dans les fichiers de théorie examinés.
+- **[vérifié]** Calcul des cas xUnit : les `[Fact]` donnent 75 cas et les lignes `[InlineData]` ajoutent 43 cas, soit **118 cas attendus**. Ce total correspond au résultat CI déjà constaté sur le commit de code `22415ef` : 118 réussis, 0 échec, 0 ignoré, run https://github.com/eemntirey/MadaSearch/actions/runs/39965989504.
+
+### Branche `feat/design-moderne`
+
+- **[vérifié]** La solution contient deux projets de test : `tests/MadagascarBrowser.Tests/MadagascarBrowser.Tests.csproj` et `tests/MadagascarBrowser.Shell.Tests/MadagascarBrowser.Shell.Tests.csproj`. Les deux utilisent xUnit 2.5.3 et Microsoft.NET.Test.Sdk 17.8.0.
+- **[vérifié]** 26 fichiers C# de tests ; inventaire statique : 132 `[Fact]`, 13 `[Theory]`, 57 `[InlineData]`. Aucun `[MemberData]` ou `[ClassData]` n’a été trouvé dans les fichiers de théorie inspectés.
+- **[vérifié]** Total statique calculé par expansion des données : 132 cas `[Fact]` + 57 cas `[InlineData]` = **189 cas de test attendus** (sous réserve de la découverte réelle par le runner).
+- **[non vérifié]** Aucun run CI/TRX de `feat/design-moderne` n’a été obtenu dans la recherche des runs Actions consultée. Les 189 cas sont un calcul statique, pas un résultat d’exécution.
+- **[vérifié]** L’écart entre les 118 cas de l’audit et le total statique de 189 sur feature vient de l’ajout de tests et du second projet `MadagascarBrowser.Shell.Tests`, ainsi que de tests supplémentaires dans des fichiers partagés.
+- **[non vérifié]** Le nombre de 184 tests annoncé précédemment n’est confirmé ni par le TRX de `22415ef` (118), ni par l’inventaire statique de `feat/design-moderne` (189). Sa provenance exacte n’est pas établie ; il ne faut pas le présenter comme un résultat de CI. Le total intégré réel ne sera connu qu’après fusion, build et test du commit intégré.
+
+## D. CI du SHA précédent et du présent rapport
+
+- **[vérifié]** Le commit documentaire précédent `9122f2f65b55b7508d46098ca16f40707bd08517` a une CI terminale `completed / success`, run #49 : https://github.com/eemntirey/MadaSearch/actions/runs/39967399505.
+- **[non vérifié]** Cette CI ne couvre pas le commit de ce présent ajout documentaire ; sa CI devra être consultée sur son propre SHA après le push. Aucun build/test du code combiné n’a été exécuté.
+- **[vérifié]** Aucun build Release ni test local n’a été lancé dans cet environnement, car .NET/WPF n’est pas exécutable ici et l’accès réseau Git shell est bloqué par DNS.
+
+## E. Recette Windows/WebView2
+
+- **[non vérifié — non exécutée]** La recette GUI Windows/WebView2 n’a pas été exécutée : aucun environnement Windows interactif avec WebView2 n’est disponible dans cette session.
+- **[non vérifié]** L’isolation réelle des cookies, du stockage local et du cache privé, le nettoyage après fermeture/crash, les scénarios de certificat invalide et la restauration après arrêt brutal restent à tester manuellement sur Windows.
+- **[vérifié]** Les tests automatisés antérieurs valident des politiques et services, mais ne prouvent pas à eux seuls l’isolation du moteur WebView2 réel.
+
+## F. Étapes exactes pour débloquer
+
+À exécuter dans un environnement Windows avec Git, .NET 8 et accès réseau fonctionnels :
+
+```powershell
+git fetch origin
+git switch fix/audit-madagascar-browser
+git merge --no-ff origin/feat/design-moderne
+# Pour chaque conflit réel :
+git show :1:<fichier>
+git show :2:<fichier>
+git show :3:<fichier>
+git diff --check
+git merge-base --is-ancestor origin/feat/design-moderne HEAD
+dotnet restore MadagascarBrowser.sln
+dotnet build MadagascarBrowser.sln --configuration Release --no-restore
+dotnet test MadagascarBrowser.sln --configuration Release --no-build --logger "trx;LogFileName=test-results.trx"
+```
+
+Résoudre les conflits en conservant la navigation et les fonctionnalités récentes ainsi que les correctifs d’audit ; ne pas choisir aveuglément un côté. Pousser sans force, attendre le statut terminal de CI sur le SHA fusionné, puis exécuter la recette GUI.
+
+## G. Décision de phase 3
+
+- **[vérifié]** L’accès API GitHub a été utilisé pour comparer les branches, récupérer les trois versions des 12 fichiers candidats, créer la PR de diagnostic #2 et l’issue #3.
+- **[bloqué]** L’intégration reste non réalisée en raison de la PR `mergeable_state=dirty`, de l’absence d’un checkout Git opérationnel et de l’impossibilité d’exécuter les tests .NET sur un arbre combiné.
+- **[vérifié]** Aucune fusion vers `main` effectuée.
