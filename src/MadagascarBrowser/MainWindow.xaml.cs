@@ -112,7 +112,7 @@ namespace MadagascarBrowser
             }
         }
 
-        private void OnSourceInitialized(object sender, EventArgs e)
+        private void OnSourceInitialized(object? sender, EventArgs e)
         {
             var hwnd = new WindowInteropHelper(this).Handle;
             try
