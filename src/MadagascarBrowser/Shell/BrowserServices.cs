@@ -34,7 +34,7 @@ namespace MadagascarBrowser.Shell
             Favorites = new FavoritesService(db);
             Downloads = new DownloadService(db);
             Downloads.RecoverInProgressDownloads();
-            OfflinePages = new OfflinePageService(db, paths.OfflinePagesPath);
+            OfflinePages = new OfflinePageService(db, paths.OfflineDirectory);
             SettingsService = new BrowserSettingsService(db);
             Profile = new BrowserProfileService(db, SettingsService);
             Sessions = new SessionService(db);
