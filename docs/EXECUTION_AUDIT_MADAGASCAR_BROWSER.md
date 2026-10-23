@@ -741,3 +741,37 @@ Le run .NET validation https://github.com/eemntirey/MadaSearch/actions/runs/3998
 - Verdict actuel : non prêt — scénarios GUI non prouvés et O1 définitif à confirmer.
 
 **Aucune fusion vers main effectuée.**
+
+
+---
+
+# Phase 8 — clôture des contrôles CI et inventaire xUnit
+
+Contrôle effectué sur le SHA de travail 2159e6f59c734883c82e38879b02e0f4c29a0665.
+
+## O1 — inventaire xUnit [vérifié]
+- Workflow UI : https://github.com/eemntirey/MadaSearch/actions/runs/39983679984 — completed / success sur le SHA 2159e6f59c734883c82e38879b02e0f4c29a0665.
+- Artefact : https://github.com/eemntirey/MadaSearch/actions/runs/39983679984/artifacts/12515091089.
+- Le script a récupéré les huit snapshots demandés; aucun échec API; 0 occurrence de Skip=.
+- Statut calculé : « vérifié — aucun candidat de suppression non justifiée détecté ».
+- Deux déplacements exacts sont prouvés par identité du blob entre e23d72a et 07a05c4 :
+  1. BrowsingDataClearTests.cs : projet MadagascarBrowser.Tests → MadagascarBrowser.Shell.Tests.
+  2. PrivateProfileSessionTests.cs : projet MadagascarBrowser.Tests → MadagascarBrowser.Shell.Tests.
+- Les deux branches de base feature/audit ne sont pas comparées comme des commits successifs; la boucle suit désormais la chaîne historique de 45c6bfd jusqu'au SHA courant.
+
+## O2 — recette UI [partiellement vérifiée]
+- Build Release : succès.
+- Tests de régression : 194 Core + 21 Shell = 215 réussis, 0 échec, 0 ignoré.
+- Test FlaUI/UIA3 : 1 test réussi vérifiant le démarrage de la fenêtre WPF.
+- GUI-01 à GUI-13 : **non exécuté — manuel** dans recette-resultats.json. Le smoke test ne valide pas les scénarios métier. Artefacts et TRX sont disponibles dans le lien ci-dessus.
+
+## O5 — CI standard
+- Run .NET validation : https://github.com/eemntirey/MadaSearch/actions/runs/39983679936 — completed / success sur le même SHA 2159e6f59c734883c82e38879b02e0f4c29a0665 après exclusion du projet UI de la commande de tests générale; le projet UI est exécuté séparément dans recette-ui.yml.
+
+## O3/O4/O6 — handoff, PR et verdict
+- Handoff : docs/recette/handoff-humain.md; lien publié dans l'issue #3.
+- PR #5 reste brouillon et non fusionnée : https://github.com/eemntirey/MadaSearch/pull/5.
+- Verdict : **non prêt — 13 scénarios GUI restent non exécutés**. Le critère O4 exige des preuves PASS pour GUI-02 à GUI-04 et GUI-06 à GUI-13; GUI-01/GUI-05 doivent être couverts par le handoff et un risque accepté. Ces conditions ne sont pas satisfaites.
+- Le prochain commit documentaire déclenche une nouvelle CI; le SHA final de Phase 8 doit lui aussi atteindre completed / success. Le run 2159e6f est la preuve terminale du contenu applicatif précédant cette dernière mise à jour documentaire.
+
+**Aucune fusion vers main effectuée.**
