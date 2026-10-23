@@ -4,3 +4,5 @@ obj/
 *.user
 @AutomationLog.txt
 graphify-out/
+# Outil de recette manuelle (serveur HTTP de test) : auxiliaire, non livré.
+tools/
