@@ -816,3 +816,84 @@ Le commit documentaire courant déclenche à nouveau les workflows; la CI termin
 - [vérifié] `main` est inchangée : `2b80b96b6ceea52913079667db49d265cdd1cd67`.
 
 **Décision finale : non prêt à fusionner tant que la recette fonctionnelle GUI requise n'est pas exécutée et documentée. Aucune fusion vers main.**
+
+
+---
+
+# Phase 9 — clôture finale fondée sur les artefacts
+
+**SHA contrôlé par les workflows de cette phase :** `53347956b76348e86eeb1f391507fe9dc156e5e3`.
+
+## 1. Runs terminaux
+
+- [vérifié] CI .NET : [run #39988319779](https://github.com/eemntirey/MadaSearch/actions/runs/39988319779), `completed / success`, `head_sha=53347956b76348e86eeb1f391507fe9dc156e5e3`.
+- [vérifié] Recette UI Windows : [run #39988319709](https://github.com/eemntirey/MadaSearch/actions/runs/39988319709), `completed / success`, `head_sha=53347956b76348e86eeb1f391507fe9dc156e5e3`.
+- [vérifié] Artefact UI : [recette-ui-53347956b76348e86eeb1f391507fe9dc156e5e3](https://github.com/eemntirey/MadaSearch/actions/runs/39988319709/artifacts/12516183805).
+- [vérifié] Les artefacts du run #39988319709 contiennent `recette-resultats.json`, `recette-resultats.md`, trois TRX de tests .NET, le TRX UI, et les sorties O1 JSON/Markdown.
+- [vérifié] TRX du SHA ci-dessus : Core 194/194, Shell 21/21, UiTests smoke de démarrage 1/1 ; aucun échec ni test ignoré. Un TRX séparé contient 0 test et n'est pas compté comme succès.
+- [vérifié] Run de référence phase 8 : [run #39985180694](https://github.com/eemntirey/MadaSearch/actions/runs/39985180694), artefact [12515751251](https://github.com/eemntirey/MadaSearch/actions/runs/39985180694/artifacts/12515751251), résultat JSON avec SHA testé `44f9750ff593160f17bb64e62bb306b884ed298c`.
+
+## 2. Table réelle GUI-01 à GUI-13
+
+Source obligatoire consultée : `artifacts/recette/recette-resultats.json` dans les artefacts des runs #39985180694 et #39988319709. Les deux JSON déclarent pour chaque scénario `status="non exécuté — manuel"`, `evidence=[]`, et indiquent que le smoke test UI ne valide pas le scénario. La table ci-dessous reflète le run de référence de phase 8 (`44f9750ff593160f17bb64e62bb306b884ed298c)); le run phase 9 sur `53347956b76348e86eeb1f391507fe9dc156e5e3` confirme les mêmes statuts. Aucun PNG/log par scénario n'est présent dans ces artefacts.
+
+| Scénario | Type déclaré | Statut réel | Artefact(s) | Preuve |
+|---|---|---|---|---|
+| GUI-01 — Navigation et indicateur de sécurité | Manuel; pas d'assertion métier dédiée | [non exécuté] | JSON recette, entrée GUI-01; `evidence=[]` | [vérifié] Aucun PNG/log par scénario; smoke test non probant |
+| GUI-02 — Téléchargement terminé | Manuel; pas d'assertion métier dédiée | [non exécuté] | JSON recette, entrée GUI-02; `evidence=[]` | [vérifié] Aucun PNG/log par scénario |
+| GUI-03 — Téléchargement annulé | Manuel; pas d'assertion métier dédiée | [non exécuté] | JSON recette, entrée GUI-03; `evidence=[]` | [vérifié] Aucun PNG/log par scénario |
+| GUI-04 — Téléchargement interrompu et récupération | Manuel; pas d'assertion métier dédiée | [non exécuté] | JSON recette, entrée GUI-04; `evidence=[]` | [vérifié] Aucun PNG/log par scénario |
+| GUI-05 — Isolation privée | Manuel; pas d'assertion métier dédiée | [non exécuté] | JSON recette, entrée GUI-05; `evidence=[]` | [vérifié] Aucun PNG/log par scénario |
+| GUI-06 — Nettoyage privé après fermeture normale | Manuel; pas d'assertion métier dédiée | [non exécuté] | JSON recette, entrée GUI-06; `evidence=[]` | [vérifié] Aucun PNG/log par scénario |
+| GUI-07 — Nettoyage après fermeture forcée / profil orphelin | Manuel; pas d'assertion métier dédiée | [non exécuté] | JSON recette, entrée GUI-07; `evidence=[]` | [vérifié] Aucun PNG/log par scénario |
+| GUI-08 — Effacement de l'historique seul | Manuel; pas d'assertion métier dédiée | [non exécuté] | JSON recette, entrée GUI-08; `evidence=[]` | [vérifié] Aucun PNG/log par scénario |
+| GUI-09 — Effacement cookies et données de site seuls | Manuel; pas d'assertion métier dédiée | [non exécuté] | JSON recette, entrée GUI-09; `evidence=[]` | [vérifié] Aucun PNG/log par scénario |
+| GUI-10 — Effacement du cache seul | Manuel; pas d'assertion métier dédiée | [non exécuté] | JSON recette, entrée GUI-10; `evidence=[]` | [vérifié] Aucun PNG/log par scénario |
+| GUI-11 — Annulation de confirmation | Manuel; pas d'assertion métier dédiée | [non exécuté] | JSON recette, entrée GUI-11; `evidence=[]` | [vérifié] Aucun PNG/log par scénario |
+| GUI-12 — Restauration après arrêt brutal | Manuel; pas d'assertion métier dédiée | [non exécuté] | JSON recette, entrée GUI-12; `evidence=[]` | [vérifié] Aucun PNG/log par scénario |
+| GUI-13 — Certificat invalide | Manuel; pas d'assertion métier dédiée | [non exécuté] | JSON recette, entrée GUI-13; `evidence=[]` | [vérifié] Aucun PNG/log par scénario |
+
+**Interprétation :** le seul test UI réussi vérifie le démarrage de la fenêtre WPF (`ApplicationLaunchTests.BrowserStartsAndExposesNamedTopLevelWindow`). Il ne prouve aucun des treize scénarios fonctionnels. Aucun scénario GUI n'est `PASS` ni `FAIL` d'après les artefacts : les treize sont `non exécuté — manuel`, et restent des bloqueurs QA.
+
+## 3. Livrables O1 et O3
+
+- **O1 — [vérifié]** `scripts/recette/Compare-TestAttributes.ps1` existe et est exécuté dans le workflow UI; les sorties sont archivées dans `docs/recette/attributs-tests/attributs-tests.json` et `attributs-tests.md`. L'artefact du run #39988319709 confirme huit SHA inventoriés, aucune erreur API, zéro `Skip=`, zéro candidat de suppression non justifiée et deux déplacements prouvés par identité de blob Git : `BrowsingDataClearTests.cs` et `PrivateProfileSessionTests.cs` de `MadagascarBrowser.Tests` vers `MadagascarBrowser.Shell.Tests`. Preuve : [artefact O1/UI](https://github.com/eemntirey/MadaSearch/actions/runs/39988319709/artifacts/12516183805).
+- **O3 — [vérifié]** `docs/recette/handoff-humain.md` existe. Le handoff GUI-01 à GUI-13 est publié dans [l'issue #3, commentaire de phase 8](https://github.com/eemntirey/MadaSearch/issues/3#issuecomment-6369012086). Il détaille les actions, résultats attendus et preuves à déposer. Il couvre les treize scénarios actuellement `non exécuté — manuel`; cela ne vaut pas acceptation du risque ni PASS.
+- Handoff : [document versionné](https://github.com/eemntirey/MadaSearch/blob/integration/audit-design-moderne/docs/recette/handoff-humain.md).
+- Script O1 : [Compare-TestAttributes.ps1](https://github.com/eemntirey/MadaSearch/blob/integration/audit-design-moderne/scripts/recette/Compare-TestAttributes.ps1).
+
+## 4. FAIL identifiés et traitement
+
+- [vérifié] Aucun scénario GUI n'est enregistré comme `FAIL` dans les artefacts des runs #39985180694 et #39988319709; les 13 scénarios sont non exécutés, donc il n'y a pas de diagnostic applicatif à attribuer à partir de ces artefacts.
+- [vérifié] Un échec de compilation antérieur de la recette UI (CS0103 dans `ApplicationLaunchTests.cs`) a été documenté dans [run #39982393870](https://github.com/eemntirey/MadaSearch/actions/runs/39982393870) et corrigé avant le candidat actuel. Les runs de phase 8 et 9 sont terminaux verts.
+- [non vérifié] Les comportements applicatifs ciblés par GUI-01 à GUI-13 ne sont pas certifiés par la CI actuelle. Il serait incorrect d'affirmer qu'ils sont exempts de défauts.
+- Aucun test n'a été supprimé, désactivé ou marqué `Skip` pendant cette phase.
+
+## 5. Décision PR #5
+
+- PR : https://github.com/eemntirey/MadaSearch/pull/5.
+- [vérifié] Reste ouverte en brouillon (`draft=true`), non fusionnée.
+- [vérifié] Dernier contrôle API avant cette mise à jour : `mergeable=true`, `mergeable_state=clean`; head `53347956b76348e86eeb1f391507fe9dc156e5e3`, base `2b80b96b6ceea52913079667db49d265cdd1cd67`.
+- **Bloqueurs de promotion :**
+  1. GUI-02 à GUI-04 et GUI-06 à GUI-12 ne sont pas PASS et ne disposent pas de preuves par scénario; critères de levée : exécuter et joindre JSON, PNG et journal (ainsi que TRX applicable) sur le SHA candidat.
+  2. GUI-01 et GUI-05 ne sont pas PASS; le handoff existe, mais aucune acceptation explicite du risque n'est démontrée dans la description de la PR. Critère de levée : PASS avec preuve ou handoff explicitement accepté dans la PR.
+  3. GUI-13 (certificat invalide) reste également non exécuté; il doit être exécuté et documenté pour satisfaire la recette complète de `docs/recette/recette-gui.md`.
+  4. Après cette mise à jour documentaire, recontrôler les deux workflows sur le nouveau SHA et confirmer `mergeable_state=clean`.
+- [vérifié] La PR n'a pas été promue à `ready for review`, conformément aux critères stricts.
+- [vérifié] `main` est toujours `2b80b96b6ceea52913079667db49d265cdd1cd67`.
+
+## 6. Verdict final de préparation de livraison
+
+**Verdict unique : `prêt sous réserve de handoff humain` — au sens limité du code et de la CI verte; livraison non autorisée.**
+
+Justification : les workflows .NET et UI sont verts sur le SHA phase 9 et les livrables O1/O3 sont vérifiés; les scénarios fonctionnels GUI restent non exécutés et le handoff publié demande leur exécution humaine. Conformément à la règle stricte, PR #5 reste en brouillon jusqu'à l'exécution/acceptation des scénarios exigés. Ce verdict n'est ni une approbation de livraison ni une autorisation de fusion.
+
+## 7. Risques résiduels consolidés
+
+- [bloqué] Fonctionnalités de navigation/sécurité, téléchargements, isolation et nettoyage du profil privé, effacements sélectifs, restauration après arrêt brutal et gestion de certificat invalide non validées par recette GUI.
+- [bloqué] Absence de captures/logs/JSON par scénario; le seul smoke test UI prouve uniquement le lancement de la fenêtre.
+- [vérifié] O1 et O3 existent et sont publiés; l'exécution du handoff reste à faire.
+- [vérifié] Les runs de code combiné précédents et les runs phase 9 sont verts; le présent rapport doit lui-même être validé par une CI terminale sur son nouveau SHA.
+- [vérifié] Sauvegarde `backup/audit-backup-ea5461d` conservée; issue #3 conservée.
+
+**Aucune fusion vers main effectuée.**
