@@ -738,7 +738,17 @@ namespace MadagascarBrowser.Shell
                     return;
                 }
 
-                var responseHeaders = root.GetProperty("responseHeaders").EnumerateArray()
+                // Sans en-têtes de réponse, impossible d'évaluer le type ou la taille :
+                // certains payloads DevTools (redirections, réponses sans corps) n'en
+                // contiennent pas. On laisse la requête passer plutôt que d'échouer.
+                if (!root.TryGetProperty("responseHeaders", out var headersElement) ||
+                    headersElement.ValueKind != JsonValueKind.Array)
+                {
+                    await ContinuePausedRequestAsync(requestId);
+                    return;
+                }
+
+                var responseHeaders = headersElement.EnumerateArray()
                     .Select(header => new
                     {
                         Name = header.GetProperty("name").GetString() ?? string.Empty,
