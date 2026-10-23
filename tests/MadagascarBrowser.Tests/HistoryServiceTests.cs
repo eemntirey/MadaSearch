@@ -51,6 +51,24 @@ public class HistoryServiceTests
         ClearDatabase(dbPath);
     }
 
+    [Fact]
+    public void Clear_LeavesFavoritesUntouched()
+    {
+        var dbPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".db");
+        var database = new Database(dbPath);
+        var history = new HistoryService(database);
+        var favorites = new FavoritesService(database);
+        history.AddVisit("https://history.example", "History");
+        favorites.Add("https://favorite.example", "Favorite");
+
+        history.Clear();
+
+        Assert.Empty(history.Recent(5));
+        var favorite = Assert.Single(favorites.GetAll());
+        Assert.Equal("https://favorite.example", favorite.Url);
+        ClearDatabase(dbPath);
+    }
+
     private static void ClearDatabase(string path)
     {
         using var connection = new SqliteConnection($"Data Source={path}");
