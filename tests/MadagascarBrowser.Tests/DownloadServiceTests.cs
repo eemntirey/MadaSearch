@@ -53,6 +53,59 @@ public class DownloadServiceTests
         }
     }
 
+    [Fact]
+    public void RecoverInProgressDownloads_MarksPartialFileInterruptedWithoutDeletingIt()
+    {
+        var (directory, databasePath) = CreateDatabasePath();
+
+        try
+        {
+            var filePath = Path.Combine(directory, "partial.bin");
+            File.WriteAllBytes(filePath, new byte[10]);
+            var service = new DownloadService(new Database(databasePath));
+            var started = service.Start("https://example.com/partial.bin", filePath);
+            service.UpdateProgress(started.Id, 10, 100);
+
+            Assert.Equal(1, service.RecoverInProgressDownloads());
+
+            var recovered = Assert.Single(service.GetRecent());
+            Assert.Equal(DownloadState.Interrupted, recovered.State);
+            Assert.True(File.Exists(filePath));
+            Assert.Equal(10, new FileInfo(filePath).Length);
+        }
+        finally
+        {
+            ClearDatabase(directory, databasePath);
+        }
+    }
+
+    [Fact]
+    public void RecoverInProgressDownloads_PreservesCompleteFile()
+    {
+        var (directory, databasePath) = CreateDatabasePath();
+
+        try
+        {
+            var filePath = Path.Combine(directory, "complete.bin");
+            File.WriteAllBytes(filePath, new byte[100]);
+            var service = new DownloadService(new Database(databasePath));
+            var started = service.Start("https://example.com/complete.bin", filePath);
+            service.UpdateProgress(started.Id, 90, 100);
+
+            Assert.Equal(1, service.RecoverInProgressDownloads());
+
+            var recovered = Assert.Single(service.GetRecent());
+            Assert.Equal(DownloadState.Completed, recovered.State);
+            Assert.Equal(100, recovered.BytesReceived);
+            Assert.True(File.Exists(filePath));
+            Assert.Equal(100, new FileInfo(filePath).Length);
+        }
+        finally
+        {
+            ClearDatabase(directory, databasePath);
+        }
+    }
+
     private static (string Directory, string DatabasePath) CreateDatabasePath()
     {
         var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
