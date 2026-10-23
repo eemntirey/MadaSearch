@@ -107,6 +107,19 @@ namespace MadagascarBrowser.Shell
             NewTab(url);
         }
 
+        public async Task ClearWebViewDataAsync(bool clearCookies, bool clearCache)
+        {
+            if (!clearCookies && !clearCache)
+                return;
+
+            var view = Tabs.Select(tab => tab.View).OfType<BrowserView>()
+                .FirstOrDefault(browserView => browserView.IsCoreReady);
+            if (view == null)
+                throw new InvalidOperationException("Aucun onglet WebView2 initialisé ne permet d'effacer les données.");
+
+            await view.ClearWebViewDataAsync(clearCookies, clearCache);
+        }
+
         public void RestoreSession(MadagascarBrowser.Core.Data.BrowserSession session)
         {
             var urls = session.Urls
