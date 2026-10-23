@@ -393,7 +393,7 @@ namespace MadagascarBrowser.Shell
             MenuPopup.IsOpen = false;
             if (!PrivateBrowsingPolicy.ShouldPersistFavorites((DataContext as TabViewModel)?.IsPrivate == true))
             {
-                MenuFeedback.Text = "Les favoris sont désactivés en navigation privée."
+                MenuFeedback.Text = "Les favoris sont désactivés en navigation privée.";
                 MenuPopup.IsOpen = true;
                 return;
             }
