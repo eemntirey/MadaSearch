@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Threading;
 using MadagascarBrowser.Shell;
 
 namespace MadagascarBrowser
@@ -20,6 +21,7 @@ namespace MadagascarBrowser
         private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int valueSize);
 
         private readonly TabManager _tabManager;
+        private readonly DispatcherTimer _sessionSnapshotTimer = new() { Interval = TimeSpan.FromSeconds(15) };
 
         public MainWindow()
         {
@@ -34,9 +36,20 @@ namespace MadagascarBrowser
             SourceInitialized += OnSourceInitialized;
             PreviewKeyDown += OnPreviewKeyDown;
             Closing += OnClosing;
+            _sessionSnapshotTimer.Tick += (_, _) => SaveSessionSnapshot();
+            _sessionSnapshotTimer.Start();
         }
 
         private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
+        {
+            _sessionSnapshotTimer.Stop();
+            SaveSessionSnapshot();
+        }
+
+        /// <summary>
+        /// Persists a recoverable tab snapshot periodically, not only during normal shutdown.
+        /// </summary>
+        private void SaveSessionSnapshot()
         {
             var urls = new List<string>();
             var activeIndex = -1;
@@ -53,7 +66,15 @@ namespace MadagascarBrowser
                 urls.Add(uri.AbsoluteUri);
             }
 
-            BrowserServices.Sessions.Save(new MadagascarBrowser.Core.Data.BrowserSession(urls, activeIndex));
+            try
+            {
+                BrowserServices.Sessions.Save(new MadagascarBrowser.Core.Data.BrowserSession(urls, activeIndex));
+            }
+            catch (Exception exception)
+            {
+                // Keep the UI responsive; log the exception type without URLs or user data.
+                System.Diagnostics.Debug.WriteLine($"SessionSnapshotFailed: {exception.GetType().Name}");
+            }
         }
 
         private void OnPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
