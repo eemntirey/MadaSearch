@@ -36,11 +36,13 @@ internal sealed class RecordingTabHost : ITabHost
 
     public List<AcceleratorCommand> ExecutedCommands { get; } = new();
 
-    public TabViewModel NewTab(string url)
+    public TabViewModel NewTab(string? url)
     {
         if (_shouldFail)
             throw new InvalidOperationException("Ouverture d'onglet refusée par le test.");
 
+        // L'interface autorise l'URL absente ; l'hôte de test la traite comme vide.
+        url ??= string.Empty;
         OpenedUrls.Add(url);
         return new TabViewModel { Url = url, Title = "Nouvel onglet" };
     }

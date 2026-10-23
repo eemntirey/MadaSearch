@@ -95,7 +95,7 @@ namespace MadagascarBrowser
             StatusBarBorder.Visibility = isFullScreen ? Visibility.Collapsed : Visibility.Visible;
         }
 
-        private void OnSourceInitialized(object sender, EventArgs e)
+        private void OnSourceInitialized(object? sender, EventArgs e)
         {
             var hwnd = new WindowInteropHelper(this).Handle;
             try
