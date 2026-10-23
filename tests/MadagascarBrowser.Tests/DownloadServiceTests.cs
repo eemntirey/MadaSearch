@@ -80,6 +80,32 @@ public class DownloadServiceTests
     }
 
     [Fact]
+    public void RecoverInProgressDownloads_DoesNotMistakePreExistingFileForCompletedDownload()
+    {
+        var (directory, databasePath) = CreateDatabasePath();
+
+        try
+        {
+            var filePath = Path.Combine(directory, "existing.bin");
+            File.WriteAllBytes(filePath, new byte[100]);
+            var service = new DownloadService(new Database(databasePath));
+            var started = service.Start("https://example.com/existing.bin", filePath);
+            service.UpdateProgress(started.Id, 90, 100);
+
+            Assert.Equal(1, service.RecoverInProgressDownloads());
+
+            var recovered = Assert.Single(service.GetRecent());
+            Assert.Equal(DownloadState.Interrupted, recovered.State);
+            Assert.True(File.Exists(filePath));
+            Assert.Equal(100, new FileInfo(filePath).Length);
+        }
+        finally
+        {
+            ClearDatabase(directory, databasePath);
+        }
+    }
+
+    [Fact]
     public void RecoverInProgressDownloads_PreservesCompleteFile()
     {
         var (directory, databasePath) = CreateDatabasePath();
@@ -87,9 +113,10 @@ public class DownloadServiceTests
         try
         {
             var filePath = Path.Combine(directory, "complete.bin");
-            File.WriteAllBytes(filePath, new byte[100]);
             var service = new DownloadService(new Database(databasePath));
             var started = service.Start("https://example.com/complete.bin", filePath);
+            File.WriteAllBytes(filePath, new byte[100]);
+            File.SetLastWriteTimeUtc(filePath, DateTime.UtcNow.AddSeconds(1));
             service.UpdateProgress(started.Id, 90, 100);
 
             Assert.Equal(1, service.RecoverInProgressDownloads());

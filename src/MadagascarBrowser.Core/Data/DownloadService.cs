@@ -57,23 +57,29 @@ namespace MadagascarBrowser.Core.Data
         /// </summary>
         public int RecoverInProgressDownloads()
         {
-            var pending = new List<(long Id, string Path, long TotalBytes)>();
+            var pending = new List<(long Id, string Path, long TotalBytes, DateTime StartedAt)>();
             using (var connection = new SqliteConnection($"Data Source={_path}"))
             {
                 connection.Open();
                 using var command = connection.CreateCommand();
-                command.CommandText = "SELECT id,path,total_bytes FROM downloads WHERE state=$state";
+                command.CommandText = "SELECT id,path,total_bytes,started_at FROM downloads WHERE state=$state";
                 command.Parameters.AddWithValue("$state", DownloadState.InProgress.ToString());
                 using var reader = command.ExecuteReader();
                 while (reader.Read())
-                    pending.Add((reader.GetInt64(0), reader.GetString(1), reader.GetInt64(2)));
+                    pending.Add((reader.GetInt64(0), reader.GetString(1), reader.GetInt64(2),
+                        DateTimeStorage.Parse(reader.GetString(3))));
             }
 
             foreach (var item in pending)
             {
+                // Be conservative: a pre-existing file at the selected destination must not
+                // make a new, interrupted download look complete. Require an exact size match
+                // and a last-write timestamp at or after this download's recorded start.
+                var fileInfo = File.Exists(item.Path) ? new FileInfo(item.Path) : null;
                 var complete = item.TotalBytes > 0
-                    && File.Exists(item.Path)
-                    && new FileInfo(item.Path).Length >= item.TotalBytes;
+                    && fileInfo != null
+                    && fileInfo.Length == item.TotalBytes
+                    && fileInfo.LastWriteTimeUtc >= item.StartedAt;
                 using var connection = new SqliteConnection($"Data Source={_path}");
                 connection.Open();
                 using var command = connection.CreateCommand();
