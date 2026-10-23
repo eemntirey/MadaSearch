@@ -47,9 +47,9 @@ namespace MadagascarBrowser.Shell
         public string? PrivateProfileFolder { get; set; }
 
         public TabKind Kind { get; set; } = TabKind.Page;
-        public object View { get; set; }
+        public object? View { get; set; }
 
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        public event PropertyChangedEventHandler? PropertyChanged;
+        protected void OnPropertyChanged([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
     }
 }
