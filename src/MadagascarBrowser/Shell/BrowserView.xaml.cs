@@ -391,9 +391,9 @@ namespace MadagascarBrowser.Shell
         private async void MenuAddFavorite_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
-            if ((DataContext as TabViewModel)?.IsPrivate == true)
+            if (!PrivateBrowsingPolicy.ShouldPersistFavorites((DataContext as TabViewModel)?.IsPrivate == true))
             {
-                MenuFeedback.Text = "Les favoris sont désactivés en navigation privée.";
+                MenuFeedback.Text = "Les favoris sont désactivés en navigation privée."
                 MenuPopup.IsOpen = true;
                 return;
             }
@@ -427,7 +427,7 @@ namespace MadagascarBrowser.Shell
         private async void MenuSaveOffline_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
-            if ((DataContext as TabViewModel)?.IsPrivate == true)
+            if (!PrivateBrowsingPolicy.ShouldPersistOfflinePages((DataContext as TabViewModel)?.IsPrivate == true))
             {
                 MessageBox.Show(Window.GetWindow(this), "L'enregistrement hors ligne est désactivé en navigation privée.",
                     "Navigation privée", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -558,7 +558,7 @@ namespace MadagascarBrowser.Shell
 
             // The user explicitly selected this destination; keep the file, but never persist
             // private download metadata in the normal download database.
-            if ((DataContext as TabViewModel)?.IsPrivate == true)
+            if (!PrivateBrowsingPolicy.ShouldPersistDownloadMetadata((DataContext as TabViewModel)?.IsPrivate == true))
                 return;
 
             var download = await DatabaseAccess.WriteAsync(() =>
@@ -709,7 +709,7 @@ namespace MadagascarBrowser.Shell
                 }
             }
 
-            if (e.IsSuccess && IsHistoryWorthy(core.Source) && (DataContext as TabViewModel)?.IsPrivate != true)
+            if (e.IsSuccess && PrivateBrowsingPolicy.ShouldPersistHistory((DataContext as TabViewModel)?.IsPrivate == true, IsHistoryWorthy(core.Source)))
             {
                 var url = core.Source;
                 var title = core.DocumentTitle ?? string.Empty;
