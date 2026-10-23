@@ -800,3 +800,19 @@ La recette UI demeure distincte : GUI-01 à GUI-13 sont explicitement non exécu
 Le commit documentaire courant déclenche à nouveau les workflows; la CI terminale de ce nouveau SHA doit être vérifiée avant la clôture technique.
 
 **Aucune fusion vers main effectuée.**
+
+
+## Vérification terminale après mise à jour du rapport
+
+**SHA contrôlé :** `44f9750ff593160f17bb64e62bb306b884ed298c`.
+
+- [vérifié] Workflow `.NET validation` : completed / success — https://github.com/eemntirey/MadaSearch/actions/runs/39985180678.
+- [vérifié] Workflow `Recette UI Windows — Phase 8` : completed / success — https://github.com/eemntirey/MadaSearch/actions/runs/39985180694.
+- [vérifié] Artefact des TRX : https://github.com/eemntirey/MadaSearch/actions/runs/39985180694/artifacts/12515751251.
+- [vérifié] Build Release réussi; TRX : Core 194/194, Shell 21/21, UiTests smoke test 1/1, aucun échec ni test ignoré.
+- [vérifié] Inventaire O1 : aucun `Skip=`, aucun candidat de suppression injustifiée; les deux déplacements de fichiers sont identifiés par l'égalité des blobs.
+- [non exécuté] GUI-01 à GUI-13 restent manuels et sans preuves PASS.
+- [vérifié] PR #5 toujours ouverte en brouillon, non fusionnée; `mergeable_state=clean` au contrôle terminal.
+- [vérifié] `main` est inchangée : `2b80b96b6ceea52913079667db49d265cdd1cd67`.
+
+**Décision finale : non prêt à fusionner tant que la recette fonctionnelle GUI requise n'est pas exécutée et documentée. Aucune fusion vers main.**
