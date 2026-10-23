@@ -207,6 +207,16 @@
                                    Text="{Binding SavedDataText, Source={x:Static shell:BrowserStats.Instance}}"
                                    ToolTip="{Binding SavedDataTooltip, Source={x:Static shell:BrowserStats.Instance}}"/>
                     </Border>
+                    <Border Background="{DynamicResource SurfaceHighBrush}" CornerRadius="999"
+                            Padding="10,3" Margin="0,0,6,0">
+                        <TextBlock FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                                   Text="{Binding ReplacedImagesCount, Source={x:Static shell:BrowserStats.Instance}, StringFormat={}{0} images remplacées}"/>
+                    </Border>
+                    <Border Background="{DynamicResource SurfaceHighBrush}" CornerRadius="999"
+                            Padding="10,3" Margin="0,0,6,0">
+                        <TextBlock FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                                   Text="{Binding BlockedVideosCount, Source={x:Static shell:BrowserStats.Instance}, StringFormat={}{0} vidéos bloquées}"/>
+                    </Border>
                     <Border Background="{DynamicResource SurfaceHighBrush}" CornerRadius="999" Padding="10,3">
                         <TextBlock FontSize="11" Foreground="{DynamicResource MutedBrush}"
                                    Text="{Binding Tabs.Count, StringFormat={}{0} onglets}"/>

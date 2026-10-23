@@ -919,6 +919,8 @@ namespace MadagascarBrowser.Shell
                 await Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     BrowserStats.Instance.BlockedCount = metrics.SessionBlockedAds;
+                    BrowserStats.Instance.ReplacedImagesCount = metrics.SessionReplacedImages;
+                    BrowserStats.Instance.BlockedVideosCount = metrics.SessionBlockedVideos;
                     BrowserStats.Instance.SavedDataText =
                         $"↓ {(metrics.SessionSavedBytes / (1024d * 1024d)).ToString("N1", culture)} Mo économisés";
                     BrowserStats.Instance.SavedDataTooltip =
