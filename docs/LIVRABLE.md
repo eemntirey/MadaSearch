@@ -51,6 +51,10 @@ vérifiables que manuellement : c'est exactement le trou que la phase 1 comble.
   jugées cohérentes, et découpées en 4 commits :
   `4fb6eca` (course d'annulation AsyncDebouncer), `ca31727` (profil unifié),
   `9dbccb5` (journal fichier 6.2), `3d00ffa` (recherche/zoom/impression/plein écran/raccourcis, phase 3).
+- Par la suite : `f462301` + `56a236d` (documents de phase 0), puis `8a0dc6a`
+  (bouton Épingler + glisser la barre d'onglets — feature ajoutée hors plan,
+  compilée avec restauration de `CloseTab_Click` et correction de
+  `ReleaseMouseCapture()`).
 - Chaîne de commits récente lue : phases 2.1→2.4 et 3 (core) déjà en historique (`8a9955d`…).
   L'état du dépôt est **connu et compris** → pas de STOP.
 
@@ -58,7 +62,7 @@ vérifiables que manuellement : c'est exactement le trou que la phase 1 comble.
 
 | # | Annoncé | État réel observé | Traitement |
 |---|---|---|---|
-| É1 | 1 avertissement de nullabilité | **2 avertissements distincts** en build complet : `CS8622` (`MainWindow.OnSourceInitialized`), `CS8767` (`RecordingTabHost.NewTab` dans les tests) | Dette planifiée phase 6.1 |
+| É1 | 1 avertissement de nullabilité | **Avertissements de nullabilité résiduels** : `CS8622` (`MainWindow.OnSourceInitialized`), `CS8767` (`RecordingTabHost.NewTab` dans les tests) — visibles selon la complétude du rebuild | Dette planifiée phase 6.1 |
 | É2 | « aucun bug connu » supposé après phase 0 | **Exception récurrente détectée au journal** : `KeyNotFoundException` en `BrowserView.OnFetchRequestPaused` ligne 741 (`root.GetProperty("responseHeaders")` absent du payload DevTools) — 4 occurrences dès la première navigation, interceptée et loggée (non silencieuse), mais interception DataSaver en erreur sur certaines réponses | **Correctif phase 1** (parcour 1.12 / 2.1) |
 | É3 | 180 tests verts = fonctionnel | Confirmé : 166 Core + 14 Shell verts, **mais aucun parcours manuel documenté** avant cette mission | Comblé par les phases 1 à 4 |
 | É4 | Travail phase 3 / 6.2 « supposé » committé | Était **non committé** au démarrage (13 fichiers modifiés + 1 test) | Committé en 4 commits (0.3) |

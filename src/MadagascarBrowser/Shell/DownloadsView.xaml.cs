@@ -88,7 +88,19 @@ namespace MadagascarBrowser.Shell
                 download.State != DownloadState.Completed || !File.Exists(download.Path))
                 return;
 
-            Process.Start(new ProcessStartInfo(download.Path) { UseShellExecute = true });
+            try
+            {
+                Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{download.Path}\"")
+                {
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception exception)
+            {
+                AppLog.Error($"Impossible d'ouvrir le dossier du téléchargement {download.Id}.", exception);
+                MessageBox.Show(Window.GetWindow(this), "Le dossier du téléchargement ne peut pas être ouvert.",
+                    "Téléchargements", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
     }
 }
