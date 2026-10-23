@@ -30,6 +30,7 @@ public sealed class NativeWebMessagePolicyTests
     [InlineData("http://startpage.localhost/")]
     [InlineData("https://startpage.localhost.example.com/")]
     [InlineData("https://startpage.localhost:444/")]
+    [InlineData("https://user@startpage.localhost/")]
     [InlineData("file:///C:/page.html")]
     [InlineData("not a uri")]
     [InlineData(null)]
