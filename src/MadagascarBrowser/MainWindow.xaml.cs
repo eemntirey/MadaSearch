@@ -21,14 +21,18 @@ namespace MadagascarBrowser
         private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int valueSize);
 
         private readonly TabManager _tabManager;
+        private readonly bool _isPrivate;
         private readonly DispatcherTimer _sessionSnapshotTimer = new() { Interval = TimeSpan.FromSeconds(15) };
 
-        public MainWindow()
+        public MainWindow(bool isPrivate = false)
         {
             InitializeComponent();
-            _tabManager = new TabManager();
+            _isPrivate = isPrivate;
+            PrivateProfileSession.CleanupOrphanedProfiles();
+            Title = isPrivate ? "Madagascar Browser — Navigation privée" : "Madagascar Browser";
+            _tabManager = new TabManager(isPrivate);
             BrowserServices.EnsureInitialized();
-            if (BrowserServices.CurrentSettings.RestoreSession)
+            if (!_isPrivate && BrowserServices.CurrentSettings.RestoreSession)
                 _tabManager.RestoreSession(BrowserServices.Sessions.Load());
             if (_tabManager.Tabs.Count == 0)
                 _tabManager.NewTab();
@@ -36,14 +40,19 @@ namespace MadagascarBrowser
             SourceInitialized += OnSourceInitialized;
             PreviewKeyDown += OnPreviewKeyDown;
             Closing += OnClosing;
-            _sessionSnapshotTimer.Tick += (_, _) => SaveSessionSnapshot();
-            _sessionSnapshotTimer.Start();
+            Closed += (_, _) => _tabManager.Dispose();
+            if (!_isPrivate)
+            {
+                _sessionSnapshotTimer.Tick += (_, _) => SaveSessionSnapshot();
+                _sessionSnapshotTimer.Start();
+            }
         }
 
         private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
         {
             _sessionSnapshotTimer.Stop();
-            SaveSessionSnapshot();
+            if (!_isPrivate)
+                SaveSessionSnapshot();
         }
 
         /// <summary>
@@ -51,6 +60,8 @@ namespace MadagascarBrowser
         /// </summary>
         private void SaveSessionSnapshot()
         {
+            if (_isPrivate)
+                return;
             var urls = new List<string>();
             var activeIndex = -1;
             var currentIndex = _tabManager.Tabs.IndexOf(_tabManager.Active);
