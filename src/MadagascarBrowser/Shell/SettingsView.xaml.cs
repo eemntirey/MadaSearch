@@ -72,6 +72,11 @@ namespace MadagascarBrowser.Shell
 
         private async void ClearData_Click(object sender, RoutedEventArgs e)
         {
+            if (Window.GetWindow(this)?.DataContext is TabManager { IsPrivate: true })
+            {
+                ClearDataFeedback.Text = "L'effacement des données du profil normal est désactivé depuis une fenêtre privée.";
+                return;
+            }
             var clearHistory = ClearHistoryCheck.IsChecked == true;
             var clearCookies = ClearCookiesCheck.IsChecked == true;
             var clearCache = ClearCacheCheck.IsChecked == true;
