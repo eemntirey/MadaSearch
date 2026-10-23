@@ -34,6 +34,6 @@ jobs:
       - name: Build Release
         run: dotnet build MadagascarBrowser.sln --configuration Release --no-restore
       - name: Test
-        run: dotnet test MadagascarBrowser.sln --configuration Release --no-build --filter "FullyQualifiedName!~MadagascarBrowser.UiTests" --logger "trx;LogFileName=test-results.trx"
+        run: dotnet test MadagascarBrowser.sln --configuration Release --no-build --filter "FullyQualifiedName!~MadagascarBrowser.UiTests" --logger "trx;LogFilePrefix=test-results"
 
 # Phase 4 final verification: keep CI enabled on the integration candidate branch.

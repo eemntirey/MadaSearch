@@ -775,3 +775,10 @@ Contrôle effectué sur le SHA de travail 2159e6f59c734883c82e38879b02e0f4c29a06
 - Le prochain commit documentaire déclenche une nouvelle CI; le SHA final de Phase 8 doit lui aussi atteindre completed / success. Le run 2159e6f est la preuve terminale du contenu applicatif précédant cette dernière mise à jour documentaire.
 
 **Aucune fusion vers main effectuée.**
+
+
+## Correction finale de l'archivage TRX
+
+Le run UI Phase 8 sur ff8d9f6 a terminé avec succès, et les compteurs vérifiés donnent 194 tests Core et 1 smoke test UI réussis. Le journal de job confirme également 21 tests Shell réussis, mais l'artefact a montré que le paramètre LogFileName écrasait le TRX précédent lors de l'exécution multi-projet de la solution. Pour que chaque groupe de tests ait un TRX distinct et que les preuves soient opposables, les deux workflows utilisent maintenant LogFilePrefix au lieu de LogFileName. Cette correction ne modifie aucun test applicatif; elle change uniquement le nommage des fichiers de résultats.
+
+Le prochain run doit confirmer que Core, Shell et UiTests publient chacun leur propre TRX sur le SHA final. Jusqu'à ce run terminal, la validation de l'archivage complet reste non vérifiée.
