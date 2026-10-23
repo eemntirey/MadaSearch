@@ -41,6 +41,7 @@ namespace MadagascarBrowser.Core.Security
 
             return uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
                 && uri.Host.Equals(localHost, StringComparison.OrdinalIgnoreCase)
+                && string.IsNullOrEmpty(uri.UserInfo)
                 && uri.IsDefaultPort;
         }
     }
