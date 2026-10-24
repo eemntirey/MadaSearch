@@ -130,8 +130,9 @@
                          ItemsSource="{Binding Tabs}"
                          SelectedItem="{Binding Active}"
                          Background="Transparent" BorderThickness="0"
-                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.HorizontalScrollBarVisibility="Auto"
                          ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                         ScrollViewer.CanContentScroll="True"
                          ItemContainerStyle="{StaticResource TabStripItem}">
                     <ListBox.ItemsPanel>
                         <ItemsPanelTemplate>

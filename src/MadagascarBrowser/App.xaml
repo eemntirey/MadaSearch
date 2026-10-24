@@ -183,19 +183,21 @@
                     <ControlTemplate TargetType="ListBoxItem">
                         <Grid>
                             <Border x:Name="Bd" CornerRadius="10" Margin="3,4,3,3" Padding="12,7"
-                                    Background="Transparent">
+                                    Background="Transparent" BorderBrush="Transparent" BorderThickness="1">
                                 <ContentPresenter/>
                             </Border>
-                            <Border x:Name="Top" Height="2" CornerRadius="1" Margin="16,4,16,0"
+                            <Border x:Name="Top" Height="3" CornerRadius="1.5" Margin="16,4,16,0"
                                     VerticalAlignment="Top" Background="{DynamicResource AccentBrush}"
                                     Visibility="Collapsed"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource HoverBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource EdgeStrongBrush}"/>
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentSoftBrush}"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
                                 <Setter TargetName="Top" Property="Visibility" Value="Visible"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
