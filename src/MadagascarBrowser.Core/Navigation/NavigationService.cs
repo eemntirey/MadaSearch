@@ -31,8 +31,10 @@ namespace MadagascarBrowser.Core.Navigation
             }
 
             // Un chemin local absolu (« C:\...\page.mhtml ») est une cible de fichier :
-            // NavigationTargetResolver le convertit en URI file://.
-            if (Path.IsPathRooted(input))
+            // NavigationTargetResolver le convertit en URI file://. Un sélecteur de
+            // lecteur sans séparateur (« c: documents ») n'en est pas un : c'est une
+            // recherche, sinon la saisie deviendrait un fichier introuvable.
+            if (LooksLikeRootedPath(input))
             {
                 return input;
             }
@@ -80,6 +82,15 @@ namespace MadagascarBrowser.Core.Navigation
             }
 
             return false;
+        }
+
+        private static bool LooksLikeRootedPath(string s)
+        {
+            // Un chemin absolu Windows (« C:\... » ou « C:/... ») est une page locale,
+            // jamais une recherche. Un simple lecteur (« c: bonjour ») reste une
+            // recherche : sans séparateur, il n'y a pas de chemin.
+            return s.IndexOfAny(new[] { '\\', '/' }) >= 0
+                && Path.IsPathRooted(s);
         }
 
         /// <summary>

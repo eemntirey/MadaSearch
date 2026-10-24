@@ -79,6 +79,23 @@ public class NavigationServiceTests
     }
 
     [Fact]
+    public void ResolveNavigation_GivenFileUrlWithSpaces_KeepsFileScheme()
+    {
+        var result = _nav.ResolveNavigation("file:///C:/mon dossier/page.mhtml");
+
+        Assert.StartsWith("file:///", result);
+        Assert.DoesNotContain("https://file", result);
+    }
+
+    [Fact]
+    public void ResolveNavigation_GivenDriveLetterWithText_IsTreatedAsSearch()
+    {
+        var result = _nav.ResolveNavigation("c: documents", "https://duckduckgo.com/?q=");
+
+        Assert.StartsWith("https://duckduckgo.com/?q=", result);
+    }
+
+    [Fact]
     public void LooksLikeUrl_GivenFileUrl_IsAUrl()
     {
         Assert.True(_nav.LooksLikeUrl("file:///C:/Users/moi/page.mhtml"));

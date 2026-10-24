@@ -207,10 +207,10 @@ namespace MadagascarBrowser
                 int round = DWMWCP_ROUND;
                 DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ref round, sizeof(int));
             }
-            catch
+            catch (Exception exception)
             {
                 // Windows sans DWM : la barre de titre reste en thème système.
-                AppLog.Warning("Le gestionnaire de fenêtres DWM a refusé la demande de thème.");
+                AppLog.Warning("Le gestionnaire de fenêtres DWM a refusé la demande de thème.", exception);
             }
         }
 

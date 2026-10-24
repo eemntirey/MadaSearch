@@ -99,6 +99,8 @@ namespace MadagascarBrowser.Shell
         /// </summary>
         private static void WarnAboutDefaultProfileLeftovers()
         {
+            ReportDefaultProfileLeftovers();
+
             try
             {
                 var applicationName = Path.GetFileNameWithoutExtension(Environment.ProcessPath) ?? "MadagascarBrowser";
@@ -119,6 +121,32 @@ namespace MadagascarBrowser.Shell
             {
                 Debug.WriteLine($"Impossible de vérifier les profils WebView2 par défaut : {exception}");
                 Trace.TraceWarning($"Impossible de vérifier les profils WebView2 par défaut : {exception}");
+            }
+        }
+
+        /// <summary>
+        /// Signale les profils WebView2 par défaut laissés par une version antérieure
+        /// (à côté de l'exécutable ou dans %LocalAppData%). Leur présence ne bloque
+        /// rien : le profil imposé est ailleurs, mais elle indique une installation
+        /// à nettoyer.
+        /// </summary>
+        private static void ReportDefaultProfileLeftovers()
+        {
+            try
+            {
+                var applicationName = Path.GetFileNameWithoutExtension(
+                    Environment.ProcessPath ?? "MadagascarBrowser");
+                foreach (var leftover in BrowserPaths.FindDefaultProfileLeftovers(
+                             AppContext.BaseDirectory,
+                             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                             applicationName))
+                {
+                    Trace.TraceWarning($"Profil WebView2 par défaut résiduel (nettoyage conseillé) : {leftover}");
+                }
+            }
+            catch (Exception exception)
+            {
+                Trace.TraceWarning($"Diagnostic des profils WebView2 par défaut impossible : {exception}");
             }
         }
     }

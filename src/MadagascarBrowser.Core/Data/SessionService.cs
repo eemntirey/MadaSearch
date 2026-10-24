@@ -46,8 +46,10 @@ namespace MadagascarBrowser.Core.Data
             {
                 urls = JsonSerializer.Deserialize<List<string>>(reader.GetString(0));
             }
-            catch (JsonException)
+            catch (JsonException exception)
             {
+                System.Diagnostics.Trace.TraceWarning(
+                    $"Session illisible (JSON corrompu), démarrage sans restauration : {exception.Message}");
                 return new BrowserSession(Array.Empty<string>(), -1);
             }
 
