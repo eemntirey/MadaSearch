@@ -5,10 +5,12 @@ on:
     branches:
       - main
       - feat/design-moderne
+      - feat/experience-madasearch-innovante
       - fix/audit-madagascar-browser
       - integration/audit-design-moderne
   pull_request:
     branches:
+      - main
       - fix/audit-madagascar-browser
 
 permissions:
