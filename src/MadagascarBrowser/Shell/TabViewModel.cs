@@ -71,11 +71,22 @@ namespace MadagascarBrowser.Shell
 
         public event PropertyChangedEventHandler? PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-        /// <summary>Indicates that this tab belongs to an isolated private window.</summary>
+        /// <summary>Vrai quand l'onglet appartient à une fenêtre privée.</summary>
         public bool IsPrivate { get; set; }
 
-        /// <summary>Temporary WebView2 profile folder for a private tab.</summary>
+        /// <summary>Dossier temporaire du profil WebView2 privé.</summary>
         public string? PrivateProfileFolder { get; set; }
 
+        /// <summary>Identifiant du groupe d'onglets (0 = aucun groupe).</summary>
+        public int GroupId { get; set; }
+
+        /// <summary>Nom du groupe d'onglets (lu depuis le modèle de groupe).</summary>
+        public string GroupName { get; set; } = string.Empty;
+
+        /// <summary>Couleur du groupe (hex).</summary>
+        public string GroupColorHex { get; set; } = "#FF4438";
+
+        /// <summary>Vrai si le groupe de cet onglet est réduit.</summary>
+        public bool GroupCollapsed { get; set; }
     }
 }

@@ -10,6 +10,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using System.Windows.Threading;
+using MadagascarBrowser.Core.Intelligence;
 using MadagascarBrowser.Core.Navigation;
 using MadagascarBrowser.Shell;
 using MadagascarBrowser.Core.Security;
@@ -378,6 +379,23 @@ namespace MadagascarBrowser
             // Capturer la souris sur l'élément pour recevoir tous les événements de déplacement
             e.Handled = true;
             TabStripBorder.CaptureMouse();
+        }
+
+        private void ToggleAssistantPanel_Click(object sender, RoutedEventArgs e)
+        {
+            if (AssistantPanel.Visibility == Visibility.Visible)
+            {
+                AssistantPanel.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                // Initialise le DataContext du panneau avec le service d'assistance configuré.
+                if (AssistantPanel.DataContext == null)
+                {
+                    AssistantPanel.DataContext = new AssistantPanelViewModel(BrowserServices.Assistant);
+                }
+                AssistantPanel.Visibility = Visibility.Visible;
+            }
         }
     }
 }

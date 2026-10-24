@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using MadagascarBrowser.Core.Blocking;
 using MadagascarBrowser.Core.Data;
+using MadagascarBrowser.Core.Intelligence;
 using MadagascarBrowser.Core.Navigation;
 using MadagascarBrowser.Core.Paths;
+using MadagascarBrowser.Core.Performance;
 
 namespace MadagascarBrowser.Shell
 {
@@ -23,6 +25,8 @@ namespace MadagascarBrowser.Shell
         public static BrowserSettingsService SettingsService { get; private set; } = null!;
         public static SessionService Sessions { get; private set; } = null!;
         public static BrowserSettings CurrentSettings { get; private set; } = new();
+        public static IAssistantService Assistant { get; private set; } = new NoOpAssistantService();
+        public static PerformanceMonitor Performance { get; private set; } = new();
 
         /// <summary>
         /// Signalé après l'enregistrement des paramètres : les vues déjà

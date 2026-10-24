@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+             xmlns:shell="clr-namespace:MadagascarBrowser.Shell"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid>
@@ -119,6 +120,10 @@
                                 Content="&#xE712;" ToolTip="Menu" Click="Menu_Click"
                                 AutomationProperties.Name="Menu"
                                 AutomationProperties.AutomationId="MenuButton"/>
+                        <Button x:Name="AssistantBtn" Style="{StaticResource IconButton}"
+                                Content="&#xE819;" ToolTip="Assistance (optionnel)" Click="Assistant_Click"
+                                AutomationProperties.Name="Assistance"
+                                AutomationProperties.AutomationId="AssistantButton"/>
                     </StackPanel>
                 </Grid>
 
@@ -162,6 +167,17 @@
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
+                    </Border>
+                </Popup>
+
+                <!-- Popup d'assistance -->
+                <Popup x:Name="AssistantPopup" PlacementTarget="{Binding ElementName=AssistantBtn}"
+                       Placement="Bottom" StaysOpen="False" AllowsTransparency="True"
+                       VerticalOffset="6" HorizontalOffset="-180" Width="360">
+                    <Border Background="{DynamicResource SurfaceBrush}"
+                            BorderBrush="{DynamicResource EdgeBrush}" BorderThickness="1"
+                            CornerRadius="10">
+                        <shell:AssistantPanel x:Name="AssistantPanelInstance" Height="320"/>
                     </Border>
                 </Popup>
 
