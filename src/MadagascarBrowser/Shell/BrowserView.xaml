@@ -29,7 +29,7 @@
             </Border.Style>
             <Grid>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="44"/>
+                    <RowDefinition Height="48"/>
                     <RowDefinition Height="2"/>
                 </Grid.RowDefinitions>
 
@@ -58,9 +58,9 @@
 
                     <!-- Pilule omnibox : état de sécurité + champ + favori -->
                     <Border Grid.Column="1" Margin="8,0" MaxWidth="820" HorizontalAlignment="Stretch"
-                            Height="36" Background="{DynamicResource BgBrush}"
+                            Height="38" Background="{DynamicResource SurfaceHighBrush}"
                             BorderBrush="{DynamicResource EdgeStrongBrush}" BorderThickness="1"
-                            CornerRadius="{DynamicResource RadiusPill}">
+                            CornerRadius="{DynamicResource RadiusPill}" Padding="2,0">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>

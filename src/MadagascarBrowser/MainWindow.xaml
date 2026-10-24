@@ -64,8 +64,12 @@
 
             <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="14,0,0,0"
                         VerticalAlignment="Center">
-                <TextBlock Text="M" FontFamily="Segoe UI" FontSize="13" FontWeight="Bold"
-                           Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
+                <Border Width="22" Height="22" CornerRadius="7" Background="{DynamicResource AccentBrush}"
+                        VerticalAlignment="Center" Margin="0,0,7,0">
+                    <TextBlock Text="M" FontFamily="Segoe UI" FontSize="13" FontWeight="Bold"
+                               Foreground="{DynamicResource OnAccentBrush}" HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
+                </Border>
                 <TextBlock Text="{Binding Title, RelativeSource={RelativeSource AncestorType=Window}}" FontFamily="Segoe UI" FontSize="11.5"
                            Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"
                            Margin="1,0,0,0"/>
@@ -112,11 +116,11 @@
         </Grid>
 
         <!-- Barre d'onglets : onglets flottants sur le fond de la fenêtre -->
-        <Border x:Name="TabStripBorder" Grid.Row="2" Background="{DynamicResource BgBrush}" BorderThickness="0"
+        <Border x:Name="TabStripBorder" Grid.Row="2" Background="{DynamicResource BgBrush}" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource EdgeBrush}"
                 MouseLeftButtonDown="TabStripBorder_MouseLeftButtonDown"
                 MouseLeftButtonUp="TabStripBorder_MouseLeftButtonUp"
                 MouseMove="TabStripBorder_MouseMove">
-            <Grid Margin="8,2,8,0">
+            <Grid Margin="10,3,10,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
@@ -136,7 +140,7 @@
                     </ListBox.ItemsPanel>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <Grid Height="24">
+                            <Grid Height="27">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>

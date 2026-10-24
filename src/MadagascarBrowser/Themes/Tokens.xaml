@@ -2,25 +2,25 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!-- ============ Surfaces ============ -->
-    <SolidColorBrush x:Key="BgBrush" Color="#0C0B0A"/>
-    <SolidColorBrush x:Key="SurfaceBrush" Color="#131211"/>
-    <SolidColorBrush x:Key="SurfaceHighBrush" Color="#1B1917"/>
-    <SolidColorBrush x:Key="HoverBrush" Color="#24211E"/>
-    <SolidColorBrush x:Key="ActiveTabBrush" Color="#2B2724"/>
+    <SolidColorBrush x:Key="BgBrush" Color="#081321"/>
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#0D1B2D"/>
+    <SolidColorBrush x:Key="SurfaceHighBrush" Color="#13263C"/>
+    <SolidColorBrush x:Key="HoverBrush" Color="#1B3552"/>
+    <SolidColorBrush x:Key="ActiveTabBrush" Color="#1D3B5D"/>
     <SolidColorBrush x:Key="PillBrush" Color="#1B1917"/>
 
     <!-- ============ Filets ============ -->
-    <SolidColorBrush x:Key="EdgeBrush" Color="#272421"/>
-    <SolidColorBrush x:Key="EdgeStrongBrush" Color="#383430"/>
+    <SolidColorBrush x:Key="EdgeBrush" Color="#20354B"/>
+    <SolidColorBrush x:Key="EdgeStrongBrush" Color="#2B4967"/>
 
     <!-- ============ Texte ============ -->
-    <SolidColorBrush x:Key="TextBrush" Color="#F2EFEA"/>
-    <SolidColorBrush x:Key="MutedBrush" Color="#A8A099"/>
-    <SolidColorBrush x:Key="FaintBrush" Color="#6F6963"/>
+    <SolidColorBrush x:Key="TextBrush" Color="#F4F8FF"/>
+    <SolidColorBrush x:Key="MutedBrush" Color="#A9BCD2"/>
+    <SolidColorBrush x:Key="FaintBrush" Color="#7189A5"/>
 
     <!-- ============ Sémantique ============ -->
-    <SolidColorBrush x:Key="AccentBrush" Color="#FF4438"/>
-    <SolidColorBrush x:Key="AccentSoftBrush" Color="#33201E"/>
+    <SolidColorBrush x:Key="AccentBrush" Color="#278BFF"/>
+    <SolidColorBrush x:Key="AccentSoftBrush" Color="#16385D"/>
     <SolidColorBrush x:Key="SecureBrush" Color="#19B36B"/>
     <SolidColorBrush x:Key="WarnBrush" Color="#F0A63C"/>
     <SolidColorBrush x:Key="DangerBrush" Color="#FF5C57"/>

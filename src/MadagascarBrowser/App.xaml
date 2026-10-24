@@ -176,13 +176,13 @@
             </Setter>
         </Style>
 
-        <!-- Onglet flottant : fond transparent, survol discret, actif + liseré rouge 2 px -->
+        <!-- Onglets MadaSearch : surfaces aérées, état actif bleu et repère visuel net -->
         <Style x:Key="TabStripItem" TargetType="ListBoxItem">
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
                         <Grid>
-                            <Border x:Name="Bd" CornerRadius="9" Margin="3,6,3,4" Padding="12,6"
+                            <Border x:Name="Bd" CornerRadius="10" Margin="3,4,3,3" Padding="12,7"
                                     Background="Transparent">
                                 <ContentPresenter/>
                             </Border>
@@ -195,7 +195,7 @@
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource HoverBrush}"/>
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SurfaceHighBrush}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentSoftBrush}"/>
                                 <Setter TargetName="Top" Property="Visibility" Value="Visible"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
