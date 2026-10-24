@@ -6,7 +6,7 @@
         <!-- Les jetons de couleur vivent dans Themes/Tokens.xaml (fusionné ci-dessous) :
              les vues les consomment en DynamicResource pour rester reactivables. -->
         <ResourceDictionary.MergedDictionaries>
-            <ResourceDictionary Source="Themes/Tokens.xaml"/>
+            <ResourceDictionary Source="Themes/DarkTokens.xaml"/>
         </ResourceDictionary.MergedDictionaries>
 
         <!-- Anneau de focus : visible au clavier sur les contrôles interactifs -->

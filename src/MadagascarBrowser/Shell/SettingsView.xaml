@@ -170,10 +170,8 @@
                             <StackPanel Grid.Column="0" Margin="0,0,12,0">
                                 <TextBlock Text="Thème" Style="{StaticResource ViewSubtitle}" Margin="0,0,0,6"/>
                                 <ComboBox x:Name="ThemeCombo" SelectedValuePath="Tag" Style="{StaticResource DarkComboBox}">
-                                    <ComboBoxItem Content="Sombre" Tag="dark"/>
-                                </ComboBox>
-                                <TextBlock Text="Le mode clair n'est pas encore disponible."
-                                           Style="{StaticResource ViewSubtitle}" FontSize="11" Margin="0,6,0,0"/>
+                                    <ComboBoxItem Content="Clair" Tag="light"/>
+                            </ComboBox>
                             </StackPanel>
 
                             <StackPanel Grid.Column="1" Margin="0,0,12,0">

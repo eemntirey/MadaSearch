@@ -34,4 +34,5 @@ public class TabGroupTests
         Assert.NotNull(session.Urls);
         Assert.NotNull(session.Groups);
     }
+
 }

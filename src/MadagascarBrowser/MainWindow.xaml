@@ -204,8 +204,23 @@
             </Grid>
         </Border>
 
-        <!-- Contenu de l'onglet actif -->
-        <ContentControl Grid.Row="4" Content="{Binding Active.View}"/>
+        <!-- Contenu de l'onglet actif + panneau d'assistance latéral -->
+        <Grid Grid.Row="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <ContentControl Grid.Column="0" Content="{Binding Active.View}"/>
+            <shell:AssistantPanel Grid.Column="1" x:Name="AssistantPanel"
+                                  Visibility="Collapsed"/>
+            <Button Grid.Column="0" HorizontalAlignment="Right" VerticalAlignment="Top"
+                    Margin="0,-28,8,0" Padding="8,4" Background="{DynamicResource AccentBrush}"
+                    Foreground="{DynamicResource OnAccentBrush}" BorderThickness="0"
+                    Click="ToggleAssistantPanel_Click" ToolTip="Afficher/masquer l'assistant"
+                    AutomationProperties.Name="Assistant">
+                <TextBlock Text="&#xE819;" FontFamily="Segoe MDL2 Assets" FontSize="14"/>
+            </Button>
+        </Grid>
 
         <!-- Barre d'état : état de navigation + puces d'information -->
         <Border x:Name="StatusBarBorder" Grid.Row="5" Background="{DynamicResource SurfaceBrush}"
