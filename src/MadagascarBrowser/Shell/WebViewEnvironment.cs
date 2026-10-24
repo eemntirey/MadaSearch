@@ -1,6 +1,10 @@
 using System;
+using System.Diagnostics;
+using System.Collections.Concurrent;
+using System.Threading;
 using System.IO;
 using System.Threading.Tasks;
+using MadagascarBrowser.Core.Paths;
 using Microsoft.Web.WebView2.Core;
 
 namespace MadagascarBrowser.Shell
@@ -23,25 +27,85 @@ namespace MadagascarBrowser.Shell
         /// </summary>
         public const string LocalHost = "startpage.localhost";
 
-        public static string UserDataFolder { get; } = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "MadagascarBrowser",
-            "WebView2");
+        /// <summary>URL de la page d'accueil intégrée.</summary>
+        public const string StartPageUrl = "https://" + LocalHost + "/index.html";
 
-        private static Task<CoreWebView2Environment>? _environment;
+        /// <summary>URL de la page d'erreur du navigateur.</summary>
+        public const string ErrorPageUrl = "https://" + LocalHost + "/error.html";
+
+        /// <summary>
+        /// Dossier de profil unique : jamais à côté de l'exécutable, jamais dans le
+        /// profil par défaut de WebView2 (%LocalAppData%\Microsoft\EdgeWebView2\Application).
+        /// L'emplacement est celui de BrowserPaths : une seule source de vérité
+        /// pour les données écrites par le navigateur.
+        /// </summary>
+        public static string UserDataFolder { get; } = BrowserPaths.Default.WebViewProfilePath;
+
+        private static readonly ConcurrentDictionary<string, Lazy<Task<CoreWebView2Environment>>> Environments =
+            new(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// Environnement unique, partagé par tous les onglets : un seul processus navigateur
         /// et un seul dossier de profil (WebView2 refuse deux environnements sur le même dossier).
+        /// Un échec n'est pas mis en cache : la prochaine demande retente la création.
         /// </summary>
-        public static Task<CoreWebView2Environment> GetAsync()
+        public static Task<CoreWebView2Environment> GetAsync(string? userDataFolder = null)
         {
-            if (_environment == null)
+            var folder = string.IsNullOrWhiteSpace(userDataFolder) ? UserDataFolder : Path.GetFullPath(userDataFolder);
+            return Environments.GetOrAdd(folder, path => new Lazy<Task<CoreWebView2Environment>>(
+                () => CreateAsync(path), LazyThreadSafetyMode.ExecutionAndPublication)).Value;
+        }
+
+        private static async Task<CoreWebView2Environment> CreateAsync(string folder)
+        {
+            try
             {
-                Directory.CreateDirectory(UserDataFolder);
-                _environment = CoreWebView2Environment.CreateAsync(null, UserDataFolder);
+                Directory.CreateDirectory(folder);
+                if (string.Equals(folder, UserDataFolder, StringComparison.OrdinalIgnoreCase))
+                    WarnAboutDefaultProfileLeftovers();
+                return await CoreWebView2Environment.CreateAsync(null, folder).ConfigureAwait(false);
             }
-            return _environment;
+            catch (Exception exception)
+            {
+                Environments.TryRemove(folder, out _); // failed creation is retriable
+                Trace.TraceError($"Création impossible de l'environnement WebView2 (profil '{folder}') : {exception.GetType().Name}");
+                throw;
+            }
+        }
+
+        public static void Forget(string userDataFolder)
+        {
+            Environments.TryRemove(userDataFolder, out _);
+        }
+
+        /// <summary>
+        /// Signale les profils WebView2 par défaut restés à côté de l'exécutable.
+        /// Leur présence est sans danger pour l'utilisateur, mais elle indique que
+        /// l'application tourne encore avec un dossier de profil non imposé.
+        /// </summary>
+        private static void WarnAboutDefaultProfileLeftovers()
+        {
+            try
+            {
+                var applicationName = Path.GetFileNameWithoutExtension(Environment.ProcessPath) ?? "MadagascarBrowser";
+                var leftovers = BrowserPaths.FindDefaultProfileLeftovers(
+                    AppContext.BaseDirectory,
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    applicationName);
+
+                foreach (var leftover in leftovers)
+                {
+                    var message = $"Un profil WebView2 par défaut subsiste à l'emplacement « {leftover} ». " +
+                                  "Le profil utilisé est « " + UserDataFolder + " ».";
+                    Debug.WriteLine(message);
+                    Trace.TraceWarning(message);
+                }
+            }
+            catch (Exception exception)
+            {
+                Debug.WriteLine($"Impossible de vérifier les profils WebView2 par défaut : {exception}");
+                Trace.TraceWarning($"Impossible de vérifier les profils WebView2 par défaut : {exception}");
+            }
         }
     }
 }

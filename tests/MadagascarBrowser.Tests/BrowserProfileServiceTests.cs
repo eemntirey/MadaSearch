@@ -28,6 +28,7 @@ public class BrowserProfileServiceTests
                 SearchProvider = "duckduckgo",
                 AdBlockEnabled = false,
                 DataSaverEnabled = true,
+                DataSaverImageThresholdKilobytes = 450,
                 RestoreSession = true
             });
             new BrowserProfileService(sourceDatabase, sourceSettings).Export(exportPath);
@@ -42,6 +43,7 @@ public class BrowserProfileServiceTests
             Assert.Equal("duckduckgo", targetSettings.Load().SearchProvider);
             Assert.False(targetSettings.Load().AdBlockEnabled);
             Assert.True(targetSettings.Load().DataSaverEnabled);
+            Assert.Equal(450, targetSettings.Load().DataSaverImageThresholdKilobytes);
             Assert.True(targetSettings.Load().RestoreSession);
         }
         finally

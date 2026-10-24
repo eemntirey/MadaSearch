@@ -2,14 +2,15 @@ using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
 using MadagascarBrowser.Core.Navigation;
 
 namespace MadagascarBrowser.Shell
 {
-    public class TabManager : INotifyPropertyChanged
+    public class TabManager : INotifyPropertyChanged, ITabHost
     {
         public ObservableCollection<TabViewModel> Tabs { get; } = new();
-        private TabViewModel _active;
+        private TabViewModel _active = null!;
         public TabViewModel Active
         {
             get => _active;
@@ -22,12 +23,124 @@ namespace MadagascarBrowser.Shell
             }
         }
 
-        public event EventHandler ActiveChanged;
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event EventHandler? ActiveChanged;
+        public event PropertyChangedEventHandler? PropertyChanged;
 
-        public TabViewModel NewTab(string url = "https://" + WebViewEnvironment.LocalHost + "/index.html")
+        /// <summary>Signalé quand une page passe en plein écran.</summary>
+        public event EventHandler<bool>? FullScreenChanged;
+
+        private readonly List<string> _closedTabUrls = new();
+        public bool IsPrivate { get; }
+        private PrivateProfileSession? PrivateProfile { get; }
+
+        public TabManager(bool isPrivate = false)
+        {
+            IsPrivate = isPrivate;
+            if (isPrivate) PrivateProfile = new PrivateProfileSession();
+        }
+
+        /// <summary>
+        /// Active l'onglet suivant, avec passage à l'onglet suivant en fin de liste.
+        /// </summary>
+        public void SwitchToNextTab() => SwitchTab(1);
+
+        /// <summary>Active l'onglet précédent, avec passage au dernier en début de liste.</summary>
+        public void SwitchToPreviousTab() => SwitchTab(-1);
+
+        private void SwitchTab(int offset)
+        {
+            if (Tabs.Count < 2)
+                return;
+
+            var index = Tabs.IndexOf(Active);
+            if (index < 0)
+                return;
+
+            Active = Tabs[(index + offset + Tabs.Count) % Tabs.Count];
+        }
+
+        /// <summary>Rouvre le dernier onglet fermé (Ctrl+Maj+T).</summary>
+        public void ReopenClosedTab()
+        {
+            if (_closedTabUrls.Count == 0)
+                return;
+
+            var url = _closedTabUrls[0];
+            _closedTabUrls.RemoveAt(0);
+            NewTab(url);
+        }
+
+        /// <summary>Ajoute l'onglet actif aux favoris (Ctrl+D).</summary>
+        public void AddFavoriteToActiveTab()
+        {
+            var tab = Active;
+            if (tab == null)
+                return;
+
+            if (!Uri.TryCreate(tab.Url, UriKind.Absolute, out var uri) ||
+                (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            {
+                AppLog.Info($"Ajout aux favoris ignoré : « {tab.Url} » n'est pas une page Web.");
+                return;
+            }
+
+            var url = uri.AbsoluteUri;
+            var title = tab.Title;
+            _ = DatabaseAccess.WriteAsync(() => BrowserServices.Favorites.Add(url, title));
+        }
+
+        /// <summary>Masque ou réaffiche les barres de la fenêtre selon le plein écran.</summary>
+        public void SetFullScreen(bool enabled)
+        {
+            FullScreenChanged?.Invoke(this, enabled);
+        }
+
+        /// <summary>Exécute une commande applicative issue d'un raccourci clavier.</summary>
+        public void Execute(AcceleratorCommand command)
+        {
+            var view = Active?.View as BrowserView;
+            switch (command)
+            {
+                case AcceleratorCommand.NewTab:
+                    NewTab();
+                    break;
+                case AcceleratorCommand.CloseTab:
+                    CloseActiveTab();
+                    break;
+                case AcceleratorCommand.FocusAddressBar:
+                    view?.FocusAddressBar();
+                    break;
+                case AcceleratorCommand.Reload:
+                    view?.Reload();
+                    break;
+                case AcceleratorCommand.NextTab:
+                    SwitchToNextTab();
+                    break;
+                case AcceleratorCommand.PreviousTab:
+                    SwitchToPreviousTab();
+                    break;
+                case AcceleratorCommand.AddFavorite:
+                    AddFavoriteToActiveTab();
+                    break;
+                case AcceleratorCommand.ReopenClosedTab:
+                    ReopenClosedTab();
+                    break;
+                case AcceleratorCommand.FindInPage:
+                    view?.OpenFindBar();
+                    break;
+                case AcceleratorCommand.Print:
+                    view?.Print();
+                    break;
+                case AcceleratorCommand.ExitFullScreen:
+                    view?.ExitFullScreen();
+                    break;
+            }
+        }
+
+        public TabViewModel NewTab(string? url = null)
         {
             BrowserServices.EnsureInitialized();
+            url ??= WebViewEnvironment.StartPageUrl;
             var kind = NavigationTargetResolver.Resolve(url, out var target, out var title);
             switch (kind)
             {
@@ -43,12 +156,18 @@ namespace MadagascarBrowser.Shell
                     break;
             }
 
-            var t = new TabViewModel { Title = title, Url = target };
-            var view = new BrowserView { DataContext = t };
+            var t = new TabViewModel { Title = title, Url = target, IsPrivate = IsPrivate, PrivateProfileFolder = PrivateProfile?.DirectoryPath };
+            var view = new BrowserView(this) { DataContext = t };
             t.View = view;
             Tabs.Add(t);
             Active = t;
             return t;
+        }
+
+        public void CloseActiveTab()
+        {
+            if (Active != null)
+                Close(Active);
         }
 
         public TabViewModel OpenLibrary(int selectedTab = 0)
@@ -107,6 +226,23 @@ namespace MadagascarBrowser.Shell
             NewTab(url);
         }
 
+        public async Task ClearWebViewDataAsync(bool clearHistory, bool clearCookies, bool clearCache)
+        {
+            if (IsPrivate) throw new InvalidOperationException("L'effacement sélectif du profil normal est désactivé en navigation privée.");
+            if (!clearHistory && !clearCookies && !clearCache) return;
+            var views = Tabs.Select(tab => tab.View).OfType<BrowserView>().ToList();
+            var view = views.FirstOrDefault(browserView => browserView.IsCoreReady);
+            if (view == null)
+            {
+                var pending = views.FirstOrDefault();
+                if (pending == null) throw new InvalidOperationException("Aucun onglet WebView2 ne permet d'effacer les données.");
+                await pending.CoreReady;
+                if (!pending.IsCoreReady) throw new InvalidOperationException("WebView2 n'est pas prêt pour effacer les données.");
+                view = pending;
+            }
+            await view.ClearWebViewDataAsync(clearHistory, clearCookies, clearCache);
+        }
+
         public void RestoreSession(MadagascarBrowser.Core.Data.BrowserSession session)
         {
             var urls = session.Urls
@@ -122,26 +258,46 @@ namespace MadagascarBrowser.Shell
             Active = Tabs[Math.Clamp(session.ActiveTabIndex, 0, Tabs.Count - 1)];
         }
 
+        public void Dispose()
+        {
+            foreach (var tab in Tabs.ToList())
+                if (tab.View is BrowserView view) view.Dispose();
+            Tabs.Clear();
+            _active = null!;
+            PrivateProfile?.Dispose();
+        }
+
         public void Close(TabViewModel t)
         {
             if (t == null) return;
-            var idx = Tabs.IndexOf(t);
+            var index = Tabs.IndexOf(t);
+            if (index < 0) return;
+            if (index < 0) return;
+            var wasActive = ReferenceEquals(Active, t);
+
+            // L'URL est mémorisée pour permettre la réouverture (Ctrl+Maj+T).
+            if (!IsPrivate && !string.IsNullOrWhiteSpace(t.Url))
+                _closedTabUrls.Insert(0, t.Url);
+
             Tabs.Remove(t);
             if (t.View is BrowserView view)
             {
                 view.Dispose();
             }
-            if (Active == t)
+
+            if (!wasActive)
+                return;
+
+            // Le retrait de l'élément sélectionné vide SelectedItem, ce qui efface
+            // Active par la liaison bidirectionnelle de la barre d'onglets : sans
+            // réaffectation explicite, la fenêtre resterait entièrement vide.
+            if (Tabs.Count == 0)
             {
-                if (Tabs.Any())
-                {
-                    Active = Tabs[Math.Max(0, idx - 1)];
-                }
-                else
-                {
-                    NewTab();
-                }
+                NewTab();
+                return;
             }
+
+            Active = Tabs[TabSelection.NextIndex(index, Tabs.Count)];
         }
     }
 }

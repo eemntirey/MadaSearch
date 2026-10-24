@@ -48,7 +48,7 @@
                                            VerticalAlignment="Center"/>
                                 <ProgressBar Grid.Row="1" Grid.ColumnSpan="2" Height="4" Margin="0,8,0,0"
                                              Style="{StaticResource DarkProgressBar}"
-                                             Maximum="100" Value="{Binding ProgressPercentage}"/>
+                                             Maximum="100" Value="{Binding ProgressPercentage, Mode=OneWay}"/>
                             </Grid>
                         </Border>
                     </DataTemplate>

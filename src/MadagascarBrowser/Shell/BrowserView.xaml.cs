@@ -1,29 +1,41 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Navigation;
 using System.Text.Json;
+using System.Threading;
 using Microsoft.Win32;
 using MadagascarBrowser.Core.Blocking;
 using MadagascarBrowser.Core.Data;
 using MadagascarBrowser.Core.Navigation;
+using MadagascarBrowser.Core.Security;
 using Microsoft.Web.WebView2.Core;
 
 namespace MadagascarBrowser.Shell
 {
     public partial class BrowserView : UserControl
     {
-        private const string StartPageUrl = "https://" + WebViewEnvironment.LocalHost + "/index.html";
-        private const string ErrorPageUrl = "https://" + WebViewEnvironment.LocalHost + "/error.html";
+        private const string StartPageUrl = WebViewEnvironment.StartPageUrl;
         private const string LocalHost = WebViewEnvironment.LocalHost;
         private static readonly byte[] PlaceholderGif =
             Convert.FromBase64String("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7");
+        private static readonly SemaphoreSlim StatsRefreshLock = new(1, 1);
 
+        private readonly ITabHost _tabHost;
+        private readonly NewWindowRequestHandler _newWindowHandler;
+        private readonly FindInPageState _findState = new();
+        private bool _findRunning;
         private bool _coreReady;
         private bool _suppressSuggest;
         private bool _certificateError;
+        private CoreWebView2Environment? _environment;
+        private ulong _activeNavigationId;
+        private CoreWebView2DevToolsProtocolEventReceiver? _fetchRequestPausedReceiver;
         private AsyncDebouncer? _suggestDebouncer;
         private readonly TaskCompletionSource<CoreWebView2> _coreReadySource =
             new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -33,12 +45,27 @@ namespace MadagascarBrowser.Shell
         /// fenêtre demandée par une page à l'onglet vide correspondant.
         /// </summary>
         public Task<CoreWebView2> CoreReady => _coreReadySource.Task;
+        public bool IsCoreReady => _coreReady && WebView.CoreWebView2 != null;
 
-        public BrowserView()
+        /// <summary>
+        /// Crée une vue de navigation. L'hôte d'onglets est injecté : la vue ne
+        /// dépend plus du DataContext de la fenêtre.
+        /// </summary>
+        /// <param name="tabHost">Hôte d'onglets qui portera les onglets ouverts.</param>
+        public BrowserView(ITabHost tabHost)
         {
+            _tabHost = tabHost ?? throw new ArgumentNullException(nameof(tabHost));
+            _newWindowHandler = new NewWindowRequestHandler(tabHost);
             InitializeComponent();
             BrowserServices.EnsureInitialized();
             Loaded += OnLoaded;
+            PreviewKeyDown += OnPreviewKeyDown;
+        }
+
+        private void RetryFailedNavigation_Click(object sender, RoutedEventArgs e)
+        {
+            if (_coreReady)
+                WebView.CoreWebView2.Reload();
         }
 
         private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -48,14 +75,18 @@ namespace MadagascarBrowser.Shell
             {
                 // Environnement explicite : le profil utilisateur WebView2 vit dans
                 // %LocalAppData%\MadagascarBrowser\WebView2, jamais à côté de l'exe.
-                var environment = await WebViewEnvironment.GetAsync();
+                var tabViewModel = DataContext as TabViewModel;
+                var environment = await WebViewEnvironment.GetAsync(tabViewModel?.PrivateProfileFolder);
+                _environment = environment;
                 await WebView.EnsureCoreWebView2Async(environment);
                 _coreReady = true;
-                InitCore();
+                await InitCoreAsync();
+                await RefreshStatsAsync();
                 _coreReadySource.TrySetResult(WebView.CoreWebView2);
             }
             catch (Exception exception)
             {
+                AppLog.Error("Impossible d'initialiser WebView2.", exception);
                 WebView.Visibility = Visibility.Collapsed;
                 WebViewError.Visibility = Visibility.Visible;
                 WebViewErrorText.Text = $"Impossible d'initialiser WebView2 : {exception.Message}";
@@ -64,7 +95,7 @@ namespace MadagascarBrowser.Shell
             }
         }
 
-        private void InitCore()
+        private async Task InitCoreAsync()
         {
             var core = WebView.CoreWebView2;
             ConfigureSettings(core.Settings);
@@ -75,7 +106,10 @@ namespace MadagascarBrowser.Shell
                 core.SetVirtualHostNameToFolderMapping(LocalHost, folder, CoreWebView2HostResourceAccessKind.DenyCors);
             }
 
-            core.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
+            foreach (var pattern in ResourceInterceptionScope.UrlPatterns)
+            {
+                core.AddWebResourceRequestedFilter(pattern, CoreWebView2WebResourceContext.All);
+            }
             core.WebResourceRequested += OnWebResourceRequested;
             core.DownloadStarting += OnDownloadStarting;
             core.NavigationStarting += OnNavigationStarting;
@@ -87,6 +121,9 @@ namespace MadagascarBrowser.Shell
             core.ServerCertificateErrorDetected += OnServerCertificateErrorDetected;
             core.WebMessageReceived += OnWebMessageReceived;
             HookAcceleratorKeys();
+            WebView.ZoomFactorChanged += OnZoomFactorChanged;
+            UpdateZoomIndicator(WebView.ZoomFactor);
+            await EnableDataSaverInterceptionAsync(core);
 
             var source = core.Source;
             if (string.IsNullOrWhiteSpace(source) || source == "about:blank")
@@ -149,22 +186,24 @@ namespace MadagascarBrowser.Shell
             // Messages Web : activés, nécessaire pour les pages hors ligne et l'hôte virtuel.
             settings.IsWebMessageEnabled = true;
 
-            // DevTools : activés pour le diagnostic, sans impact sur l'utilisateur final.
-            settings.AreDevToolsEnabled = true;
+            // DevTools : désactivés pour éviter une fenêtre détachée du navigateur.
+            settings.AreDevToolsEnabled = false;
 
             // Diapositives au doigt : désactivées, la navigation tactile n'a pas lieu d'être.
             settings.IsSwipeNavigationEnabled = false;
         }
 
         /// <summary>
-        /// Erreur de certificat détectée par WebView2 : c'est le signal le plus fiable
-        /// (la navigation est annulée et l'état d'erreur de navigation peut être
-        /// générique). L'action par défaut de WebView2 est conservée : le certificat
-        /// n'est pas accepté, la navigation échoue.
+        /// Erreur de certificat détectée : le certificat est rejeté explicitement
+        /// (phase 4.3). L'action par défaut de WebView2 afficherait son interstitiel
+        /// TLS avec une route « continuer quand même » ; ici la requête est annulée,
+        /// la requête échoue et la page d'erreur maison s'affiche via
+        /// NavigationCompleted, le glyph de sécurité passant en état d'erreur.
         /// </summary>
         private void OnServerCertificateErrorDetected(object? sender, CoreWebView2ServerCertificateErrorDetectedEventArgs e)
         {
             _certificateError = true;
+            e.Action = CoreWebView2ServerCertificateErrorAction.Cancel;
         }
 
         /// <summary>
@@ -178,6 +217,9 @@ namespace MadagascarBrowser.Shell
             {
                 if (DataContext is TabViewModel tab)
                     tab.IsFullScreen = isFullScreen;
+                // La barre d'onglets et la barre d'état de la fenêtre sont masquées :
+                // la page occupe alors toute la surface.
+                _tabHost.SetFullScreen(isFullScreen);
             }));
         }
 
@@ -193,29 +235,31 @@ namespace MadagascarBrowser.Shell
         private void OnNewWindowRequested(object? sender, CoreWebView2NewWindowRequestedEventArgs e)
         {
             e.Handled = true;
-            var target = NewWindowRequestResolver.Resolve(e.Uri);
 
-            if (Window.GetWindow(this)?.DataContext is not TabManager tabManager)
-                return;
-
-            if (NewWindowRequestResolver.IsBlank(e.Uri))
+            var result = _newWindowHandler.Handle(e.Uri);
+            switch (result.Outcome)
             {
-                // window.open sans URL : on ouvre un onglet vide et on laisse la page
-                // appelante piloter le contenu via l'API WebView2.
-                _ = OpenBlankWindowAsync(e, tabManager);
-                return;
-            }
+                case NewWindowOutcome.OpenedInNewTab:
+                    return;
 
-            tabManager.NewTab(target);
+                case NewWindowOutcome.BlankTabOpened:
+                    // window.open sans URL : on laisse la page appelante piloter
+                    // le contenu de l'onglet vide via l'API WebView2.
+                    _ = OpenBlankWindowAsync(e, result.Tab);
+                    return;
+
+                default:
+                    AppLog.Error($"Demande de nouvelle fenêtre impossible ({result.Error}) : {e.Uri}");
+                    return;
+            }
         }
 
-        private async Task OpenBlankWindowAsync(CoreWebView2NewWindowRequestedEventArgs e, TabManager tabManager)
+        private async Task OpenBlankWindowAsync(CoreWebView2NewWindowRequestedEventArgs e, TabViewModel? tab)
         {
             var deferral = e.GetDeferral();
             try
             {
-                var tab = tabManager.NewTab(NewWindowRequestResolver.BlankUrl);
-                if (tab.View is BrowserView view)
+                if (tab?.View is BrowserView view)
                 {
                     // Timeout : l'onglet vide reste utilisable même si WebView2 ne démarre pas.
                     var ready = await Task.WhenAny(view.CoreReady, Task.Delay(TimeSpan.FromSeconds(5)));
@@ -223,11 +267,21 @@ namespace MadagascarBrowser.Shell
                     {
                         e.NewWindow = await view.CoreReady;
                     }
+                    else
+                    {
+                        AppLog.Warning(
+                            "Le WebView2 de l'onglet vide n'a pas démarré à temps : la page appelante perd la main.");
+                    }
+                }
+                else
+                {
+                    AppLog.Warning("Onglet vide absent : la page appelante perd la main.");
                 }
             }
-            catch (Exception)
+            catch (Exception exception)
             {
                 // Onglet vide sans rattachement API : la page appelante perd la main.
+                AppLog.Error("Rattachement de la fenêtre vide impossible.", exception);
             }
             finally
             {
@@ -264,12 +318,19 @@ namespace MadagascarBrowser.Shell
 (function () {
   if (window.__madagascarAcceleratorBridge) { return; }
   window.__madagascarAcceleratorBridge = true;
+  var handled = ['t', 'w', 'l', 'd', 'f', 'p', 'tab'];
   document.addEventListener('keydown', function (event) {
-    if (!event.ctrlKey || event.altKey || event.metaKey) { return; }
     var key = (event.key || '').toLowerCase();
-    if (key !== 't' && key !== 'w' && key !== 'l') { return; }
+    var ctrl = !!event.ctrlKey;
+    var alt = !!event.altKey;
+    var shift = !!event.shiftKey;
+    var meta = !!event.metaKey;
+    var escape = key === 'escape' && !!document.fullscreenElement;
+    if (!escape && !(ctrl && !alt && !meta && handled.indexOf(key) >= 0)) { return; }
+    event.preventDefault();
+    event.stopPropagation();
     try {
-      window.chrome.webview.postMessage(key);
+      window.chrome.webview.postMessage(JSON.stringify({ key: key, ctrl: ctrl, alt: alt, shift: shift }));
     } catch (error) {
       /* canal de messages indisponible */
     }
@@ -281,38 +342,63 @@ namespace MadagascarBrowser.Shell
         /// </summary>
         private void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
         {
-            string? key;
-            try
+            // Fail closed: only the trusted local HTTPS origin may issue native commands.
+            if (!NativeWebMessagePolicy.IsAllowedOrigin(e.Source, LocalHost))
             {
-                key = e.TryGetWebMessageAsString();
-            }
-            catch (ArgumentException)
-            {
-                // Message non textuel : ignoré.
+                System.Diagnostics.Debug.WriteLine("WebMessageRejected: untrusted origin.");
                 return;
             }
 
-            var command = AcceleratorCommandResolver.Resolve(key, ctrl: true, alt: false, shift: false);
-            switch (command)
+            string? key;
+            try { key = e.TryGetWebMessageAsString(); }
+            catch (ArgumentException) { return; }
+            if (string.IsNullOrWhiteSpace(key)) return;
+
+            const string searchCommandPrefix = "search:";
+            if (key.StartsWith(searchCommandPrefix, StringComparison.Ordinal))
             {
-                case AcceleratorCommand.NewTab:
-                    Dispatcher.BeginInvoke(new Action(() =>
-                    {
-                        if (Window.GetWindow(this)?.DataContext is TabManager tabManager)
-                            tabManager.NewTab();
-                    }));
-                    break;
-                case AcceleratorCommand.CloseTab:
-                    Dispatcher.BeginInvoke(new Action(() =>
-                    {
-                        if (Window.GetWindow(this)?.DataContext is TabManager tabManager &&
-                            tabManager.Active != null)
-                            tabManager.Close(tabManager.Active);
-                    }));
-                    break;
-                case AcceleratorCommand.FocusAddressBar:
-                    Dispatcher.BeginInvoke(new Action(FocusAddressBar));
-                    break;
+                try
+                {
+                    var query = Uri.UnescapeDataString(key[searchCommandPrefix.Length..]);
+                    var destination = BrowserServices.Navigation.ResolveNavigation(query);
+                    if (!Uri.TryCreate(destination, UriKind.Absolute, out var destinationUri) ||
+                        (destinationUri.Scheme != Uri.UriSchemeHttp && destinationUri.Scheme != Uri.UriSchemeHttps))
+                        return;
+                    Dispatcher.BeginInvoke(new Action(() => WebView.CoreWebView2.Navigate(destinationUri.AbsoluteUri)));
+                }
+                catch (Exception exception) { AppLog.Warning("Recherche de la page d'accueil rejetée.", exception); }
+                return;
+            }
+
+            var command = ParseAcceleratorCommand(key);
+            if (command is not (AcceleratorCommand.NewTab or AcceleratorCommand.CloseTab or AcceleratorCommand.FocusAddressBar))
+                return;
+            Dispatcher.BeginInvoke(new Action(() => _tabHost.Execute(command)));
+        }
+
+        /// <summary>
+        /// Traduit le message relayed par la page en commande applicative.
+        /// Le message est un objet JSON ; une ancienne version du pont envoyait
+        /// simplement la touche, ce qui reste accepté.
+        /// </summary>
+        private static AcceleratorCommand ParseAcceleratorCommand(string message)
+        {
+            try
+            {
+                using var document = JsonDocument.Parse(message);
+                var root = document.RootElement;
+                if (!root.TryGetProperty("key", out var keyElement))
+                    return AcceleratorCommand.None;
+
+                var ctrl = root.TryGetProperty("ctrl", out var ctrlElement) && ctrlElement.GetBoolean();
+                var alt = root.TryGetProperty("alt", out var altElement) && altElement.GetBoolean();
+                var shift = root.TryGetProperty("shift", out var shiftElement) && shiftElement.GetBoolean();
+                return AcceleratorCommandResolver.Resolve(keyElement.GetString(), ctrl, alt, shift);
+            }
+            catch (JsonException)
+            {
+                // Ancien format : la touche seule, toujours avec Ctrl.
+                return AcceleratorCommandResolver.Resolve(message, ctrl: true, alt: false, shift: false);
             }
         }
 
@@ -350,22 +436,40 @@ namespace MadagascarBrowser.Shell
         private void MenuNewTab_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
-            if (Window.GetWindow(this)?.DataContext is TabManager tm)
+            _tabHost.NewTab(StartPageUrl);
+        }
+
+        private void MenuPrivateWindow_Click(object sender, RoutedEventArgs e)
+        {
+            MenuPopup.IsOpen = false;
+            try
             {
-                tm.NewTab();
+                var privateWindow = new MainWindow(isPrivate: true);
+                privateWindow.Show();
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show(Window.GetWindow(this),
+                    "Impossible d'ouvrir une fenêtre privée : " + exception.Message,
+                    "Navigation privée", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         private void MenuSettings_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
-            if (Window.GetWindow(this)?.DataContext is TabManager tm)
-                tm.OpenSettings();
+            _tabHost.OpenSettings();
         }
 
         private async void MenuAddFavorite_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
+            if (!PrivateBrowsingPolicy.ShouldPersistFavorites((DataContext as TabViewModel)?.IsPrivate == true))
+            {
+                MenuFeedback.Text = "Les favoris sont désactivés en navigation privée.";
+                MenuPopup.IsOpen = true;
+                return;
+            }
             if (!Uri.TryCreate(WebView.CoreWebView2?.Source, UriKind.Absolute, out var uri) ||
                 (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
             {
@@ -382,20 +486,23 @@ namespace MadagascarBrowser.Shell
         private void MenuHistory_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
-            if (Window.GetWindow(this)?.DataContext is TabManager tm)
-                tm.OpenLibrary(0);
+            _tabHost.OpenLibrary(0);
         }
 
         private void MenuFavorites_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
-            if (Window.GetWindow(this)?.DataContext is TabManager tm)
-                tm.OpenLibrary(1);
+            _tabHost.OpenLibrary(1);
         }
 
         private async void MenuSaveOffline_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
+            if (!PrivateBrowsingPolicy.ShouldPersistOfflinePages((DataContext as TabViewModel)?.IsPrivate == true))
+            {
+                MessageBox.Show(Window.GetWindow(this), "L'enregistrement hors ligne est désactivé en navigation privée.", "Navigation privée", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
             if (!_coreReady || !Uri.TryCreate(WebView.CoreWebView2.Source, UriKind.Absolute, out var uri) ||
                 (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
             {
@@ -422,6 +529,7 @@ namespace MadagascarBrowser.Shell
             }
             catch (Exception exception)
             {
+                AppLog.Error("Impossible d'enregistrer la page hors ligne.", exception);
                 MessageBox.Show(Window.GetWindow(this), $"Impossible d'enregistrer la page : {exception.Message}",
                     "Pages hors ligne", MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -430,15 +538,13 @@ namespace MadagascarBrowser.Shell
         private void MenuOfflinePages_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
-            if (Window.GetWindow(this)?.DataContext is TabManager tm)
-                tm.OpenLibrary(2);
+            _tabHost.OpenLibrary(2);
         }
 
         private void MenuDownloads_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
-            if (Window.GetWindow(this)?.DataContext is TabManager tm)
-                tm.OpenDownloads();
+            _tabHost.OpenDownloads();
         }
 
         private void MenuExportProfile_Click(object sender, RoutedEventArgs e)
@@ -460,6 +566,7 @@ namespace MadagascarBrowser.Shell
             }
             catch (Exception exception)
             {
+                AppLog.Error("Impossible d'exporter le profil.", exception);
                 MessageBox.Show(Window.GetWindow(this), $"Impossible d'exporter le profil : {exception.Message}",
                     "Profil", MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -485,6 +592,7 @@ namespace MadagascarBrowser.Shell
             }
             catch (Exception exception)
             {
+                AppLog.Error("Impossible d'importer le profil.", exception);
                 MessageBox.Show(Window.GetWindow(this), $"Impossible d'importer le profil : {exception.Message}",
                     "Profil", MessageBoxButton.OK, MessageBoxImage.Error);
             }
@@ -493,11 +601,7 @@ namespace MadagascarBrowser.Shell
         private async void OnDownloadStarting(object? sender, CoreWebView2DownloadStartingEventArgs e)
         {
             var operation = e.DownloadOperation;
-            var fileName = Uri.TryCreate(operation.Uri, UriKind.Absolute, out var uri)
-                ? Path.GetFileName(uri.LocalPath)
-                : "download";
-            if (string.IsNullOrWhiteSpace(fileName))
-                fileName = "download";
+            var fileName = DownloadFileNameResolver.Resolve(operation.ContentDisposition, operation.Uri);
 
             var dialog = new SaveFileDialog
             {
@@ -518,8 +622,17 @@ namespace MadagascarBrowser.Shell
 
             e.ResultFilePath = dialog.FileName;
             e.Handled = true;
+            // Autoriser le téléchargement choisi par l'utilisateur, sans persister de métadonnées privées.
+            if (!PrivateBrowsingPolicy.ShouldPersistDownloadMetadata((DataContext as TabViewModel)?.IsPrivate == true))
+                return;
+            // Les membres de WebView2 ne sont lisibles que sur le thread UI :
+            // on capture avant l'écriture asynchrone en base (sinon InvalidOperationException
+            // « CoreWebView2DownloadOperation members can only be accessed from the UI thread »
+            // qui tuait l'application après le téléchargement).
+            var uri = operation.Uri;
+            var resultFilePath = e.ResultFilePath;
             var download = await DatabaseAccess.WriteAsync(() =>
-                BrowserServices.Downloads.Start(operation.Uri, e.ResultFilePath));
+                BrowserServices.Downloads.Start(uri, resultFilePath));
             DownloadsView.Register(download.Id, operation);
 
             // L'avancement n'est plus écrit à chaque événement : l'écriture est
@@ -566,13 +679,13 @@ namespace MadagascarBrowser.Shell
 
         private void OnNavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
         {
-            // La page d'erreur interne ne doit pas effacer une erreur de certificat déjà signalée.
-            if (!e.Uri.StartsWith(ErrorPageUrl, StringComparison.OrdinalIgnoreCase))
-                _certificateError = false;
+            _activeNavigationId = e.NavigationId;
+            _certificateError = false;
 
             if (DataContext is TabViewModel tab)
             {
                 tab.IsLoading = true;
+                tab.HasNavigationError = false;
                 tab.Url = e.Uri;
                 tab.SecurityState = ConnectionSecurityResolver.Resolve(e.Uri, _certificateError, LocalHost);
             }
@@ -586,22 +699,7 @@ namespace MadagascarBrowser.Shell
             if (BrowserServices.AdBlock.ShouldBlock(uri))
             {
                 SetResponse(e, 403, "Bloqué", "text/plain; charset=utf-8", Array.Empty<byte>());
-                RefreshStats();
-                return;
-            }
-
-            var mime = MimeTypeFromUri(uri);
-            if (mime == null)
-                return;
-
-            var decision = BrowserServices.DataSaver.Evaluate(uri, mime, ContentLengthOf(e));
-            if (decision == DataSaverDecision.Block)
-            {
-                SetResponse(e, 403, "Économisé", "text/plain; charset=utf-8", Array.Empty<byte>());
-            }
-            else if (decision == DataSaverDecision.Placeholder)
-            {
-                SetResponse(e, 200, "OK", "image/gif", PlaceholderGif);
+                _ = RecordMetricAndRefreshAsync(BrowserServices.DataSaverMetrics.RecordAdBlocked);
             }
         }
 
@@ -612,41 +710,168 @@ namespace MadagascarBrowser.Shell
                 .CreateWebResourceResponse(new MemoryStream(body), status, reason, headers);
         }
 
-        private static long ContentLengthOf(CoreWebView2WebResourceRequestedEventArgs e)
+        private async Task EnableDataSaverInterceptionAsync(CoreWebView2 core)
         {
-            if (e.Request.Headers.Contains("Content-Length") &&
-                long.TryParse(e.Request.Headers.GetHeader("Content-Length"), out var length))
+            _fetchRequestPausedReceiver = core.GetDevToolsProtocolEventReceiver("Fetch.requestPaused");
+            _fetchRequestPausedReceiver.DevToolsProtocolEventReceived += OnFetchRequestPaused;
+            try
             {
-                return length;
+                var patterns = string.Join(",", ResourceInterceptionScope.FetchPatterns.Select(
+                    pattern => $"{{\"urlPattern\":\"{pattern}\",\"requestStage\":\"Response\"}}"));
+                await core.CallDevToolsProtocolMethodAsync(
+                    "Fetch.enable",
+                    $"{{\"patterns\":[{patterns}]}}");
             }
-            return 0;
+            catch (Exception exception)
+            {
+                AppLog.Error("Impossible d'activer l'interception des réponses pour l'économiseur de données.", exception);
+                _fetchRequestPausedReceiver.DevToolsProtocolEventReceived -= OnFetchRequestPaused;
+                _fetchRequestPausedReceiver = null;
+            }
         }
 
-        private static string? MimeTypeFromUri(Uri uri)
+        private async void OnFetchRequestPaused(
+            object? sender,
+            CoreWebView2DevToolsProtocolEventReceivedEventArgs e)
         {
-            switch (Path.GetExtension(uri.AbsolutePath).ToLowerInvariant())
+            string? requestId = null;
+            try
             {
-                case ".jpg":
-                case ".jpeg": return "image/jpeg";
-                case ".png": return "image/png";
-                case ".gif": return "image/gif";
-                case ".webp": return "image/webp";
-                case ".svg": return "image/svg+xml";
-                case ".bmp":
-                case ".ico": return "image/bmp";
-                case ".mp4":
-                case ".m4v": return "video/mp4";
-                case ".webm": return "video/webm";
-                case ".ogv": return "video/ogg";
-                case ".avi": return "video/x-msvideo";
-                case ".mkv":
-                case ".mov": return "video/x-matroska";
-                default: return null;
+                using var document = JsonDocument.Parse(e.ParameterObjectAsJson);
+                var root = document.RootElement;
+                requestId = root.GetProperty("requestId").GetString();
+                if (string.IsNullOrEmpty(requestId))
+                    throw new InvalidOperationException("La réponse interceptée ne contient pas d'identifiant de requête.");
+
+                var url = root.GetProperty("request").GetProperty("url").GetString();
+                if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+                    (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+                {
+                    await ContinuePausedRequestAsync(requestId);
+                    return;
+                }
+
+                if (BrowserServices.AdBlock.IsDomainExempt(uri))
+                {
+                    await ContinuePausedRequestAsync(requestId);
+                    return;
+                }
+
+                // Sans en-têtes de réponse, impossible d'évaluer le type ou la taille :
+                // certains payloads DevTools (redirections, réponses sans corps) n'en
+                // contiennent pas. On laisse la requête passer plutôt que d'échouer.
+                if (!root.TryGetProperty("responseHeaders", out var headersElement) ||
+                    headersElement.ValueKind != JsonValueKind.Array)
+                {
+                    await ContinuePausedRequestAsync(requestId);
+                    return;
+                }
+
+                var responseHeaders = headersElement.EnumerateArray()
+                    .Select(header => new
+                    {
+                        Name = header.GetProperty("name").GetString() ?? string.Empty,
+                        Value = header.GetProperty("value").GetString() ?? string.Empty
+                    })
+                    .ToList();
+                var contentType = responseHeaders
+                    .FirstOrDefault(header => header.Name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))
+                    ?.Value.Split(';', 2)[0].Trim() ?? string.Empty;
+                var contentLengthHeader = responseHeaders
+                    .FirstOrDefault(header => header.Name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase))
+                    ?.Value;
+                long? contentLength = long.TryParse(contentLengthHeader, out var length) && length >= 0
+                    ? length
+                    : null;
+                var statusCode = root.TryGetProperty("responseStatusCode", out var status)
+                    ? status.GetInt32()
+                    : 0;
+
+                if (statusCode != 200)
+                {
+                    await ContinuePausedRequestAsync(requestId);
+                    return;
+                }
+
+                var decision = BrowserServices.DataSaver.Evaluate(uri, contentType, contentLength);
+                if (decision == DataSaverDecision.Block)
+                {
+                    await WebView.CoreWebView2.CallDevToolsProtocolMethodAsync(
+                        "Fetch.failRequest",
+                        JsonSerializer.Serialize(new { requestId, errorReason = "BlockedByClient" }));
+                    _ = RecordMetricAndRefreshAsync(
+                        () => BrowserServices.DataSaverMetrics.RecordVideoBlocked(contentLength ?? 0));
+                    return;
+                }
+
+                if (decision == DataSaverDecision.Placeholder && contentLength.HasValue)
+                {
+                    var replacementHeaders = responseHeaders
+                        .Where(header => !IsPayloadHeader(header.Name))
+                        .Select(header => new Dictionary<string, string>
+                        {
+                            ["name"] = header.Name,
+                            ["value"] = header.Value
+                        })
+                        .ToList();
+                    replacementHeaders.Add(new Dictionary<string, string> { ["name"] = "Content-Type", ["value"] = "image/gif" });
+                    replacementHeaders.Add(new Dictionary<string, string> { ["name"] = "Content-Length", ["value"] = PlaceholderGif.Length.ToString() });
+
+                    await WebView.CoreWebView2.CallDevToolsProtocolMethodAsync(
+                        "Fetch.fulfillRequest",
+                        JsonSerializer.Serialize(new
+                        {
+                            requestId,
+                            responseCode = statusCode,
+                            responseHeaders = replacementHeaders,
+                            body = Convert.ToBase64String(PlaceholderGif)
+                        }));
+                    _ = RecordMetricAndRefreshAsync(
+                        () => BrowserServices.DataSaverMetrics.RecordImageReplaced(contentLength.Value));
+                    return;
+                }
+
+                await ContinuePausedRequestAsync(requestId);
             }
+            catch (Exception exception)
+            {
+                AppLog.Error("Erreur pendant l'interception d'une réponse Web.", exception);
+                if (!string.IsNullOrEmpty(requestId))
+                {
+                    try
+                    {
+                        await ContinuePausedRequestAsync(requestId);
+                    }
+                    catch (Exception continuationException)
+                    {
+                        AppLog.Error("Impossible de reprendre la réponse Web interceptée.", continuationException);
+                    }
+                }
+            }
+        }
+
+        private static bool IsPayloadHeader(string name)
+        {
+            return name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)
+                || name.Equals("Content-Length", StringComparison.OrdinalIgnoreCase)
+                || name.Equals("Content-Encoding", StringComparison.OrdinalIgnoreCase)
+                || name.Equals("Content-Range", StringComparison.OrdinalIgnoreCase)
+                || name.Equals("Transfer-Encoding", StringComparison.OrdinalIgnoreCase)
+                || name.Equals("Content-MD5", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private Task<string> ContinuePausedRequestAsync(string requestId)
+        {
+            return WebView.CoreWebView2.CallDevToolsProtocolMethodAsync(
+                "Fetch.continueRequest",
+                JsonSerializer.Serialize(new { requestId }));
         }
 
         private void OnNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
         {
+            if (e.NavigationId != _activeNavigationId)
+                return;
+
             var core = WebView.CoreWebView2;
             if (!e.IsSuccess && ConnectionSecurityResolver.IsCertificateError(e.WebErrorStatus.ToString()))
                 _certificateError = true;
@@ -659,21 +884,23 @@ namespace MadagascarBrowser.Shell
                     tab.Title = string.IsNullOrWhiteSpace(core.DocumentTitle) ? "Nouvel onglet" : core.DocumentTitle;
                     tab.Url = core.Source;
                 }
-                else if (!string.IsNullOrEmpty(core.Source) &&
-                         !core.Source.StartsWith(ErrorPageUrl, StringComparison.OrdinalIgnoreCase))
+                else
                 {
-                    core.Navigate(ErrorPageUrl + "?u=" + Uri.EscapeDataString(core.Source));
+                    var failure = NavigationFailureResolver.Resolve(e.WebErrorStatus.ToString());
+                    tab.NavigationErrorTitle = failure.Title;
+                    tab.NavigationErrorMessage = failure.Message;
+                    tab.HasNavigationError = true;
                 }
             }
 
-            if (e.IsSuccess && IsHistoryWorthy(core.Source))
+            if (e.IsSuccess && PrivateBrowsingPolicy.ShouldPersistHistory((DataContext as TabViewModel)?.IsPrivate == true, IsHistoryWorthy(core.Source)))
             {
                 var url = core.Source;
                 var title = core.DocumentTitle ?? string.Empty;
                 _ = DatabaseAccess.WriteAsync(() => BrowserServices.History.AddVisit(url, title));
             }
 
-            RefreshStats();
+            _ = RefreshStatsAsync();
             _suppressSuggest = true;
             AddressBar.Text = core.Source;
             _suppressSuggest = false;
@@ -699,9 +926,51 @@ namespace MadagascarBrowser.Shell
                     || url.StartsWith("https://", StringComparison.OrdinalIgnoreCase));
         }
 
-        private static void RefreshStats()
+        private static async Task RefreshStatsAsync()
         {
-            BrowserStats.Instance.BlockedCount = BrowserServices.AdBlock.BlockedCount;
+            var lockTaken = false;
+            try
+            {
+                await StatsRefreshLock.WaitAsync();
+                lockTaken = true;
+                var metrics = await DatabaseAccess.ReadAsync(BrowserServices.DataSaverMetrics.GetSnapshot);
+                var culture = System.Globalization.CultureInfo.CurrentCulture;
+                await Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    BrowserStats.Instance.BlockedCount = metrics.SessionBlockedAds;
+                    BrowserStats.Instance.ReplacedImagesCount = metrics.SessionReplacedImages;
+                    BrowserStats.Instance.BlockedVideosCount = metrics.SessionBlockedVideos;
+                    BrowserStats.Instance.SavedDataText =
+                        $"↓ {(metrics.SessionSavedBytes / (1024d * 1024d)).ToString("N1", culture)} Mo économisés";
+                    BrowserStats.Instance.SavedDataTooltip =
+                        $"Cette session : {metrics.SessionSavedBytes.ToString("N0", culture)} octets. " +
+                        $"Cumul : {metrics.TotalSavedBytes.ToString("N0", culture)} octets.";
+                });
+            }
+            catch (Exception exception)
+            {
+                AppLog.Error("Impossible de lire les métriques du navigateur.", exception);
+            }
+            finally
+            {
+                if (lockTaken)
+                    StatsRefreshLock.Release();
+            }
+        }
+
+        private static async Task RecordMetricAndRefreshAsync(Action record)
+        {
+            try
+            {
+                await DatabaseAccess.WriteAsync(record);
+            }
+            catch (Exception exception)
+            {
+                AppLog.Error("Impossible d'enregistrer une métrique du navigateur.", exception);
+                return;
+            }
+
+            await RefreshStatsAsync();
         }
 
         private void AddressBar_KeyDown(object sender, KeyEventArgs e)
@@ -799,21 +1068,23 @@ namespace MadagascarBrowser.Shell
 
         private static string ResolveAddress(string input)
         {
-            var searchUrl = BrowserServices.CurrentSettings.SearchProvider switch
-            {
-                "duckduckgo" => "https://duckduckgo.com/?q=",
-                "bing" => "https://www.bing.com/search?q=",
-                _ => "https://www.google.mg/search?q="
-            };
-            return BrowserServices.Navigation.ResolveNavigation(input, searchUrl);
+            return BrowserServices.Navigation.ResolveNavigation(input);
         }
 
         private void WebView2Link_RequestNavigate(object sender, RequestNavigateEventArgs e)
         {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri.AbsoluteUri)
+            try
             {
-                UseShellExecute = true
-            });
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri.AbsoluteUri)
+                {
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception exception)
+            {
+                // Lien externe (protocole applicatif) : l'ouverture peut échouer.
+                AppLog.Warning($"Ouverture du lien externe '{e.Uri}' impossible.", exception);
+            }
             e.Handled = true;
         }
 
@@ -823,11 +1094,289 @@ namespace MadagascarBrowser.Shell
             AddressBar.SelectAll();
         }
 
+        /// <summary>Recharge la page courante.</summary>
+        public void Reload()
+        {
+            if (_coreReady)
+            {
+                WebView.CoreWebView2.Reload();
+            }
+        }
+
+        /// <summary>Ouvre la fenêtre d'impression du navigateur.</summary>
+        public void Print()
+        {
+            if (!_coreReady)
+                return;
+
+            try
+            {
+                WebView.CoreWebView2.ShowPrintUI();
+            }
+            catch (Exception exception)
+            {
+                AppLog.Error("Impossible d'ouvrir la fenêtre d'impression.", exception);
+            }
+        }
+
+        /// <summary>Demande à la page de quitter le plein écran.</summary>
+        public void ExitFullScreen()
+        {
+            if (!_coreReady)
+                return;
+
+            try
+            {
+                _ = WebView.CoreWebView2.ExecuteScriptAsync(
+                    "if (document.fullscreenElement) { document.exitFullscreen(); }");
+            }
+            catch (Exception exception)
+            {
+                AppLog.Error("Sortie du plein écran impossible.", exception);
+            }
+        }
+
+        /// <summary>Ouvre la barre de recherche dans la page (Ctrl+F).</summary>
+        public void OpenFindBar()
+        {
+            FindBar.Visibility = Visibility.Visible;
+            FindInput.Focus();
+            FindInput.SelectAll();
+        }
+
+        private void CloseFindBar()
+        {
+            FindBar.Visibility = Visibility.Collapsed;
+            _findState.Clear();
+            UpdateFindCounter();
+
+            if (!_coreReady)
+                return;
+
+            try
+            {
+                WebView.CoreWebView2.Find.Stop();
+            }
+            catch (Exception exception)
+            {
+                AppLog.Error("Arrêt de la recherche dans la page impossible.", exception);
+            }
+        }
+
+        private void FindInput_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (_findRunning)
+                return;
+
+            _ = RunFindAsync();
+        }
+
+        private void FindInput_KeyDown(object sender, KeyEventArgs e)
+        {
+            switch (e.Key)
+            {
+                case Key.Enter:
+                    MoveToMatch((Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift);
+                    e.Handled = true;
+                    break;
+                case Key.Escape:
+                    CloseFindBar();
+                    e.Handled = true;
+                    break;
+            }
+        }
+
+        private void FindNext_Click(object sender, RoutedEventArgs e) => MoveToMatch(forward: true);
+
+        private void FindPrevious_Click(object sender, RoutedEventArgs e) => MoveToMatch(forward: false);
+
+        private void FindClose_Click(object sender, RoutedEventArgs e) => CloseFindBar();
+
+        /// <summary>
+        /// Lance la recherche dans la page. Le compteur et l'occurrence courante
+        /// sont fournis par WebView2 : le Core ne fait que porter l'état affiché.
+        /// </summary>
+        private async Task RunFindAsync()
+        {
+            if (_findRunning)
+                return;
+
+            _findRunning = true;
+            try
+            {
+                while (true)
+                {
+                    var query = FindInput.Text;
+                    _findState.Start(query);
+                    UpdateFindCounter();
+
+                    if (!_coreReady || _environment is null)
+                        return;
+
+                    if (string.IsNullOrWhiteSpace(query))
+                    {
+                        WebView.CoreWebView2.Find.Stop();
+                        return;
+                    }
+
+                    var options = _environment.CreateFindOptions();
+                    options.FindTerm = query;
+                    options.IsCaseSensitive = false;
+                    options.ShouldHighlightAllMatches = true;
+                    options.ShouldMatchWord = false;
+                    options.SuppressDefaultFindDialog = true;
+
+                    await WebView.CoreWebView2.Find.StartAsync(options);
+                    if (!string.Equals(query, FindInput.Text, StringComparison.Ordinal))
+                        continue;
+
+                    _findState.ReportMatches(
+                        WebView.CoreWebView2.Find.MatchCount,
+                        WebView.CoreWebView2.Find.ActiveMatchIndex);
+                    UpdateFindCounter();
+                    return;
+                }
+            }
+            catch (Exception exception)
+            {
+                AppLog.Error("Recherche dans la page impossible.", exception);
+            }
+            finally
+            {
+                _findRunning = false;
+            }
+        }
+
+        /// <summary>
+        /// Passe à la correspondance suivante ou précédente.
+        /// </summary>
+        private void MoveToMatch(bool forward)
+        {
+            if (!_coreReady || !_findState.IsActive)
+                return;
+
+            try
+            {
+                if (forward)
+                    WebView.CoreWebView2.Find.FindNext();
+                else
+                    WebView.CoreWebView2.Find.FindPrevious();
+
+                _findState.ReportMatches(
+                    WebView.CoreWebView2.Find.MatchCount,
+                    WebView.CoreWebView2.Find.ActiveMatchIndex);
+                UpdateFindCounter();
+            }
+            catch (Exception exception)
+            {
+                AppLog.Error("Passage à la correspondance suivante impossible.", exception);
+            }
+        }
+
+        private void UpdateFindCounter()
+        {
+            if (_findState.MatchCount == 0)
+            {
+                FindCounter.Text = string.IsNullOrWhiteSpace(_findState.Query) ? string.Empty : "0/0";
+                return;
+            }
+
+            FindCounter.Text = $"{_findState.MatchIndex}/{_findState.MatchCount}";
+        }
+
+        /// <summary>Met à jour l'indicateur de niveau de zoom.</summary>
+        private void UpdateZoomIndicator(double factor)
+        {
+            ZoomIndicator.Content = ZoomLevel.Format(factor);
+        }
+
+        private void OnZoomFactorChanged(object? sender, object e)
+        {
+            var factor = WebView.ZoomFactor;
+            Dispatcher.BeginInvoke(new Action(() => UpdateZoomIndicator(factor)));
+        }
+
+        private void ZoomIndicator_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                WebView.ZoomFactor = ZoomLevel.Reset(WebView.ZoomFactor);
+                UpdateZoomIndicator(WebView.ZoomFactor);
+            }
+            catch (Exception exception)
+            {
+                AppLog.Error("Réinitialisation du zoom impossible.", exception);
+            }
+        }
+
+        /// <summary>
+        /// Raccourcis saisis dans l'interface WPF (barre d'adresse, barre de
+        /// recherche) : ceux relayés par la page sont traités par le pont Web.
+        /// </summary>
+        private void OnPreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Escape && FindBar.Visibility == Visibility.Visible)
+            {
+                CloseFindBar();
+                e.Handled = true;
+                return;
+            }
+
+            var ctrl = (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control;
+            if (e.Key == Key.F && ctrl)
+            {
+                OpenFindBar();
+                e.Handled = true;
+            }
+        }
+
         public void Dispose()
         {
             _suggestDebouncer?.Dispose();
             _suggestDebouncer = null;
-            try { WebView.Dispose(); } catch { }
+            if (_fetchRequestPausedReceiver != null)
+            {
+                _fetchRequestPausedReceiver.DevToolsProtocolEventReceived -= OnFetchRequestPaused;
+                _fetchRequestPausedReceiver = null;
+            }
+            try
+            {
+                WebView.Dispose();
+            }
+            catch (Exception exception)
+            {
+                AppLog.Warning("Liberation du WebView2 incomplete.", exception);
+            }
         }
+        internal static CoreWebView2BrowsingDataKinds ResolveBrowsingDataKinds(
+                    bool clearHistory,
+                    bool clearCookies,
+                    bool clearCache)
+                {
+                    var kinds = (CoreWebView2BrowsingDataKinds)0;
+                    if (clearHistory)
+                        kinds |= CoreWebView2BrowsingDataKinds.BrowsingHistory;
+                    if (clearCookies)
+                        // AllSite includes cookies and site storage (local storage, IndexedDB,
+                        // service workers and related site data), not just HTTP cookies.
+                        kinds |= CoreWebView2BrowsingDataKinds.AllSite;
+                    if (clearCache)
+                        kinds |= CoreWebView2BrowsingDataKinds.DiskCache;
+                    return kinds;
+                }
+
+        public Task ClearWebViewDataAsync(bool clearHistory, bool clearCookies, bool clearCache)
+                {
+                    if (!IsCoreReady)
+                        throw new InvalidOperationException("WebView2 is not initialized.");
+        
+                    var kinds = ResolveBrowsingDataKinds(clearHistory, clearCookies, clearCache);
+                    if ((int)kinds == 0)
+                        return Task.CompletedTask;
+        
+                    // Completion of this API call is the WebView2 acknowledgement that the selected
+                    // categories were cleared; SQLite history is independently verified by SettingsView.
+                    return WebView.CoreWebView2.Profile.ClearBrowsingDataAsync(kinds);
+                }
     }
 }

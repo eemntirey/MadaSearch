@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using MadagascarBrowser.Core.Blocking;
 using MadagascarBrowser.Core.Data;
 using MadagascarBrowser.Core.Navigation;
+using MadagascarBrowser.Core.Paths;
 
 namespace MadagascarBrowser.Shell
 {
@@ -14,6 +14,7 @@ namespace MadagascarBrowser.Shell
         public static NavigationService Navigation { get; private set; } = null!;
         public static AdBlockService AdBlock { get; private set; } = null!;
         public static DataSaverService DataSaver { get; private set; } = null!;
+        public static DataSaverMetricsService DataSaverMetrics { get; private set; } = null!;
         public static HistoryService History { get; private set; } = null!;
         public static FavoritesService Favorites { get; private set; } = null!;
         public static DownloadService Downloads { get; private set; } = null!;
@@ -26,23 +27,24 @@ namespace MadagascarBrowser.Shell
         public static void EnsureInitialized()
         {
             if (_initialized) return;
-            var dir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "MadagascarBrowser");
-            var db = new Database(Path.Combine(dir, "browser.db"));
+            var paths = BrowserPaths.Default;
+            var db = new Database(paths.DatabasePath);
             History = new HistoryService(db);
+            DataSaverMetrics = new DataSaverMetricsService(db);
             Favorites = new FavoritesService(db);
             Downloads = new DownloadService(db);
-            OfflinePages = new OfflinePageService(db, Path.Combine(dir, "offline"));
+            Downloads.RecoverInProgressDownloads();
+            OfflinePages = new OfflinePageService(db, paths.OfflineDirectory);
             SettingsService = new BrowserSettingsService(db);
             Profile = new BrowserProfileService(db, SettingsService);
             Sessions = new SessionService(db);
             CurrentSettings = SettingsService.Load();
-            Navigation = new NavigationService();
+            Navigation = new NavigationService(CurrentSettings.SearchProvider);
             AdBlock = new AdBlockService();
             ApplyAllowedDomains(CurrentSettings);
             DataSaver = new DataSaverService();
             DataSaver.Enabled = CurrentSettings.DataSaverEnabled;
+            DataSaver.ImageThresholdBytes = CurrentSettings.DataSaverImageThresholdKilobytes * 1024L;
             ThemeManager.Apply(CurrentSettings);
             _initialized = true;
         }
@@ -61,20 +63,23 @@ namespace MadagascarBrowser.Shell
             AdBlock = adBlock;
         }
 
-        public static void UpdateSettings(BrowserSettings settings)
+        public static void ApplySettings(BrowserSettings settings)
         {
-            SettingsService.Save(settings);
             CurrentSettings = settings;
+            Navigation = new NavigationService(settings.SearchProvider);
             ApplyAllowedDomains(settings);
             DataSaver.Enabled = settings.DataSaverEnabled;
+            DataSaver.ImageThresholdBytes = settings.DataSaverImageThresholdKilobytes * 1024L;
             ThemeManager.Apply(settings);
         }
 
         public static void ReloadSettings()
         {
             CurrentSettings = SettingsService.Load();
+            Navigation = new NavigationService(CurrentSettings.SearchProvider);
             ApplyAllowedDomains(CurrentSettings);
             DataSaver.Enabled = CurrentSettings.DataSaverEnabled;
+            DataSaver.ImageThresholdBytes = CurrentSettings.DataSaverImageThresholdKilobytes * 1024L;
             ThemeManager.Apply(CurrentSettings);
         }
     }

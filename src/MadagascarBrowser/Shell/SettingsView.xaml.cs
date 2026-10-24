@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using MadagascarBrowser.Core.Data;
@@ -25,6 +26,7 @@ namespace MadagascarBrowser.Shell
             SelectByTag(AccentCombo, settings.Accent);
             AdBlockCheck.IsChecked = settings.AdBlockEnabled;
             DataSaverCheck.IsChecked = settings.DataSaverEnabled;
+            DataSaverImageThresholdBox.Text = settings.DataSaverImageThresholdKilobytes.ToString(CultureInfo.InvariantCulture);
             RestoreSessionCheck.IsChecked = settings.RestoreSession;
             AllowedDomainsList.ItemsSource = settings.AllowedDomains?.ToList() ?? new List<string>();
             AllowedDomainsFeedback.Text = string.Empty;
@@ -57,11 +59,17 @@ namespace MadagascarBrowser.Shell
         private BrowserSettings BuildSettings(List<string>? allowedDomains = null)
         {
             var current = BrowserServices.CurrentSettings;
+            if (!int.TryParse(DataSaverImageThresholdBox.Text, NumberStyles.None, CultureInfo.InvariantCulture, out var thresholdKilobytes) ||
+                thresholdKilobytes is < 1 or > 10000)
+                throw new ArgumentOutOfRangeException(nameof(DataSaverImageThresholdBox),
+                    "Le seuil d'image doit être un nombre de Ko compris entre 1 et 10 000.");
+
             return new BrowserSettings
             {
                 SearchProvider = SearchProviderCombo.SelectedValue?.ToString() ?? "google",
                 AdBlockEnabled = AdBlockCheck.IsChecked == true,
                 DataSaverEnabled = DataSaverCheck.IsChecked == true,
+                DataSaverImageThresholdKilobytes = thresholdKilobytes,
                 RestoreSession = RestoreSessionCheck.IsChecked == true,
                 AllowedDomains = allowedDomains ?? current.AllowedDomains?.ToList() ?? new List<string>(),
                 Theme = ThemeCombo.SelectedValue?.ToString() ?? current.Theme,
@@ -74,7 +82,9 @@ namespace MadagascarBrowser.Shell
         {
             try
             {
-                await DatabaseAccess.WriteAsync(() => BrowserServices.UpdateSettings(BuildSettings()));
+                var settings = BuildSettings();
+                await DatabaseAccess.WriteAsync(() => BrowserServices.SettingsService.Save(settings));
+                BrowserServices.ApplySettings(settings);
             }
             catch (Exception exception)
             {
@@ -128,7 +138,9 @@ namespace MadagascarBrowser.Shell
 
             try
             {
-                await DatabaseAccess.WriteAsync(() => BrowserServices.UpdateSettings(BuildSettings(allowed)));
+                var settings = BuildSettings(allowed);
+                await DatabaseAccess.WriteAsync(() => BrowserServices.SettingsService.Save(settings));
+                BrowserServices.ApplySettings(settings);
                 AllowedDomainBox.Text = string.Empty;
                 AllowedDomainsList.ItemsSource = allowed;
                 AllowedDomainsFeedback.Text = "Domaine autorisé.";
@@ -149,7 +161,9 @@ namespace MadagascarBrowser.Shell
 
             try
             {
-                await DatabaseAccess.WriteAsync(() => BrowserServices.UpdateSettings(BuildSettings(allowed)));
+                var settings = BuildSettings(allowed);
+                await DatabaseAccess.WriteAsync(() => BrowserServices.SettingsService.Save(settings));
+                BrowserServices.ApplySettings(settings);
                 AllowedDomainsList.ItemsSource = allowed;
                 AllowedDomainsFeedback.Text = "Domaine retiré.";
             }
@@ -158,5 +172,60 @@ namespace MadagascarBrowser.Shell
                 AllowedDomainsFeedback.Text = $"Impossible de retirer le domaine : {exception.Message}";
             }
         }
+        private async void ClearData_Click(object sender, RoutedEventArgs e)
+                {
+                    if (Window.GetWindow(this)?.DataContext is TabManager { IsPrivate: true })
+                    {
+                        ClearDataFeedback.Text = "L'effacement des données du profil normal est désactivé depuis une fenêtre privée.";
+                        return;
+                    }
+                    var clearHistory = ClearHistoryCheck.IsChecked == true;
+                    var clearCookies = ClearCookiesCheck.IsChecked == true;
+                    var clearCache = ClearCacheCheck.IsChecked == true;
+                    var selected = new List<string>();
+                    if (clearHistory) selected.Add("historique");
+                    if (clearCookies) selected.Add("cookies et données de session");
+                    if (clearCache) selected.Add("cache WebView2");
+        
+                    if (selected.Count == 0)
+                    {
+                        ClearDataFeedback.Text = "Sélectionnez au moins une catégorie.";
+                        return;
+                    }
+        
+                    var message = "Cette action supprimera uniquement : " + string.Join(", ", selected) +
+                        ". Les favoris, les téléchargements et les paramètres ne seront pas supprimés. Continuer ?";
+                    if (MessageBox.Show(Window.GetWindow(this), message, "Confirmer l'effacement",
+                            MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+                    {
+                        ClearDataFeedback.Text = "Effacement annulé.";
+                        return;
+                    }
+        
+                    try
+                    {
+                        if (clearHistory || clearCookies || clearCache)
+                        {
+                            if (Window.GetWindow(this)?.DataContext is not TabManager tabManager)
+                                throw new InvalidOperationException("Gestionnaire de navigation indisponible.");
+                            await tabManager.ClearWebViewDataAsync(clearHistory, clearCookies, clearCache);
+                        }
+        
+                        if (clearHistory)
+                        {
+                            await DatabaseAccess.WriteAsync(() => BrowserServices.History.Clear());
+                            var historyIsEmpty = await DatabaseAccess.ReadAsync(() => BrowserServices.History.Recent(1).Count == 0);
+                            if (!historyIsEmpty)
+                                throw new InvalidOperationException("La vérification de l'historique a échoué.");
+                        }
+        
+                        ClearDataFeedback.Text = "Effacement terminé : " + string.Join(", ", selected) +
+                            ". WebView2 a confirmé la fin de l'opération; l'historique SQLite a été vérifié s'il était sélectionné.";
+                    }
+                    catch (Exception exception)
+                    {
+                        ClearDataFeedback.Text = "Effacement incomplet : " + exception.Message;
+                    }
+                }
     }
 }

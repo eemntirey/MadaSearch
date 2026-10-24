@@ -65,7 +65,7 @@
                         VerticalAlignment="Center">
                 <TextBlock Text="M" FontFamily="Segoe UI" FontSize="13" FontWeight="Bold"
                            Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center"/>
-                <TextBlock Text="adagascar Browser" FontFamily="Segoe UI" FontSize="11.5"
+                <TextBlock Text="{Binding Title, RelativeSource={RelativeSource AncestorType=Window}}" FontFamily="Segoe UI" FontSize="11.5"
                            Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"
                            Margin="1,0,0,0"/>
             </StackPanel>
@@ -78,8 +78,7 @@
                         chrome:WindowChrome.IsHitTestVisibleInChrome="True"
                         Click="Minimize_Click" ToolTip="Réduire" AutomationProperties.Name="Réduire"/>
                 <Button Click="Maximize_Click" ToolTip="Agrandir"
-                        chrome:WindowChrome.IsHitTestVisibleInChrome="True"
-                        AutomationProperties.Name="Agrandir">
+                        chrome:WindowChrome.IsHitTestVisibleInChrome="True">
                     <Button.Style>
                         <Style TargetType="Button" BasedOn="{StaticResource CaptionButton}">
                             <Setter Property="Content" Value="&#xE922;"/>
@@ -93,6 +92,10 @@
                         </Style>
                     </Button.Style>
                 </Button>
+                <Button x:Name="PinBtn" Style="{StaticResource CaptionPinButton}" Content="&#xE733;"
+                        chrome:WindowChrome.IsHitTestVisibleInChrome="True"
+                        Click="PinBtn_Click" ToolTip="Épingler / détacher l'en-tête"
+                        AutomationProperties.Name="Épingler l'en-tête"/>
                 <Button Style="{StaticResource CaptionCloseButton}" Content="&#xE8BB;"
                         chrome:WindowChrome.IsHitTestVisibleInChrome="True"
                         Click="CloseWindow_Click" ToolTip="Fermer" AutomationProperties.Name="Fermer la fenêtre"/>
@@ -100,7 +103,10 @@
         </Grid>
 
         <!-- Barre d'onglets : onglets flottants sur le fond de la fenêtre -->
-        <Border Grid.Row="2" Background="{DynamicResource BgBrush}" BorderThickness="0">
+        <Border x:Name="TabStripBorder" Grid.Row="2" Background="{DynamicResource BgBrush}" BorderThickness="0"
+                MouseLeftButtonDown="TabStripBorder_MouseLeftButtonDown"
+                MouseLeftButtonUp="TabStripBorder_MouseLeftButtonUp"
+                MouseMove="TabStripBorder_MouseMove">
             <Grid Margin="8,2,8,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -168,7 +174,7 @@
         <ContentControl Grid.Row="3" Content="{Binding Active.View}"/>
 
         <!-- Barre d'état : état de navigation + puces d'information -->
-        <Border Grid.Row="4" Background="{DynamicResource SurfaceBrush}"
+        <Border x:Name="StatusBarBorder" Grid.Row="4" Background="{DynamicResource SurfaceBrush}"
                 BorderBrush="{DynamicResource EdgeBrush}" BorderThickness="0,1,0,0">
             <Grid Height="26" Margin="12,0">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -194,6 +200,22 @@
                             Padding="10,3" Margin="0,0,6,0">
                         <TextBlock FontSize="11" Foreground="{DynamicResource MutedBrush}"
                                    Text="{Binding BlockedCount, Source={x:Static shell:BrowserStats.Instance}, StringFormat={}{0} pubs bloquées}"/>
+                    </Border>
+                    <Border Background="{DynamicResource SurfaceHighBrush}" CornerRadius="999"
+                            Padding="10,3" Margin="0,0,6,0">
+                        <TextBlock FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                                   Text="{Binding SavedDataText, Source={x:Static shell:BrowserStats.Instance}}"
+                                   ToolTip="{Binding SavedDataTooltip, Source={x:Static shell:BrowserStats.Instance}}"/>
+                    </Border>
+                    <Border Background="{DynamicResource SurfaceHighBrush}" CornerRadius="999"
+                            Padding="10,3" Margin="0,0,6,0">
+                        <TextBlock FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                                   Text="{Binding ReplacedImagesCount, Source={x:Static shell:BrowserStats.Instance}, StringFormat={}{0} images remplacées}"/>
+                    </Border>
+                    <Border Background="{DynamicResource SurfaceHighBrush}" CornerRadius="999"
+                            Padding="10,3" Margin="0,0,6,0">
+                        <TextBlock FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                                   Text="{Binding BlockedVideosCount, Source={x:Static shell:BrowserStats.Instance}, StringFormat={}{0} vidéos bloquées}"/>
                     </Border>
                     <Border Background="{DynamicResource SurfaceHighBrush}" CornerRadius="999" Padding="10,3">
                         <TextBlock FontSize="11" Foreground="{DynamicResource MutedBrush}"

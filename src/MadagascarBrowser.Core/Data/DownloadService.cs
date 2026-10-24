@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 
 namespace MadagascarBrowser.Core.Data
 {
@@ -17,8 +18,8 @@ namespace MadagascarBrowser.Core.Data
         public BrowserDownload Start(string url, string destination)
         {
             var startedAt = DateTime.UtcNow;
-            using var connection = new SqliteConnection($"Data Source={_path}");
-            connection.Open();
+            using var connection = SqliteConnectionFactory.Open(_path);
+
             using var command = connection.CreateCommand();
             command.CommandText = "INSERT INTO downloads (url,path,bytes_received,total_bytes,state,started_at) VALUES ($url,$path,0,0,$state,$started_at); SELECT last_insert_rowid();";
             command.Parameters.AddWithValue("$url", url);
@@ -49,11 +50,56 @@ namespace MadagascarBrowser.Core.Data
             SetState(id, DownloadState.Failed);
         }
 
+        /// <summary>
+        /// Recovers download records left InProgress after an unclean shutdown.
+        /// Existing files are never deleted. A record is considered complete only
+        /// when a known positive expected size is present on disk in full.
+        /// </summary>
+        public int RecoverInProgressDownloads()
+        {
+            var pending = new List<(long Id, string Path, long TotalBytes, DateTime StartedAt)>();
+            using (var connection = new SqliteConnection($"Data Source={_path}"))
+            {
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText = "SELECT id,path,total_bytes,started_at FROM downloads WHERE state=$state";
+                command.Parameters.AddWithValue("$state", DownloadState.InProgress.ToString());
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                    pending.Add((reader.GetInt64(0), reader.GetString(1), reader.GetInt64(2),
+                        DateTimeStorage.Parse(reader.GetString(3))));
+            }
+
+            foreach (var item in pending)
+            {
+                // Be conservative: a pre-existing file at the selected destination must not
+                // make a new, interrupted download look complete. Require an exact size match
+                // and a last-write timestamp at or after this download's recorded start.
+                var fileInfo = File.Exists(item.Path) ? new FileInfo(item.Path) : null;
+                var complete = item.TotalBytes > 0
+                    && fileInfo != null
+                    && fileInfo.Length == item.TotalBytes
+                    && fileInfo.LastWriteTimeUtc >= item.StartedAt;
+                using var connection = new SqliteConnection($"Data Source={_path}");
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText = "UPDATE downloads SET state=$state, bytes_received=CASE WHEN $complete=1 THEN $total ELSE bytes_received END WHERE id=$id AND state=$inProgress";
+                command.Parameters.AddWithValue("$state", (complete ? DownloadState.Completed : DownloadState.Interrupted).ToString());
+                command.Parameters.AddWithValue("$complete", complete ? 1 : 0);
+                command.Parameters.AddWithValue("$total", item.TotalBytes);
+                command.Parameters.AddWithValue("$id", item.Id);
+                command.Parameters.AddWithValue("$inProgress", DownloadState.InProgress.ToString());
+                command.ExecuteNonQuery();
+            }
+
+            return pending.Count;
+        }
+
         public List<BrowserDownload> GetRecent(int limit = 50)
         {
             var downloads = new List<BrowserDownload>();
-            using var connection = new SqliteConnection($"Data Source={_path}");
-            connection.Open();
+            using var connection = SqliteConnectionFactory.Open(_path);
+
             using var command = connection.CreateCommand();
             command.CommandText = "SELECT id,url,path,bytes_received,total_bytes,state,started_at FROM downloads ORDER BY id DESC LIMIT $limit";
             command.Parameters.AddWithValue("$limit", Math.Max(0, limit));
@@ -74,8 +120,8 @@ namespace MadagascarBrowser.Core.Data
 
         private void Update(long id, long bytesReceived, long totalBytes, DownloadState state)
         {
-            using var connection = new SqliteConnection($"Data Source={_path}");
-            connection.Open();
+            using var connection = SqliteConnectionFactory.Open(_path);
+
             using var command = connection.CreateCommand();
             command.CommandText = "UPDATE downloads SET bytes_received=$received,total_bytes=$total,state=$state WHERE id=$id";
             command.Parameters.AddWithValue("$received", Math.Max(0, bytesReceived));
@@ -87,8 +133,8 @@ namespace MadagascarBrowser.Core.Data
 
         private void SetState(long id, DownloadState state)
         {
-            using var connection = new SqliteConnection($"Data Source={_path}");
-            connection.Open();
+            using var connection = SqliteConnectionFactory.Open(_path);
+
             using var command = connection.CreateCommand();
             command.CommandText = "UPDATE downloads SET state=$state WHERE id=$id";
             command.Parameters.AddWithValue("$state", state.ToString());

@@ -36,6 +36,17 @@ public class AdBlockServiceTests
     }
 
     [Fact]
+    public void DomainExemption_IsDetectedForHostAndSubdomain()
+    {
+        var ad = new AdBlockService();
+        ad.SetDomainExempt("tracker.io");
+
+        Assert.True(ad.IsDomainExempt(new Uri("https://tracker.io/image.jpg")));
+        Assert.True(ad.IsDomainExempt(new Uri("https://cdn.tracker.io/video")));
+        Assert.False(ad.IsDomainExempt(new Uri("https://nottracker.io/image.jpg")));
+    }
+
+    [Fact]
     public void SetDomainExempt_ExemptsSubdomainsButNotLookalikeDomains()
     {
         var directory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));

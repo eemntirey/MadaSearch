@@ -35,40 +35,45 @@ namespace MadagascarBrowser.Core.Data
         /// </summary>
         public void Debounce()
         {
+            CancellationTokenSource? previous;
+            CancellationTokenSource current;
+
             lock (_lock)
             {
                 if (_disposed)
                     return;
 
-                _pending?.Cancel();
-                _pending?.Dispose();
-                _pending = new CancellationTokenSource();
-                var token = _pending.Token;
-                _ = RunAsync(token);
+                previous = _pending;
+                current = new CancellationTokenSource();
+                _pending = current;
             }
-        }
 
-        private async Task RunAsync(CancellationToken token)
-        {
-            try
+            previous?.Cancel();
+            previous?.Dispose();
+
+            _ = Task.Run(async () =>
             {
-                await Task.Delay(_delay, token).ConfigureAwait(false);
-                if (token.IsCancellationRequested)
-                    return;
-
-                lock (_lock)
+                try
                 {
-                    if (_disposed || token.IsCancellationRequested)
+                    await Task.Delay(_delay, current.Token).ConfigureAwait(false);
+                    if (current.IsCancellationRequested)
                         return;
-                    ExecutionCount++;
-                }
 
-                await _action(token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                // Demande annulée par une demande plus récente : rien à faire.
-            }
+                    lock (_lock)
+                    {
+                        if (_disposed || current.IsCancellationRequested)
+                            return;
+
+                        ExecutionCount++;
+                    }
+
+                    await _action(current.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Demande annulée par une demande plus récente : rien à faire.
+                }
+            });
         }
 
         public void Dispose()

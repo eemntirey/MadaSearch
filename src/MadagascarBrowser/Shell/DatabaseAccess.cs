@@ -7,7 +7,9 @@ namespace MadagascarBrowser.Shell
     /// <summary>
     /// Exécute les accès SQLite hors du thread UI.
     /// Chaque service ouvre sa propre connexion, les opérations peuvent donc
-    /// se dérouler en parallèle sans partager d'état.
+    /// se dérouler en parallèle sans partager d'état. Une écriture refusée
+    /// parce que la base est verrouillée est réessayée : l'utilisateur ne
+    /// doit jamais voir « database is locked ».
     /// </summary>
     public static class DatabaseAccess
     {
@@ -16,7 +18,7 @@ namespace MadagascarBrowser.Shell
         /// </summary>
         public static Task<T> ReadAsync<T>(Func<T> read)
         {
-            return Task.Run(read);
+            return Task.Run(() => SqliteRetryPolicy.Execute(read));
         }
 
         /// <summary>
@@ -24,7 +26,7 @@ namespace MadagascarBrowser.Shell
         /// </summary>
         public static Task WriteAsync(Action write)
         {
-            return Task.Run(write);
+            return Task.Run(() => SqliteRetryPolicy.Execute(write));
         }
 
         /// <summary>
@@ -32,7 +34,7 @@ namespace MadagascarBrowser.Shell
         /// </summary>
         public static Task<T> WriteAsync<T>(Func<T> write)
         {
-            return Task.Run(write);
+            return Task.Run(() => SqliteRetryPolicy.Execute(write));
         }
     }
 }

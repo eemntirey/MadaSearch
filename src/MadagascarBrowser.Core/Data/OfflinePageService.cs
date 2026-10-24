@@ -35,8 +35,8 @@ namespace MadagascarBrowser.Core.Data
             File.Move(temporaryPath, path);
             try
             {
-                using var connection = new SqliteConnection($"Data Source={_databasePath}");
-                connection.Open();
+                using var connection = SqliteConnectionFactory.Open(_databasePath);
+
                 using var command = connection.CreateCommand();
                 command.CommandText = "INSERT INTO offline_pages (id,url,title,path,saved_at) VALUES ($id,$url,$title,$path,$saved_at)";
                 command.Parameters.AddWithValue("$id", id);
@@ -58,8 +58,8 @@ namespace MadagascarBrowser.Core.Data
         public List<OfflinePage> GetAll()
         {
             var pages = new List<OfflinePage>();
-            using var connection = new SqliteConnection($"Data Source={_databasePath}");
-            connection.Open();
+            using var connection = SqliteConnectionFactory.Open(_databasePath);
+
             using var command = connection.CreateCommand();
             command.CommandText = "SELECT id,url,title,path,saved_at FROM offline_pages ORDER BY saved_at DESC";
             using var reader = command.ExecuteReader();
@@ -75,8 +75,8 @@ namespace MadagascarBrowser.Core.Data
 
         public string? GetPath(string id)
         {
-            using var connection = new SqliteConnection($"Data Source={_databasePath}");
-            connection.Open();
+            using var connection = SqliteConnectionFactory.Open(_databasePath);
+
             using var command = connection.CreateCommand();
             command.CommandText = "SELECT path FROM offline_pages WHERE id=$id";
             command.Parameters.AddWithValue("$id", id);
@@ -92,9 +92,9 @@ namespace MadagascarBrowser.Core.Data
         public void Remove(string id)
         {
             var path = GetPath(id);
-            using (var connection = new SqliteConnection($"Data Source={_databasePath}"))
+            using (var connection = SqliteConnectionFactory.Open(_databasePath))
             {
-                connection.Open();
+
                 using var command = connection.CreateCommand();
                 command.CommandText = "DELETE FROM offline_pages WHERE id=$id";
                 command.Parameters.AddWithValue("$id", id);

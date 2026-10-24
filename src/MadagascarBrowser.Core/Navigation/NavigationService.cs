@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Text.Encodings.Web;
 
@@ -6,11 +7,16 @@ namespace MadagascarBrowser.Core.Navigation
 {
     public class NavigationService
     {
-        private const string DefaultSearchUrl = "https://www.google.com/search?q=";
+        private readonly string _searchUrlTemplate;
+
+        public NavigationService(string? searchProvider = "google")
+        {
+            _searchUrlTemplate = SearchProviderResolver.GetSearchUrlTemplate(searchProvider);
+        }
 
         public string ResolveNavigation(string input)
         {
-            return ResolveNavigation(input, DefaultSearchUrl);
+            return ResolveNavigation(input, _searchUrlTemplate);
         }
 
         public string ResolveNavigation(string input, string searchUrlTemplate)
@@ -24,13 +30,20 @@ namespace MadagascarBrowser.Core.Navigation
                 return input;
             }
 
+            // Un chemin local absolu (« C:\...\page.mhtml ») est une cible de fichier :
+            // NavigationTargetResolver le convertit en URI file://.
+            if (Path.IsPathRooted(input))
+            {
+                return input;
+            }
+
             if (LooksLikeUrl(input))
             {
                 return "https://" + input;
             }
 
             var encoded = UrlEncoder.Default.Encode(input);
-            return (string.IsNullOrWhiteSpace(searchUrlTemplate) ? DefaultSearchUrl : searchUrlTemplate) + encoded;
+            return (string.IsNullOrWhiteSpace(searchUrlTemplate) ? _searchUrlTemplate : searchUrlTemplate) + encoded;
         }
 
         public bool LooksLikeUrl(string input)
@@ -69,9 +82,17 @@ namespace MadagascarBrowser.Core.Navigation
             return false;
         }
 
+        /// <summary>
+        /// Indique si la saisie porte déjà un schéma d'URL qui doit être conservé tel quel.
+        /// Les pages hors ligne (file://) et les onglets vides (about:) seraient
+        /// sinon transformés en « https://file://… », donc inaccessibles.
+        /// </summary>
         private static bool IsAbsoluteUrl(string s)
         {
-            return s.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || s.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+            return s.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                || s.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+                || s.StartsWith("file://", StringComparison.OrdinalIgnoreCase)
+                || s.StartsWith("about:", StringComparison.OrdinalIgnoreCase);
         }
     }
 }
