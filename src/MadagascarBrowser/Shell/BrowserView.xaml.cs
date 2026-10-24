@@ -13,6 +13,7 @@ using Microsoft.Win32;
 using MadagascarBrowser.Core.Blocking;
 using MadagascarBrowser.Core.Data;
 using MadagascarBrowser.Core.Navigation;
+using MadagascarBrowser.Core.Intelligence;
 using MadagascarBrowser.Core.Security;
 using Microsoft.Web.WebView2.Core;
 
@@ -622,6 +623,15 @@ namespace MadagascarBrowser.Shell
                 AppLog.Error("Impossible d'importer le profil.", exception);
                 MessageBox.Show(Window.GetWindow(this), $"Impossible d'importer le profil : {exception.Message}",
                     "Profil", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void Assistant_Click(object sender, RoutedEventArgs e)
+        {
+            AssistantPopup.IsOpen = !AssistantPopup.IsOpen;
+            if (AssistantPopup.IsOpen && AssistantPanelInstance.DataContext == null)
+            {
+                AssistantPanelInstance.DataContext = new AssistantPanelViewModel(BrowserServices.Assistant);
             }
         }
 

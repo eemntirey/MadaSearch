@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
+using MadagascarBrowser.Core.Data;
 using MadagascarBrowser.Core.Navigation;
 
 namespace MadagascarBrowser.Shell
@@ -21,6 +22,9 @@ namespace MadagascarBrowser.Shell
 
         public ObservableCollection<TabViewModel> Tabs { get; } = new();
         private TabViewModel _active = null!;
+
+        /// <summary>Groupes d'onglets nommés et colorés.</summary>
+        public ObservableCollection<TabGroup> Groups { get; } = new();
         public TabViewModel Active
         {
             get => _active;
@@ -279,6 +283,134 @@ namespace MadagascarBrowser.Shell
             _active = null!;
         }
 
+        /// <summary>Réduit ou restaure un groupe.</summary>
+        public void ToggleGroupCollapse(int groupId)
+        {
+            var group = Groups.FirstOrDefault(g => g.Id == groupId);
+            if (group != null)
+            {
+                group.IsCollapsed = !group.IsCollapsed;
+                // Met à jour tous les onglets liés au groupe
+                foreach (var tab in Tabs)
+                {
+                    if (tab.GroupId == groupId)
+                        tab.GroupCollapsed = group.IsCollapsed;
+                }
+            }
+        }
+
+        /// <summary>Recherche rapide dans les onglets ouverts (titre ou URL).</summary>
+        /// <param name="query">Texte de recherche.</param>
+        /// <returns>Onglets correspondants.</returns>
+        public System.Collections.Generic.List<TabViewModel> SearchTabs(string query)
+        {
+            if (string.IsNullOrWhiteSpace(query)) return new();
+            var q = query.ToLowerInvariant();
+            return Tabs
+                .Where(t => t.Title.ToLowerInvariant().Contains(q) ||
+                            (t.Url ?? string.Empty).ToLowerInvariant().Contains(q))
+                .ToList();
+        }
+
+        /// <summary>Détecte les onglets potentiellement dupliqués (même URL) et propose une action.</summary>
+        /// <returns>Paires d'onglets avec la même URL, sans fermer automatiquement.</returns>
+        public System.Collections.Generic.List<(TabViewModel first, TabViewModel second, string url)> DetectDuplicateTabs()
+        {
+            var duplicates = new System.Collections.Generic.List<(TabViewModel, TabViewModel, string)>();
+            var seen = new System.Collections.Generic.Dictionary<string, TabViewModel>();
+            foreach (var tab in Tabs)
+            {
+                if (string.IsNullOrWhiteSpace(tab.Url)) continue;
+                var url = tab.Url;
+                if (seen.TryGetValue(url, out var existing))
+                {
+                    duplicates.Add((existing, tab, url));
+                }
+                else
+                {
+                    seen[url] = tab;
+                }
+            }
+            return duplicates;
+        }
+
+        /// <summary>Crée un nouveau groupe d'onglets nommé et coloré.</summary>
+        /// <param name="name">Nom du groupe.</param>
+        /// <param name="colorHex">Couleur hexadécimale du groupe.</param>
+        /// <returns>Le groupe créé.</returns>
+        public TabGroup CreateGroup(string name, string colorHex)
+        {
+            var group = new TabGroup
+            {
+                Id = Groups.Count > 0 ? Groups.Max(g => g.Id) + 1 : 1,
+                Name = string.IsNullOrWhiteSpace(name) ? "Nouveau groupe" : name.Trim(),
+                ColorHex = string.IsNullOrWhiteSpace(colorHex) ? "#FF4438" : colorHex.Trim(),
+                OrderIndex = Groups.Count
+            };
+            Groups.Add(group);
+            return group;
+        }
+
+        /// <summary>Supprime un groupe d'onglets et en retire tous les onglets sans les fermer.</summary>
+        public void DeleteGroup(int groupId)
+        {
+            var group = Groups.FirstOrDefault(g => g.Id == groupId);
+            if (group == null) return;
+
+            // Retire l'association de groupe pour tous les onglets concernés sans les fermer.
+            foreach (var tab in Tabs.Where(t => t.GroupId == groupId).ToList())
+            {
+                RemoveTabFromGroup(tab);
+            }
+
+            Groups.Remove(group);
+        }
+
+        /// <summary>Renomme un groupe d'onglets existant.</summary>
+        public void RenameGroup(int groupId, string name)
+        {
+            var group = Groups.FirstOrDefault(g => g.Id == groupId);
+            if (group == null || string.IsNullOrWhiteSpace(name)) return;
+
+            group.Name = name.Trim();
+            foreach (var tab in Tabs.Where(t => t.GroupId == groupId))
+                tab.GroupName = group.Name;
+        }
+
+        /// <summary>Retourne les onglets appartenant à un groupe.</summary>
+        public System.Collections.Generic.List<TabViewModel> GetGroupTabs(int groupId)
+        {
+            return Tabs.Where(t => t.GroupId == groupId).ToList();
+        }
+
+        /// <summary>Associe un onglet à un groupe (le retire de son groupe précédent le cas échéant).</summary>
+        public void AssignTabToGroup(TabViewModel tab, int groupId)
+        {
+            var group = Groups.FirstOrDefault(g => g.Id == groupId);
+            if (group == null) return;
+
+            // Retire l'onglet de son groupe précédent sans le fermer.
+            if (tab.GroupId != 0 && tab.GroupId != groupId)
+                RemoveTabFromGroup(tab);
+
+            tab.GroupId = groupId;
+            tab.GroupName = group.Name;
+            tab.GroupColorHex = group.ColorHex;
+            if (!group.TabUrls.Contains(tab.Url ?? string.Empty))
+                group.TabUrls.Add(tab.Url ?? string.Empty);
+        }
+
+        /// <summary>Retire un onglet de son groupe.</summary>
+        public void RemoveTabFromGroup(TabViewModel tab)
+        {
+            var group = Groups.FirstOrDefault(g => g.Id == tab.GroupId);
+            if (group != null && !string.IsNullOrWhiteSpace(tab.Url))
+                group.TabUrls.Remove(tab.Url);
+            tab.GroupId = 0;
+            tab.GroupName = string.Empty;
+            tab.GroupCollapsed = false;
+        }
+
         public void Close(TabViewModel t)
         {
             if (t == null) return;
@@ -290,6 +422,10 @@ namespace MadagascarBrowser.Shell
             // L'URL est mémorisée pour permettre la réouverture (Ctrl+Maj+T).
             if (!IsPrivate && !string.IsNullOrWhiteSpace(t.Url))
                 _closedTabUrls.Insert(0, t.Url);
+
+            // Retire l'onglet de son groupe sans supprimer le groupe.
+            if (t.GroupId != 0)
+                RemoveTabFromGroup(t);
 
             Tabs.Remove(t);
             if (t.View is BrowserView view)
