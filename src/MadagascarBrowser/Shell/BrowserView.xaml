@@ -44,13 +44,16 @@
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,4,0">
                         <Button x:Name="BackBtn" Style="{StaticResource IconButton}"
                                 Content="&#xE72B;" ToolTip="Retour" Click="Back_Click"
-                                AutomationProperties.Name="Retour"/>
+                                AutomationProperties.Name="Retour"
+                                AutomationProperties.AutomationId="BackButton"/>
                         <Button x:Name="ForwardBtn" Style="{StaticResource IconButton}"
                                 Content="&#xE72A;" ToolTip="Suivant" Click="Forward_Click"
-                                AutomationProperties.Name="Suivant"/>
+                                AutomationProperties.Name="Suivant"
+                                AutomationProperties.AutomationId="ForwardButton"/>
                         <Button x:Name="ReloadBtn" Style="{StaticResource IconButton}"
                                 Content="&#xE72C;" ToolTip="Rafraîchir" Click="Reload_Click"
-                                AutomationProperties.Name="Rafraîchir"/>
+                                AutomationProperties.Name="Rafraîchir"
+                                AutomationProperties.AutomationId="ReloadButton"/>
                     </StackPanel>
 
                     <!-- Pilule omnibox : état de sécurité + champ + favori -->
@@ -91,13 +94,14 @@
                                     </Style>
                                 </TextBlock.Style>
                             </TextBlock>
-                            <TextBox x:Name="AddressBar" Grid.Column="1"
-                                     KeyDown="AddressBar_KeyDown" TextChanged="AddressBar_TextChanged"
-                                     Background="Transparent" Foreground="{DynamicResource TextBrush}"
-                                     CaretBrush="{DynamicResource TextBrush}" BorderThickness="0"
-                                     VerticalContentAlignment="Center" FontSize="13"
-                                     SelectionBrush="{DynamicResource AccentBrush}"
-                                     AutomationProperties.Name="Adresse"/>
+                             <TextBox x:Name="AddressBar" Grid.Column="1"
+                                      KeyDown="AddressBar_KeyDown" TextChanged="AddressBar_TextChanged"
+                                      Background="Transparent" Foreground="{DynamicResource TextBrush}"
+                                      CaretBrush="{DynamicResource TextBrush}" BorderThickness="0"
+                                      VerticalContentAlignment="Center" FontSize="13"
+                                      SelectionBrush="{DynamicResource AccentBrush}"
+                                      AutomationProperties.Name="Adresse"
+                                      AutomationProperties.AutomationId="AddressBar"/>
                             <Button Grid.Column="2" Style="{StaticResource IconButtonSmall}" Content="&#xE734;"
                                     Margin="4" ToolTip="Ajouter aux favoris" Click="MenuAddFavorite_Click"
                                     AutomationProperties.Name="Ajouter aux favoris"/>
@@ -113,7 +117,8 @@
                                 AutomationProperties.Name="Niveau de zoom"/>
                         <Button x:Name="MenuBtn" Style="{StaticResource IconButton}"
                                 Content="&#xE712;" ToolTip="Menu" Click="Menu_Click"
-                                AutomationProperties.Name="Menu"/>
+                                AutomationProperties.Name="Menu"
+                                AutomationProperties.AutomationId="MenuButton"/>
                     </StackPanel>
                 </Grid>
 
@@ -166,8 +171,42 @@
                        VerticalOffset="6" HorizontalOffset="-200">
                     <Border Background="{DynamicResource SurfaceBrush}"
                             BorderBrush="{DynamicResource EdgeBrush}" BorderThickness="1"
-                            CornerRadius="10" MinWidth="220" Padding="4">
+                            CornerRadius="10" MinWidth="260" Padding="4">
                         <StackPanel>
+                            <Button Style="{StaticResource MenuRowButton}" Click="MenuPrivateWindow_Click"
+                                    AutomationProperties.AutomationId="MenuPrivateWindow">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE727;" FontFamily="Segoe MDL2 Assets"
+                                               FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBlock Text="Nouvelle fenêtre privée" FontSize="12.5" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource MenuRowButton}" Click="MenuClearData_Click"
+                                    AutomationProperties.AutomationId="MenuClearData">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets"
+                                               FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBlock Text="Effacer les données de navigation" FontSize="12.5" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button x:Name="DevToolsMenuItem" Style="{StaticResource MenuRowButton}"
+                                    Click="MenuDevTools_Click"
+                                    AutomationProperties.AutomationId="MenuDevTools">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE90F;" FontFamily="Segoe MDL2 Assets"
+                                               FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBlock Text="Outils de développement (F12)" FontSize="12.5" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource MenuRowButton}" Click="MenuAbout_Click"
+                                    AutomationProperties.AutomationId="MenuAbout">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets"
+                                               FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBlock Text="À propos" FontSize="12.5" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Separator Background="{DynamicResource EdgeBrush}" Margin="6,4"/>
                             <Button Style="{StaticResource MenuRowButton}" Click="MenuNewTab_Click">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets"
@@ -224,7 +263,8 @@
                                     <TextBlock Text="Favoris" FontSize="12.5" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
-                            <Button Style="{StaticResource MenuRowButton}" Click="MenuDownloads_Click">
+                            <Button Style="{StaticResource MenuRowButton}" Click="MenuDownloads_Click"
+                                    AutomationProperties.AutomationId="MenuDownloads">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#xE896;" FontFamily="Segoe MDL2 Assets"
                                                FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>

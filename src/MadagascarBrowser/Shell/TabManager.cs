@@ -9,6 +9,16 @@ namespace MadagascarBrowser.Shell
 {
     public class TabManager : INotifyPropertyChanged, ITabHost
     {
+        private readonly bool _isPrivate;
+
+        public TabManager(bool isPrivate = false)
+        {
+            _isPrivate = isPrivate;
+        }
+
+        /// <summary>Vrai si cette fenêtre ne doit laisser aucune trace locale.</summary>
+        public bool IsPrivate => _isPrivate;
+
         public ObservableCollection<TabViewModel> Tabs { get; } = new();
         private TabViewModel _active = null!;
         public TabViewModel Active
@@ -29,15 +39,15 @@ namespace MadagascarBrowser.Shell
         /// <summary>Signalé quand une page passe en plein écran.</summary>
         public event EventHandler<bool>? FullScreenChanged;
 
-        private readonly List<string> _closedTabUrls = new();
-        public bool IsPrivate { get; }
-        private PrivateProfileSession? PrivateProfile { get; }
+        /// <summary>Signalé quand l'utilisateur demande une fenêtre privée.</summary>
+        public event EventHandler? PrivateWindowRequested;
 
-        public TabManager(bool isPrivate = false)
+        public void OpenPrivateWindow()
         {
-            IsPrivate = isPrivate;
-            if (isPrivate) PrivateProfile = new PrivateProfileSession();
+            PrivateWindowRequested?.Invoke(this, EventArgs.Empty);
         }
+
+        private readonly List<string> _closedTabUrls = new();
 
         /// <summary>
         /// Active l'onglet suivant, avec passage à l'onglet suivant en fin de liste.
@@ -134,6 +144,9 @@ namespace MadagascarBrowser.Shell
                 case AcceleratorCommand.ExitFullScreen:
                     view?.ExitFullScreen();
                     break;
+                case AcceleratorCommand.OpenDevTools:
+                    view?.OpenDevTools();
+                    break;
             }
         }
 
@@ -156,8 +169,8 @@ namespace MadagascarBrowser.Shell
                     break;
             }
 
-            var t = new TabViewModel { Title = title, Url = target, IsPrivate = IsPrivate, PrivateProfileFolder = PrivateProfile?.DirectoryPath };
-            var view = new BrowserView(this) { DataContext = t };
+            var t = new TabViewModel { Title = title, Url = target, IsPrivate = _isPrivate };
+            var view = new BrowserView(this, _isPrivate) { DataContext = t };
             t.View = view;
             Tabs.Add(t);
             Active = t;
@@ -264,7 +277,6 @@ namespace MadagascarBrowser.Shell
                 if (tab.View is BrowserView view) view.Dispose();
             Tabs.Clear();
             _active = null!;
-            PrivateProfile?.Dispose();
         }
 
         public void Close(TabViewModel t)

@@ -10,6 +10,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using System.Windows.Threading;
+using MadagascarBrowser.Core.Navigation;
 using MadagascarBrowser.Shell;
 using MadagascarBrowser.Core.Security;
 
@@ -27,52 +28,116 @@ namespace MadagascarBrowser
 
         private readonly TabManager _tabManager;
         private readonly bool _isPrivate;
-        private readonly DispatcherTimer _sessionSnapshotTimer = new() { Interval = TimeSpan.FromSeconds(15) };
-        private bool _isPinMode;
+        private readonly DispatcherTimer _sessionTimer;
+        private bool _isPinMode = false;
         private Point _lastMousePosition;
         private bool _isDragging;
 
-        public MainWindow() : this(false) { }
+        public MainWindow() : this(false)
+        {
+        }
 
         public MainWindow(bool isPrivate)
         {
-            InitializeComponent();
             _isPrivate = isPrivate;
+            InitializeComponent();
             PrivateProfileSession.CleanupOrphanedProfiles();
             Title = isPrivate ? "Madagascar Browser — Navigation privée" : "Madagascar Browser";
+            if (isPrivate)
+                PrivateBadge.Visibility = Visibility.Visible;
+
             _tabManager = new TabManager(isPrivate);
             BrowserServices.EnsureInitialized();
-            if (PrivateBrowsingPolicy.ShouldPersistSession(_isPrivate) && BrowserServices.CurrentSettings.RestoreSession)
+            if (!isPrivate && BrowserServices.CurrentSettings.RestoreSession)
                 _tabManager.RestoreSession(BrowserServices.Sessions.Load());
             if (_tabManager.Tabs.Count == 0)
                 _tabManager.NewTab();
             DataContext = _tabManager;
             _tabManager.FullScreenChanged += OnFullScreenChanged;
+            _tabManager.PrivateWindowRequested += OnPrivateWindowRequested;
+            _tabManager.ActiveChanged += OnActiveChanged;
             SourceInitialized += OnSourceInitialized;
             PreviewKeyDown += OnPreviewKeyDown;
             Closing += OnClosing;
             Closed += (_, _) => _tabManager.Dispose();
-            if (!_isPrivate)
+            Loaded += OnWindowLoaded;
+
+            // Instantané périodique : après un arrêt brutal, la session reste
+            // restaurable. La navigation privée n'écrit jamais de session.
+            if (!isPrivate)
             {
-                _sessionSnapshotTimer.Tick += (_, _) => SaveSessionSnapshot();
-                _sessionSnapshotTimer.Start();
+                _sessionTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
+                _sessionTimer.Tick += (_, _) => SaveSession();
+                _sessionTimer.Start();
+            }
+            else
+            {
+                _sessionTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
             }
         }
 
-        private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
+        private void OnWindowLoaded(object sender, RoutedEventArgs e)
         {
-            _sessionSnapshotTimer.Stop();
-            if (PrivateBrowsingPolicy.ShouldPersistSession(_isPrivate))
-                SaveSessionSnapshot();
+            _ = ShowRuntimeNoticeAsync();
+        }
+
+        private async Task ShowRuntimeNoticeAsync()
+        {
+            var info = await Task.Run(WebViewRuntimeService.GetRuntimeInfo);
+            if (!info.RequiresSecurityNotice)
+                return;
+
+            RuntimeBannerText.Text =
+                $"Runtime WebView2 obsolète ({info.Version ?? "version inconnue"}, " +
+                $"minimum attendu {info.MinimumSupportedVersion}). " +
+                "Mettez à jour le runtime pour recevoir les correctifs de sécurité.";
+            RuntimeBanner.Visibility = Visibility.Visible;
+        }
+
+        private void DismissRuntimeBanner_Click(object sender, RoutedEventArgs e)
+        {
+            RuntimeBanner.Visibility = Visibility.Collapsed;
+        }
+
+        private void OnPrivateWindowRequested(object? sender, EventArgs e)
+        {
+            AppLog.Info("Ouverture d'une fenêtre de navigation privée.");
+            var window = new MainWindow(isPrivate: true) { Owner = this };
+
+            // Une fenêtre privée doit rester entièrement visible, même sur un
+            // écran plus petit que sa taille par défaut.
+            var workArea = SystemParameters.WorkArea;
+            window.WindowStartupLocation = WindowStartupLocation.Manual;
+            window.Width = Math.Min(window.Width, workArea.Width);
+            window.Height = Math.Min(window.Height, workArea.Height);
+            window.Left = workArea.Left + (workArea.Width - window.Width) / 2;
+            window.Top = workArea.Top + (workArea.Height - window.Height) / 2;
+            window.Show();
+        }
+
+        private void OnActiveChanged(object? sender, EventArgs e)
+        {
+            if (!_isPrivate && IsLoaded)
+                SaveSession();
+        }
+
+        private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
+        {            if (_isPrivate)
+                return;
+
+            _sessionTimer.Stop();
+            SaveSession();
         }
 
         /// <summary>
-        /// Persists a recoverable tab snapshot periodically, not only during normal shutdown.
+        /// Enregistre l'état des onglets ouverts. Appelé à la fermeture, au
+        /// changement d'onglet et toutes les 30 secondes.
         /// </summary>
-        private void SaveSessionSnapshot()
+        private void SaveSession()
         {
-            if (!PrivateBrowsingPolicy.ShouldPersistSession(_isPrivate))
+            if (_isPrivate)
                 return;
+
             var urls = new List<string>();
             var activeIndex = -1;
             var currentIndex = _tabManager.Active is { } activeTab ? _tabManager.Tabs.IndexOf(activeTab) : -1;
@@ -94,8 +159,7 @@ namespace MadagascarBrowser
             }
             catch (Exception exception)
             {
-                // Keep the UI responsive; log the exception type without URLs or user data.
-                System.Diagnostics.Debug.WriteLine($"SessionSnapshotFailed: {exception.GetType().Name}");
+                AppLog.Error("Enregistrement de la session impossible.", exception);
             }
         }
 

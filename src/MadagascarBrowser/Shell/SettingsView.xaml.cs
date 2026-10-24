@@ -28,6 +28,8 @@ namespace MadagascarBrowser.Shell
             DataSaverCheck.IsChecked = settings.DataSaverEnabled;
             DataSaverImageThresholdBox.Text = settings.DataSaverImageThresholdKilobytes.ToString(CultureInfo.InvariantCulture);
             RestoreSessionCheck.IsChecked = settings.RestoreSession;
+            AutofillCheck.IsChecked = settings.AutofillEnabled;
+            PasswordAutosaveCheck.IsChecked = settings.PasswordAutosaveEnabled;
             AllowedDomainsList.ItemsSource = settings.AllowedDomains?.ToList() ?? new List<string>();
             AllowedDomainsFeedback.Text = string.Empty;
         }
@@ -71,6 +73,8 @@ namespace MadagascarBrowser.Shell
                 DataSaverEnabled = DataSaverCheck.IsChecked == true,
                 DataSaverImageThresholdKilobytes = thresholdKilobytes,
                 RestoreSession = RestoreSessionCheck.IsChecked == true,
+                AutofillEnabled = AutofillCheck.IsChecked == true,
+                PasswordAutosaveEnabled = PasswordAutosaveCheck.IsChecked == true,
                 AllowedDomains = allowedDomains ?? current.AllowedDomains?.ToList() ?? new List<string>(),
                 Theme = ThemeCombo.SelectedValue?.ToString() ?? current.Theme,
                 Density = DensityCombo.SelectedValue?.ToString() ?? current.Density,

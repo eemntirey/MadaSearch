@@ -29,6 +29,7 @@ namespace MadagascarBrowser.Shell
         private readonly ITabHost _tabHost;
         private readonly NewWindowRequestHandler _newWindowHandler;
         private readonly FindInPageState _findState = new();
+        private readonly bool _isPrivate;
         private bool _findRunning;
         private bool _coreReady;
         private bool _suppressSuggest;
@@ -52,15 +53,21 @@ namespace MadagascarBrowser.Shell
         /// dépend plus du DataContext de la fenêtre.
         /// </summary>
         /// <param name="tabHost">Hôte d'onglets qui portera les onglets ouverts.</param>
-        public BrowserView(ITabHost tabHost)
+        public BrowserView(ITabHost tabHost, bool isPrivate = false)
         {
             _tabHost = tabHost ?? throw new ArgumentNullException(nameof(tabHost));
+            _isPrivate = isPrivate;
             _newWindowHandler = new NewWindowRequestHandler(tabHost);
             InitializeComponent();
             BrowserServices.EnsureInitialized();
+            BrowserServices.SettingsChanged += OnSettingsChanged;
+            DevToolsMenuItem.Visibility = BuildInfo.DevToolsEnabled ? Visibility.Visible : Visibility.Collapsed;
             Loaded += OnLoaded;
             PreviewKeyDown += OnPreviewKeyDown;
         }
+
+        /// <summary>Vrai si cette vue appartient à une fenêtre de navigation privée.</summary>
+        public bool IsPrivate => _isPrivate;
 
         private void RetryFailedNavigation_Click(object sender, RoutedEventArgs e)
         {
@@ -78,7 +85,9 @@ namespace MadagascarBrowser.Shell
                 var tabViewModel = DataContext as TabViewModel;
                 var environment = await WebViewEnvironment.GetAsync(tabViewModel?.PrivateProfileFolder);
                 _environment = environment;
-                await WebView.EnsureCoreWebView2Async(environment);
+                await WebView.EnsureCoreWebView2Async(
+                    environment,
+                    WebViewEnvironment.CreateControllerOptions(environment, _isPrivate));
                 _coreReady = true;
                 await InitCoreAsync();
                 await RefreshStatsAsync();
@@ -167,11 +176,12 @@ namespace MadagascarBrowser.Shell
             // Menu contextuel natif (copier/coller, lien dans un nouvel onglet) : activé.
             settings.AreDefaultContextMenusEnabled = true;
 
-            // Pas d'enregistrement automatique des mots de passe ni d'autofill Chromium :
-            // MadaSearch ne gère pas de coffre-fort, ces fonctions resteraient
-            // inaccessibles et stockeraient des secrets sans contrôle de l'utilisateur.
-            settings.IsPasswordAutosaveEnabled = false;
-            settings.IsGeneralAutofillEnabled = false;
+            // Autofill et mots de passe : opt-in explicite dans les Paramètres.
+            // Par défaut désactivés ; une fois activés, les données restent dans
+            // le profil WebView2 local (aucune synchronisation cloud).
+            var privacy = BrowserServices.CurrentSettings;
+            settings.IsPasswordAutosaveEnabled = privacy.PasswordAutosaveEnabled;
+            settings.IsGeneralAutofillEnabled = privacy.AutofillEnabled;
 
             // Barre d'état WebView2 : désactivée, l'application affiche la sienne.
             settings.IsStatusBarEnabled = false;
@@ -186,8 +196,8 @@ namespace MadagascarBrowser.Shell
             // Messages Web : activés, nécessaire pour les pages hors ligne et l'hôte virtuel.
             settings.IsWebMessageEnabled = true;
 
-            // DevTools : désactivés pour éviter une fenêtre détachée du navigateur.
-            settings.AreDevToolsEnabled = false;
+            // DevTools : disponibles uniquement dans un build de développement.
+            settings.AreDevToolsEnabled = BuildInfo.DevToolsEnabled;
 
             // Diapositives au doigt : désactivées, la navigation tactile n'a pas lieu d'être.
             settings.IsSwipeNavigationEnabled = false;
@@ -326,7 +336,8 @@ namespace MadagascarBrowser.Shell
     var shift = !!event.shiftKey;
     var meta = !!event.metaKey;
     var escape = key === 'escape' && !!document.fullscreenElement;
-    if (!escape && !(ctrl && !alt && !meta && handled.indexOf(key) >= 0)) { return; }
+    var devTools = key === 'f12' && !ctrl && !alt && !meta && !shift;
+    if (!escape && !devTools && !(ctrl && !alt && !meta && handled.indexOf(key) >= 0)) { return; }
     event.preventDefault();
     event.stopPropagation();
     try {
@@ -442,19 +453,35 @@ namespace MadagascarBrowser.Shell
         private void MenuPrivateWindow_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
-            try
-            {
-                var privateWindow = new MainWindow(isPrivate: true);
-                privateWindow.Show();
-            }
-            catch (Exception exception)
-            {
-                MessageBox.Show(Window.GetWindow(this),
-                    "Impossible d'ouvrir une fenêtre privée : " + exception.Message,
-                    "Navigation privée", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            AppLog.Info("Fenêtre privée demandée depuis le menu.");
+            _tabHost.OpenPrivateWindow();
         }
 
+        private void MenuClearData_Click(object sender, RoutedEventArgs e)
+        {
+            MenuPopup.IsOpen = false;
+            if (!_coreReady)
+            {
+                MessageBox.Show(Window.GetWindow(this), "WebView2 n'est pas encore initialisé.",
+                    "Effacer les données", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var dialog = new ClearBrowsingDataWindow(this) { Owner = Window.GetWindow(this) };
+            dialog.ShowDialog();
+        }
+
+        private void MenuDevTools_Click(object sender, RoutedEventArgs e)
+        {
+            MenuPopup.IsOpen = false;
+            OpenDevTools();
+        }
+
+        private void MenuAbout_Click(object sender, RoutedEventArgs e)
+        {
+            MenuPopup.IsOpen = false;
+            new AboutWindow { Owner = Window.GetWindow(this) }.ShowDialog();
+        }
         private void MenuSettings_Click(object sender, RoutedEventArgs e)
         {
             MenuPopup.IsOpen = false;
@@ -603,24 +630,40 @@ namespace MadagascarBrowser.Shell
             var operation = e.DownloadOperation;
             var fileName = DownloadFileNameResolver.Resolve(operation.ContentDisposition, operation.Uri);
 
-            var dialog = new SaveFileDialog
+            // Recette GUI : un dossier imposé évite le dialogue natif, qui ne peut
+            // pas être piloté de façon fiable par UI Automation. La production
+            // garde le dialogue de destination, affiché une seule fois
+            // (e.Handled = true supprime celui de WebView2).
+            string resultFilePath;
+            var automatedDirectory = Environment.GetEnvironmentVariable("MADAGASCAR_E2E_DOWNLOAD_DIR");
+            if (!string.IsNullOrWhiteSpace(automatedDirectory))
             {
-                FileName = fileName,
-                Filter = "Tous les fichiers (*.*)|*.*"
-            };
-            var downloadsDirectory = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-            if (Directory.Exists(downloadsDirectory))
-                dialog.InitialDirectory = downloadsDirectory;
+                Directory.CreateDirectory(automatedDirectory);
+                resultFilePath = UniquePath(automatedDirectory, fileName);
+            }
+            else
+            {
+                var dialog = new SaveFileDialog
+                {
+                    FileName = fileName,
+                    Filter = "Tous les fichiers (*.*)|*.*"
+                };
+                var downloadsDirectory = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+                if (Directory.Exists(downloadsDirectory))
+                    dialog.InitialDirectory = downloadsDirectory;
 
-            if (dialog.ShowDialog(Window.GetWindow(this)) != true)
-            {
-                e.Cancel = true;
-                e.Handled = true;
-                return;
+                if (dialog.ShowDialog(Window.GetWindow(this)) != true)
+                {
+                    e.Cancel = true;
+                    e.Handled = true;
+                    return;
+                }
+
+                resultFilePath = dialog.FileName;
             }
 
-            e.ResultFilePath = dialog.FileName;
+            e.ResultFilePath = resultFilePath;
             e.Handled = true;
             // Autoriser le téléchargement choisi par l'utilisateur, sans persister de métadonnées privées.
             if (!PrivateBrowsingPolicy.ShouldPersistDownloadMetadata((DataContext as TabViewModel)?.IsPrivate == true))
@@ -630,7 +673,6 @@ namespace MadagascarBrowser.Shell
             // « CoreWebView2DownloadOperation members can only be accessed from the UI thread »
             // qui tuait l'application après le téléchargement).
             var uri = operation.Uri;
-            var resultFilePath = e.ResultFilePath;
             var download = await DatabaseAccess.WriteAsync(() =>
                 BrowserServices.Downloads.Start(uri, resultFilePath));
             DownloadsView.Register(download.Id, operation);
@@ -675,6 +717,28 @@ namespace MadagascarBrowser.Shell
             return operation.TotalBytesToReceive is ulong bytes && bytes <= long.MaxValue
                 ? (long)bytes
                 : 0;
+        }
+
+        /// <summary>
+        /// Évite qu'un téléchargement de recette écrase un fichier précédent :
+        /// « nom (1).ext », « nom (2).ext », etc.
+        /// </summary>
+        private static string UniquePath(string directory, string fileName)
+        {
+            var path = Path.Combine(directory, fileName);
+            if (!File.Exists(path))
+                return path;
+
+            var stem = Path.GetFileNameWithoutExtension(fileName);
+            var extension = Path.GetExtension(fileName);
+            for (var index = 1; index < 1000; index++)
+            {
+                var candidate = Path.Combine(directory, $"{stem} ({index}){extension}");
+                if (!File.Exists(candidate))
+                    return candidate;
+            }
+
+            return path;
         }
 
         private void OnNavigationStarting(object? sender, CoreWebView2NavigationStartingEventArgs e)
@@ -893,7 +957,9 @@ namespace MadagascarBrowser.Shell
                 }
             }
 
-            if (e.IsSuccess && PrivateBrowsingPolicy.ShouldPersistHistory((DataContext as TabViewModel)?.IsPrivate == true, IsHistoryWorthy(core.Source)))
+            // Navigation privée : aucune trace dans l'historique local.
+            // Les cookies/cache sont déjà isolés par le profil InPrivate WebView2.
+            if (!_isPrivate && e.IsSuccess && IsHistoryWorthy(core.Source))
             {
                 var url = core.Source;
                 var title = core.DocumentTitle ?? string.Empty;
@@ -1100,6 +1166,98 @@ namespace MadagascarBrowser.Shell
             if (_coreReady)
             {
                 WebView.CoreWebView2.Reload();
+            }
+        }
+
+        /// <summary>
+        /// Ouvre les outils de développement WebView2. No-op dans un build public.
+        /// </summary>
+        public void OpenDevTools()
+        {
+            if (!BuildInfo.DevToolsEnabled)
+            {
+                AppLog.Info("Outils de développement non exposés dans ce build.");
+                return;
+            }
+
+            if (!_coreReady)
+                return;
+
+            try
+            {
+                WebView.CoreWebView2.OpenDevToolsWindow();
+            }
+            catch (Exception exception)
+            {
+                AppLog.Error("Ouverture des outils de développement impossible.", exception);
+            }
+        }
+
+        /// <summary>
+        /// Efface les données du profil WebView2 de cette vue (cookies, cache,
+        /// stockage local, mots de passe) et, si demandé, l'historique SQLite.
+        /// </summary>
+        public async Task ClearBrowsingDataAsync(BrowsingDataKind selection)
+        {
+            if (!BrowsingDataSelection.HasSelection(selection))
+                throw new ArgumentException("Aucune catégorie de données sélectionnée.", nameof(selection));
+            if (!_coreReady)
+                throw new InvalidOperationException("WebView2 n'est pas encore initialisé.");
+
+            var dataKinds = ToWebViewDataKinds(selection);
+            if (dataKinds != 0)
+                await WebView.CoreWebView2.Profile.ClearBrowsingDataAsync(dataKinds);
+
+            if (selection.HasFlag(BrowsingDataKind.History))
+                await DatabaseAccess.WriteAsync(() => BrowserServices.History.Clear());
+
+            AppLog.Info($"Données de navigation effacées : {selection}.");
+        }
+
+        private static CoreWebView2BrowsingDataKinds ToWebViewDataKinds(BrowsingDataKind selection)
+        {
+            var kinds = (CoreWebView2BrowsingDataKinds)0;
+            if (selection.HasFlag(BrowsingDataKind.Cookies))
+                kinds |= CoreWebView2BrowsingDataKinds.Cookies;
+            if (selection.HasFlag(BrowsingDataKind.Cache))
+                kinds |= CoreWebView2BrowsingDataKinds.DiskCache | CoreWebView2BrowsingDataKinds.CacheStorage;
+            if (selection.HasFlag(BrowsingDataKind.History))
+                kinds |= CoreWebView2BrowsingDataKinds.BrowsingHistory;
+            if (selection.HasFlag(BrowsingDataKind.LocalStorage))
+                kinds |= CoreWebView2BrowsingDataKinds.LocalStorage
+                    | CoreWebView2BrowsingDataKinds.IndexedDb
+                    | CoreWebView2BrowsingDataKinds.WebSql
+                    | CoreWebView2BrowsingDataKinds.ServiceWorkers;
+            if (selection.HasFlag(BrowsingDataKind.Passwords))
+                kinds |= CoreWebView2BrowsingDataKinds.PasswordAutosave
+                    | CoreWebView2BrowsingDataKinds.GeneralAutofill;
+            return kinds;
+        }
+
+        /// <summary>
+        /// Applique immédiatement les réglages de confidentialité aux vues
+        /// déjà ouvertes (autofill, mots de passe) sans recréer le WebView2.
+        /// </summary>
+        private void OnSettingsChanged(BrowserSettings settings)
+        {
+            if (Dispatcher.CheckAccess())
+                ApplyLiveSettings();
+            else
+                Dispatcher.BeginInvoke(new Action(ApplyLiveSettings));
+        }
+
+        private void ApplyLiveSettings()
+        {
+            if (!_coreReady)
+                return;
+
+            try
+            {
+                ConfigureSettings(WebView.CoreWebView2.Settings);
+            }
+            catch (Exception exception)
+            {
+                AppLog.Error("Application des paramètres de confidentialité impossible.", exception);
             }
         }
 
@@ -1327,11 +1485,19 @@ namespace MadagascarBrowser.Shell
             {
                 OpenFindBar();
                 e.Handled = true;
+                return;
+            }
+
+            if (e.Key == Key.F12 && BuildInfo.DevToolsEnabled)
+            {
+                OpenDevTools();
+                e.Handled = true;
             }
         }
 
         public void Dispose()
         {
+            BrowserServices.SettingsChanged -= OnSettingsChanged;
             _suggestDebouncer?.Dispose();
             _suggestDebouncer = null;
             if (_fetchRequestPausedReceiver != null)

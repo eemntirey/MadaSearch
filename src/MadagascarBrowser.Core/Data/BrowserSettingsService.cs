@@ -47,6 +47,12 @@ namespace MadagascarBrowser.Core.Data
                     case "restore_session":
                         settings.RestoreSession = bool.TryParse(value, out var restoreSession) && restoreSession;
                         break;
+                    case "autofill_enabled":
+                        settings.AutofillEnabled = bool.TryParse(value, out var autofillEnabled) && autofillEnabled;
+                        break;
+                    case "password_autosave_enabled":
+                        settings.PasswordAutosaveEnabled = bool.TryParse(value, out var passwordAutosave) && passwordAutosave;
+                        break;
                     case "allowed_domains":
                         settings.AllowedDomains = ParseDomains(value);
                         break;
@@ -82,6 +88,8 @@ namespace MadagascarBrowser.Core.Data
             SaveValue(command, "data_saver_image_threshold_kilobytes",
                 settings.DataSaverImageThresholdKilobytes.ToString(CultureInfo.InvariantCulture));
             SaveValue(command, "restore_session", settings.RestoreSession.ToString());
+            SaveValue(command, "autofill_enabled", settings.AutofillEnabled.ToString());
+            SaveValue(command, "password_autosave_enabled", settings.PasswordAutosaveEnabled.ToString());
             SaveValue(command, "allowed_domains", string.Join(",", settings.AllowedDomains ?? new List<string>()));
             SaveValue(command, "theme", settings.Theme);
             SaveValue(command, "density", settings.Density);

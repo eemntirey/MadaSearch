@@ -24,6 +24,12 @@ namespace MadagascarBrowser.Shell
         public static SessionService Sessions { get; private set; } = null!;
         public static BrowserSettings CurrentSettings { get; private set; } = new();
 
+        /// <summary>
+        /// Signalé après l'enregistrement des paramètres : les vues déjà
+        /// ouvertes appliquent immédiatement les réglages de confidentialité.
+        /// </summary>
+        public static event Action<BrowserSettings>? SettingsChanged;
+
         public static void EnsureInitialized()
         {
             if (_initialized) return;
@@ -71,6 +77,7 @@ namespace MadagascarBrowser.Shell
             DataSaver.Enabled = settings.DataSaverEnabled;
             DataSaver.ImageThresholdBytes = settings.DataSaverImageThresholdKilobytes * 1024L;
             ThemeManager.Apply(settings);
+            SettingsChanged?.Invoke(settings);
         }
 
         public static void ReloadSettings()
@@ -81,6 +88,7 @@ namespace MadagascarBrowser.Shell
             DataSaver.Enabled = CurrentSettings.DataSaverEnabled;
             DataSaver.ImageThresholdBytes = CurrentSettings.DataSaverImageThresholdKilobytes * 1024L;
             ThemeManager.Apply(CurrentSettings);
+            SettingsChanged?.Invoke(CurrentSettings);
         }
     }
 }

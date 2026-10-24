@@ -25,6 +25,8 @@ public class BrowserSettingsServiceTests
             Assert.True(defaults.AdBlockEnabled);
             Assert.False(defaults.DataSaverEnabled);
             Assert.False(defaults.RestoreSession);
+            Assert.False(defaults.AutofillEnabled);
+            Assert.False(defaults.PasswordAutosaveEnabled);
             Assert.Equal(200, defaults.DataSaverImageThresholdKilobytes);
 
             settingsService.Save(new BrowserSettings
@@ -33,7 +35,9 @@ public class BrowserSettingsServiceTests
                 AdBlockEnabled = false,
                 DataSaverEnabled = true,
                 DataSaverImageThresholdKilobytes = 350,
-                RestoreSession = true
+                RestoreSession = true,
+                AutofillEnabled = true,
+                PasswordAutosaveEnabled = true
             });
 
             var reloaded = new BrowserSettingsService(new Database(databasePath)).Load();
@@ -43,6 +47,8 @@ public class BrowserSettingsServiceTests
             Assert.True(reloaded.DataSaverEnabled);
             Assert.Equal(350, reloaded.DataSaverImageThresholdKilobytes);
             Assert.True(reloaded.RestoreSession);
+            Assert.True(reloaded.AutofillEnabled);
+            Assert.True(reloaded.PasswordAutosaveEnabled);
             Assert.Empty(reloaded.AllowedDomains);
         }
         finally

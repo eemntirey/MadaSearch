@@ -1,7 +1,6 @@
 <Application x:Class="MadagascarBrowser.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             StartupUri="MainWindow.xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Application.Resources>
         <ResourceDictionary>
         <!-- Les jetons de couleur vivent dans Themes/Tokens.xaml (fusionné ci-dessous) :

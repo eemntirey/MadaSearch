@@ -49,6 +49,20 @@ namespace MadagascarBrowser.Shell
         /// et un seul dossier de profil (WebView2 refuse deux environnements sur le même dossier).
         /// Un échec n'est pas mis en cache : la prochaine demande retente la création.
         /// </summary>
+        /// <summary>
+        /// Options du contrôleur. En navigation privée, WebView2 crée un profil
+        /// en mémoire pour ce contrôleur uniquement : cookies et cache ne
+        /// touchent pas le profil normal et disparaissent à la fermeture.
+        /// </summary>
+        public static CoreWebView2ControllerOptions CreateControllerOptions(
+            CoreWebView2Environment environment,
+            bool isPrivate)
+        {
+            var options = environment.CreateCoreWebView2ControllerOptions();
+            options.IsInPrivateModeEnabled = isPrivate;
+            return options;
+        }
+
         public static Task<CoreWebView2Environment> GetAsync(string? userDataFolder = null)
         {
             var folder = string.IsNullOrWhiteSpace(userDataFolder) ? UserDataFolder : Path.GetFullPath(userDataFolder);

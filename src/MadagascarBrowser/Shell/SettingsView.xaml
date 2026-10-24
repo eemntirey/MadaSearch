@@ -64,7 +64,16 @@
                                      Style="{StaticResource DarkTextBox}" VerticalContentAlignment="Center"/>
                         </Grid>
                         <CheckBox x:Name="RestoreSessionCheck" Content="Restaurer les onglets au démarrage"
-                                  Style="{StaticResource DarkCheckBox}"/>
+                                  Style="{StaticResource DarkCheckBox}" Margin="0,0,0,10"
+                                  AutomationProperties.AutomationId="RestoreSessionCheck"/>
+                        <CheckBox x:Name="AutofillCheck"
+                                  Content="Remplissage automatique local (adresses, formulaires) — opt-in"
+                                  Style="{StaticResource DarkCheckBox}" Margin="0,0,0,10"
+                                  AutomationProperties.AutomationId="AutofillCheck"/>
+                        <CheckBox x:Name="PasswordAutosaveCheck"
+                                  Content="Enregistrer les mots de passe localement — opt-in, aucun envoi hors device"
+                                  Style="{StaticResource DarkCheckBox}"
+                                  AutomationProperties.AutomationId="PasswordAutosaveCheck"/>
                     </StackPanel>
                 </Border>
 
