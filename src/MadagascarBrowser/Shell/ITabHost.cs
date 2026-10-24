@@ -51,5 +51,11 @@ namespace MadagascarBrowser.Shell
         /// Exécute une commande applicative issue d'un raccourci clavier.
         /// </summary>
         void Execute(AcceleratorCommand command);
+
+        /// <summary>
+        /// Ouvre une nouvelle fenêtre de navigation privée (profil WebView2
+        /// en mémoire, isolé du profil normal).
+        /// </summary>
+        void OpenPrivateWindow();
     }
 }

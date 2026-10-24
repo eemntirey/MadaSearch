@@ -8,6 +8,16 @@ namespace MadagascarBrowser.Shell
 {
     public class TabManager : INotifyPropertyChanged, ITabHost
     {
+        private readonly bool _isPrivate;
+
+        public TabManager(bool isPrivate = false)
+        {
+            _isPrivate = isPrivate;
+        }
+
+        /// <summary>Vrai si cette fenêtre ne doit laisser aucune trace locale.</summary>
+        public bool IsPrivate => _isPrivate;
+
         public ObservableCollection<TabViewModel> Tabs { get; } = new();
         private TabViewModel _active = null!;
         public TabViewModel Active
@@ -27,6 +37,14 @@ namespace MadagascarBrowser.Shell
 
         /// <summary>Signalé quand une page passe en plein écran.</summary>
         public event EventHandler<bool>? FullScreenChanged;
+
+        /// <summary>Signalé quand l'utilisateur demande une fenêtre privée.</summary>
+        public event EventHandler? PrivateWindowRequested;
+
+        public void OpenPrivateWindow()
+        {
+            PrivateWindowRequested?.Invoke(this, EventArgs.Empty);
+        }
 
         private readonly List<string> _closedTabUrls = new();
 
@@ -125,6 +143,9 @@ namespace MadagascarBrowser.Shell
                 case AcceleratorCommand.ExitFullScreen:
                     view?.ExitFullScreen();
                     break;
+                case AcceleratorCommand.OpenDevTools:
+                    view?.OpenDevTools();
+                    break;
             }
         }
 
@@ -148,7 +169,7 @@ namespace MadagascarBrowser.Shell
             }
 
             var t = new TabViewModel { Title = title, Url = target };
-            var view = new BrowserView(this) { DataContext = t };
+            var view = new BrowserView(this, _isPrivate) { DataContext = t };
             t.View = view;
             Tabs.Add(t);
             Active = t;

@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows;
+using MadagascarBrowser.Core.Paths;
+using MadagascarBrowser.Core.Startup;
 using MadagascarBrowser.Shell;
 
 namespace MadagascarBrowser;
@@ -12,6 +15,22 @@ public partial class App : Application
 {
     protected override void OnStartup(StartupEventArgs e)
     {
+        // Les options sont lues avant toute initialisation : la recette GUI
+        // impose une racine de données isolée, et la navigation privée doit
+        // ouvrir une fenêtre dédiée.
+        var options = CommandLineOptions.Parse(e.Args);
+        if (!string.IsNullOrWhiteSpace(options.DataRoot))
+        {
+            try
+            {
+                BrowserPaths.OverrideDefaultRoot(options.DataRoot);
+            }
+            catch (Exception exception)
+            {
+                Trace.TraceError($"Racine de données invalide '{options.DataRoot}' : {exception}");
+            }
+        }
+
         // Les durées d'animation sont résolues au chargement des styles : on applique
         // donc la préférence système avant l'ouverture de la fenêtre.
         Motion.ApplyPreference();
@@ -24,7 +43,11 @@ public partial class App : Application
         AppDomain.CurrentDomain.UnhandledException += OnDomainUnhandledException;
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
 
-        AppLog.Info("Démarrage de l'application.");
+        AppLog.Info($"Démarrage de l'application (privée : {options.IsPrivate}).");
+
+        var window = new MainWindow(options.IsPrivate);
+        MainWindow = window;
+        window.Show();
         base.OnStartup(e);
     }
 

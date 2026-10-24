@@ -24,6 +24,18 @@ namespace MadagascarBrowser.Core.Data
         public string Accent { get; set; } = "malagasy";
 
         /// <summary>
+        /// Remplissage automatique général (adresses, formulaires) : opt-in explicite.
+        /// Les données restent dans le profil WebView2 local, sans synchronisation.
+        /// </summary>
+        public bool AutofillEnabled { get; set; }
+
+        /// <summary>
+        /// Enregistrement local des mots de passe : opt-in explicite.
+        /// Aucun envoi hors de la machine.
+        /// </summary>
+        public bool PasswordAutosaveEnabled { get; set; }
+
+        /// <summary>
         /// Domaines autorisés : le bloqueur de publicités les laisse passer.
         /// </summary>
         public System.Collections.Generic.List<string> AllowedDomains { get; set; } = new();

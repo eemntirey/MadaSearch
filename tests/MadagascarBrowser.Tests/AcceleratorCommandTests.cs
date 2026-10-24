@@ -63,6 +63,18 @@ public class AcceleratorCommandTests
     }
 
     [Fact]
+    public void Resolve_F12_OuvreLesDevToolsSansCtrl()
+    {
+        Assert.Equal(AcceleratorCommand.OpenDevTools, AcceleratorCommandResolver.Resolve("f12", ctrl: false, alt: false, shift: false));
+    }
+
+    [Fact]
+    public void Resolve_CtrlF12_NeDeclencheRien()
+    {
+        Assert.Equal(AcceleratorCommand.None, AcceleratorCommandResolver.Resolve("f12", ctrl: true, alt: false, shift: false));
+    }
+
+    [Fact]
     public void Resolve_Echap_SortDuPleinEcran()
     {
         Assert.Equal(

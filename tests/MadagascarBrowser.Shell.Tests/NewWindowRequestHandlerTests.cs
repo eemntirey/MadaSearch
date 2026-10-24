@@ -32,6 +32,8 @@ internal sealed class RecordingTabHost : ITabHost
 
     public int FavoritesAdded { get; private set; }
 
+    public int PrivateWindowsOpened { get; private set; }
+
     public bool FullScreen { get; private set; }
 
     public List<AcceleratorCommand> ExecutedCommands { get; } = new();
@@ -78,6 +80,8 @@ internal sealed class RecordingTabHost : ITabHost
     public void SetFullScreen(bool enabled) => FullScreen = enabled;
 
     public void Execute(AcceleratorCommand command) => ExecutedCommands.Add(command);
+
+    public void OpenPrivateWindow() => PrivateWindowsOpened++;
 }
 
 public class NewWindowRequestHandlerTests

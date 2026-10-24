@@ -66,9 +66,20 @@ namespace MadagascarBrowser.Core.Paths
         /// <summary>Dossier des pages enregistrées hors ligne.</summary>
         public string OfflineDirectory { get; }
 
+        private static BrowserPaths? _default;
+
         /// <summary>Emplacements utilisés par l'utilisateur courant.</summary>
-        public static BrowserPaths Default { get; } =
-            new(ComposeRoot(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)));
+        public static BrowserPaths Default =>
+            _default ??= new(ComposeRoot(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)));
+
+        /// <summary>
+        /// Force la racine de toutes les données. Utilisé par la recette GUI
+        /// pour isoler chaque exécution ; à appeler avant toute initialisation.
+        /// </summary>
+        public static void OverrideDefaultRoot(string root)
+        {
+            _default = ForRoot(root);
+        }
 
         /// <summary>Construit un ensemble de chemins à partir d'une racine donnée.</summary>
         public static BrowserPaths ForRoot(string root)

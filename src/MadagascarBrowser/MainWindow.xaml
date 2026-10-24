@@ -46,6 +46,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
@@ -68,6 +69,14 @@
                 <TextBlock Text="adagascar Browser" FontFamily="Segoe UI" FontSize="11.5"
                            Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center"
                            Margin="1,0,0,0"/>
+                <Border x:Name="PrivateBadge" Background="{DynamicResource AccentSoftBrush}"
+                        CornerRadius="999" Padding="9,2" Margin="12,0,0,0"
+                        VerticalAlignment="Center" Visibility="Collapsed"
+                        AutomationProperties.AutomationId="PrivateBadge">
+                    <TextBlock Text="Navigation privée" FontSize="10.5"
+                               Foreground="{DynamicResource AccentBrush}"
+                               AutomationProperties.AutomationId="PrivateBadge"/>
+                </Border>
             </StackPanel>
 
             <!-- IsHitTestVisibleInChrome sort les boutons de la zone "caption" du WindowChrome :
@@ -170,17 +179,44 @@
             </Grid>
         </Border>
 
+        <!-- Bandeau de sécurité : runtime WebView2 figé et obsolète uniquement -->
+        <Border x:Name="RuntimeBanner" Grid.Row="3" Visibility="Collapsed"
+                Background="{DynamicResource SurfaceHighBrush}"
+                BorderBrush="{DynamicResource WarnBrush}" BorderThickness="0,1,0,0"
+                AutomationProperties.AutomationId="RuntimeBanner">
+            <Grid Margin="12,7">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="13"
+                           Foreground="{DynamicResource WarnBrush}" VerticalAlignment="Center"
+                           Margin="0,0,8,0"/>
+                <TextBlock x:Name="RuntimeBannerText" Grid.Column="1" FontSize="11.5"
+                           Foreground="{DynamicResource WarnBrush}" TextWrapping="Wrap"
+                           VerticalAlignment="Center"/>
+                <Button Grid.Column="2" Style="{StaticResource IconButtonSmall}"
+                        Content="&#xE711;" ToolTip="Masquer l'avertissement"
+                        Click="DismissRuntimeBanner_Click"
+                        AutomationProperties.Name="Masquer l'avertissement"
+                        AutomationProperties.AutomationId="RuntimeBannerDismiss"/>
+            </Grid>
+        </Border>
+
         <!-- Contenu de l'onglet actif -->
-        <ContentControl Grid.Row="3" Content="{Binding Active.View}"/>
+        <ContentControl Grid.Row="4" Content="{Binding Active.View}"/>
 
         <!-- Barre d'état : état de navigation + puces d'information -->
-        <Border x:Name="StatusBarBorder" Grid.Row="4" Background="{DynamicResource SurfaceBrush}"
+        <Border x:Name="StatusBarBorder" Grid.Row="5" Background="{DynamicResource SurfaceBrush}"
                 BorderBrush="{DynamicResource EdgeBrush}" BorderThickness="0,1,0,0">
             <Grid Height="26" Margin="12,0">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <Ellipse Width="6" Height="6" Fill="{DynamicResource SecureBrush}"
                              VerticalAlignment="Center" Margin="0,0,6,0"/>
-                    <TextBlock x:Name="StatusText" FontSize="11" Foreground="{DynamicResource MutedBrush}">
+                    <TextBlock x:Name="StatusText" FontSize="11" Foreground="{DynamicResource MutedBrush}"
+                               AutomationProperties.AutomationId="StatusText"
+                               AutomationProperties.Name="{Binding Active.Title}">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Text" Value="Prêt"/>

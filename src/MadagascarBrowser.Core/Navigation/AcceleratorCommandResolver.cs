@@ -18,7 +18,8 @@ namespace MadagascarBrowser.Core.Navigation
         ReopenClosedTab,
         FindInPage,
         Print,
-        ExitFullScreen
+        ExitFullScreen,
+        OpenDevTools
     }
 
     /// <summary>
@@ -48,6 +49,11 @@ namespace MadagascarBrowser.Core.Navigation
             // Échap sort du plein écran : Ctrl n'est pas nécessaire.
             if (normalized == "escape")
                 return AcceleratorCommand.ExitFullScreen;
+
+            // F12 ouvre les outils de développement : Ctrl n'est pas nécessaire.
+            // La décision d'exposition (Debug/Release) reste dans la couche Shell.
+            if (normalized == "f12" && !ctrl && !alt)
+                return AcceleratorCommand.OpenDevTools;
 
             if (!ctrl)
                 return AcceleratorCommand.None;
