@@ -17,7 +17,7 @@ renvoient au code, aux tests et aux captures.
 | D2 | Effacement cookies/cache/historique | (A) | **Levée** : dialogue granulaire, `ClearBrowsingDataAsync`, historique SQLite effacé | `ClearBrowsingDataWindow`, `BrowsingDataSelectionTests`, E2E `ClearBrowsingData_DialogClearsSelectedCategories` |
 | D3 | `Content-Disposition` / nom de téléchargement | (A) | **Levée** : `DownloadStarting`, `filename`/`filename*`, RFC 5987, extensions doubles | `DownloadFileNameResolver`, `DownloadFileNameResolverTests`, E2E `Download_ContentDispositionFileNameIsPreserved` |
 | D4 | Cycle Retour / page en erreur | (A) | **Levée** : `GoBack`/`CanGoBack`, page d'erreur = état d'onglet | `NavigationService`, `NavigationServiceTests`, E2E `BackAndForward_NavigateThroughHistoryWithoutStaleContent` |
-| D5 | Outils de développement | (A) | **Exposés en Debug**, absents du build public | `DevToolsPolicy`, `BuildInfo`, `DevToolsPolicyTests`, E2E `DevTools_AreAvailableInDebugBuild` |
+| D5 | Outils de développement | (A) | **Exposés en Debug**, absents du build public | `DevToolsPolicy`, `BuildInfo`, `DevToolsPolicyTests`, E2E `DevTools_ExposedOnlyInDebugBuild` |
 | D6 | Runtime WebView2 obsolète | (A) | **Levée** : version réelle + bandeau si Fixed Version < 130.0.0.0 | `WebViewRuntimeInfo`, `WebViewRuntimeService`, `WebViewRuntimeInfoTests`, E2E `AboutWindow_ReportsRealRuntimeInsteadOfPretending` |
 | D7 | Autofill / mots de passe | (A partielle) | **Opt-in local**, désactivé par défaut ; support partiel selon le moteur | `BrowserSettings`, `BrowserSettingsServiceTests`, `SettingsView` |
 | D8 | Mise à jour automatique de l'application | (A) | **Dette ouverte** : distribution manuelle, pas encore Velopack/MSIX | Absence d'updater dans `src/` |

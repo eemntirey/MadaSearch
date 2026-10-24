@@ -108,6 +108,14 @@ internal sealed class BrowserSession : IDisposable
         WaitFor(() => Automation.GetDesktop().FindFirstDescendant(cf => cf.ByAutomationId(automationId)),
             $"Élément '{automationId}' absent du bureau après {timeoutSeconds} s.", timeoutSeconds)!;
 
+    /// <summary>
+    /// Cherche un élément du bureau sans attendre : renvoie null s'il est absent.
+    /// Sert à prouver qu'un élément n'est pas exposé (outils de développement
+    /// masqués dans un build public), là où WaitForDesktopElement échouerait.
+    /// </summary>
+    public AutomationElement? FindDesktopElement(string automationId) =>
+        Automation.GetDesktop().FindFirstDescendant(cf => cf.ByAutomationId(automationId));
+
     public AutomationElement WaitForElementByName(string name, int timeoutSeconds = 15) =>
         WaitFor(() => Window.FindFirstDescendant(cf => cf.ByName(name)),
             $"Élément nommé « {name} » absent après {timeoutSeconds} s.", timeoutSeconds)!;
@@ -167,6 +175,18 @@ internal sealed class BrowserSession : IDisposable
 
         return found ?? string.Empty;
     }
+
+    /// <summary>
+    /// Cherche une fenêtre dont le titre contient le texte, sans attendre :
+    /// renvoie null si elle n'existe pas. Sert à prouver qu'une fenêtre n'a
+    /// pas été ouverte (les outils de développement d'un build public).
+    /// </summary>
+    public string? FindWindowWithTitle(string titleSubstring) =>
+        Automation.GetDesktop()
+            .FindAllChildren(cf => cf.ByControlType(ControlType.Window))
+            .Select(window => window.Name)
+            .FirstOrDefault(name => name is not null &&
+                name.Contains(titleSubstring, StringComparison.OrdinalIgnoreCase));
 
     public void Capture(string name) => Capture(Window, name);
 

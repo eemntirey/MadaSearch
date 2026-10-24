@@ -37,7 +37,7 @@ supprime ce profil. Les captures sont écrites dans `docs/captures/e2e/`.
 | `ClearBrowsingData_DialogClearsSelectedCategories` | Cases par défaut, confirmation, retour « effacées » | `06-effacement-donnees.png` |
 | `Download_ContentDispositionFileNameIsPreserved` | Nom RFC 5987 `recu-été.txt` et contenu du fichier, nom affiché dans la vue Téléchargements | `03-download-content-disposition.png` |
 | `AboutWindow_ReportsRealRuntimeInsteadOfPretending` | Version application, version runtime, état réel | `07-a-propos-runtime.png` |
-| `DevTools_AreAvailableInDebugBuild` | Menu DevTools présent et fenêtre DevTools ouverte via F12 | `04-devtools-ouverts.png` |
+| `DevTools_ExposedOnlyInDebugBuild` | Debug : menu présent et fenêtre DevTools ouverte via F12 ; Release : ni menu ni fenêtre | `04-devtools-ouverts.png` |
 
 ## Ce que la suite ne fait pas
 

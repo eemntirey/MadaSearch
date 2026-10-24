@@ -119,12 +119,18 @@ public class BrowserE2ETests
         about.FindFirstDescendant(cf => cf.ByAutomationId("AboutClose"))!.AsButton().Invoke();
     }
 
+    /// <summary>
+    /// Les outils de développement suivent la configuration de compilation :
+    /// exposés dans un build de développement, absents du build public.
+    /// </summary>
     [Fact]
-    public void DevTools_AreAvailableInDebugBuild()
+    public void DevTools_ExposedOnlyInDebugBuild()
     {
         using var browser = BrowserSession.Launch();
 
         browser.OpenMenu();
+
+#if DEBUG
         browser.WaitForDesktopElement("MenuDevTools");
 
         browser.Window.Focus();
@@ -133,6 +139,15 @@ public class BrowserE2ETests
         Assert.Contains("DevTools", devToolsTitle, StringComparison.OrdinalIgnoreCase);
 
         browser.Capture("04-devtools-ouverts");
+#else
+        // Build public : ni entrée de menu, ni fenêtre ouverte par F12.
+        Assert.Null(browser.FindDesktopElement("MenuDevTools"));
+
+        browser.Window.Focus();
+        Keyboard.Press(VirtualKeyShort.F12);
+        Thread.Sleep(2000);
+        Assert.Null(browser.FindWindowWithTitle("DevTools"));
+#endif
     }
 
     private static string WaitForText(AutomationElement root, string automationId, string expected, int timeoutSeconds = 20)
