@@ -7,7 +7,7 @@
     <SolidColorBrush x:Key="SurfaceHighBrush" Color="#13263C"/>
     <SolidColorBrush x:Key="HoverBrush" Color="#1B3552"/>
     <SolidColorBrush x:Key="ActiveTabBrush" Color="#1D3B5D"/>
-    <SolidColorBrush x:Key="PillBrush" Color="#1B1917"/>
+    <SolidColorBrush x:Key="PillBrush" Color="#13263C"/>
 
     <!-- ============ Filets ============ -->
     <SolidColorBrush x:Key="EdgeBrush" Color="#20354B"/>
